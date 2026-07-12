@@ -56,3 +56,15 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 **修復摘要：**
 1. `RailPathSampler.snapToRail`：新增區塊是否已加載的判斷 `!loc.getWorld().isChunkLoaded(chunkX, chunkZ)`，如果在未加載區塊，則直接回傳原坐標，不執行 `findNearestRailBlock`，完全根絕了因同步載入導致的主執行緒凍結卡死。
 2. `RailPathSampler.densifyAndSnap`：加入 `steps` 上限限制。當距離極遠時（如跨越數千格），步數強制上限為 1000，大幅減少記憶體佔用與重複運算。
+
+### 2026-07-13 — 修復 BlockCoords 打包位移時的符號擴展 (Sign Extension) 問題
+
+**修改原因：**
+- 在先前的伺服器崩潰日誌與 `2026-07-12-6.log` 中，發現伺服器會拋出 `java.lang.IllegalStateException: Trying to create chunk out of reasonable bounds: [4193697, 80]` 的嚴重例外，並伴隨 `CinematicTransitTask.tick` 在執行 `cart.teleport(pos)` 時當掉。
+- `4193697` 的 chunk X 轉換為方塊 X 座標高達 `67,099,152`，遠超 Minecraft 世界邊界（三千萬格）。
+- 經查 `BlockCoords.java` 中的 `unpackX` 實作：`(int) ((packed >> 38) & 0x3FFFFFFL);` 以及 `unpackZ`：`(int) (packed & 0x3FFFFFFL);`。
+- 由於使用了位元及 `& 0x3FFFFFFL` 運算，導致如果原本存入的 `x` 或 `z` 座標為負數，解包時其負號位元（sign bit）會被強制抹除，使其成為一個介於 `67108863` 的超大正數，進而使礦車傳送到無效的世界座標。
+
+**修復摘要：**
+1. `BlockCoords.unpackX`：移除不必要的 `& 0x3FFFFFFL`，直接回傳 `(int) (packed >> 38)`。由於 `long` 在 `>> 38` 時會自動進行算術位移（Arithmetic Shift）保留負號，轉成 `int` 時即可正確還原負數 X 座標。
+2. `BlockCoords.unpackZ`：修改為 `((int) packed << 6) >> 6`。先擷取後段 32 bits，左移 6 bits 將資料推至頂端對齊 sign bit，再透過算術右移 `>> 6`，正確還原 Z 的負數值並過濾掉上方的 Y 座標資料。

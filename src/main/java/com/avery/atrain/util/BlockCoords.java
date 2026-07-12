@@ -14,7 +14,7 @@ public final class BlockCoords {
     }
 
     public static int unpackX(long packed) {
-        return (int) ((packed >> 38) & 0x3FFFFFFL);
+        return (int) (packed >> 38);
     }
 
     public static int unpackY(long packed) {
@@ -22,7 +22,7 @@ public final class BlockCoords {
     }
 
     public static int unpackZ(long packed) {
-        return (int) (packed & 0x3FFFFFFL);
+        return ((int) packed << 6) >> 6;
     }
 
     public static long fromDataString(String key) {
