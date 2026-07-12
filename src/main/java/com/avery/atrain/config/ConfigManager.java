@@ -70,7 +70,12 @@ public class ConfigManager {
     public boolean isCartSpawnAutoMount() { return config.getBoolean("settings.cart_spawn_auto_mount", true); }
     public double getCartSpawnRadius() { return config.getDouble("settings.cart_spawn_radius", 2.5); }
     public int getCartSpawnCooldownTicks() { return config.getInt("settings.cart_spawn_cooldown", 40); }
-    public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.35); }
+    public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.6); }
+    public double getCurveSpeed() { return config.getDouble("settings.curve_speed", 0.4); }
+    public int getCurveLookahead() { return Math.max(1, config.getInt("settings.curve_lookahead", 5)); }
+    public boolean isTrainControlEnabled() { return config.getBoolean("settings.train_control", true); }
+    public int getTrainMaxCars() { return Math.max(1, config.getInt("settings.train_max_cars", 4)); }
+    public double getTrainCoupleDistance() { return config.getDouble("settings.train_couple_distance", 1.6); }
     public int getSpawnDelay() { return config.getInt("settings.cart_spawn_delay", 40); }
     public int getDepartureDelay() { return config.getInt("settings.cart_departure_delay", 80); }
     public int getDefaultDwellTime() { return config.getInt("settings.default_dwell_time", 80); }

@@ -6,6 +6,7 @@ import com.avery.atrain.config.ConfigManager;
 import com.avery.atrain.config.DataStore;
 import com.avery.atrain.gui.GuiListener;
 import com.avery.atrain.gui.GuiManager;
+import com.avery.atrain.hangrail.HangRailTask;
 import com.avery.atrain.i18n.LanguageManager;
 import com.avery.atrain.listener.ChatInputListener;
 import com.avery.atrain.listener.EmptyCartListener;
@@ -20,6 +21,7 @@ import com.avery.atrain.manager.CartSpawnManager;
 import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
 import com.avery.atrain.manager.StopManager;
+import com.avery.atrain.train.TrainController;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
@@ -42,6 +44,8 @@ public final class AtrainPlugin extends JavaPlugin {
     private StationAutoStopListener stationAutoStopListener;
     private PlayerInteractListener playerInteractListener;
     private VehicleListener vehicleListener;
+    private TrainController trainController;
+    private HangRailTask hangRailTask;
 
     @Override
     public void onEnable() {
@@ -82,11 +86,23 @@ public final class AtrainPlugin extends JavaPlugin {
         getCommand("lang").setExecutor(langCmd);
         getCommand("lang").setTabCompleter(langCmd);
 
-        getLogger().info("atrain 已啟用 — 站點顯示 + 原版礦車召喚");
+        trainController = new TrainController(this);
+        trainController.start();
+
+        hangRailTask = new HangRailTask(this, vehicleListener.getHangRailHandler());
+        hangRailTask.start();
+
+        getLogger().info("atrain 已啟用 — 站點顯示 + 連結列車控速");
     }
 
     @Override
     public void onDisable() {
+        if (trainController != null) {
+            trainController.stop();
+            trainController.clearAll();
+        }
+        if (hangRailTask != null) hangRailTask.stop();
+        if (vehicleListener != null) vehicleListener.getHangRailHandler().restoreAll();
         stationAutoStopListener.clearAll();
         TrainTaskRegistry.cancelAllTasks();
         dataStore.save();
@@ -94,6 +110,8 @@ public final class AtrainPlugin extends JavaPlugin {
     }
 
     public void reloadAll() {
+        if (trainController != null) trainController.clearAll();
+        if (vehicleListener != null) vehicleListener.getHangRailHandler().restoreAll();
         stationAutoStopListener.clearAll();
         TrainTaskRegistry.cancelAllTasks();
         chatInputManager.clearAll();

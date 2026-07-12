@@ -30,12 +30,18 @@ public final class HangRailUtil {
 
         for (HangRailType type : types) {
             if (type.isBelowRail()) {
-                int railY = cy - type.getOffset();
-                Block rail = cartLoc.getWorld().getBlockAt(x, railY, z);
-                if (matches(rail, type)) {
-                    return new HangRailInfo(rail, type);
+                int idealY = cy - type.getOffset(); // 鐵欄杆理想高度（在礦車上方 |offset| 格）
+                // 以理想高度為中心 ±1 格容忍：避免蓋高度略差或礦車下墜過快而抓不到，
+                // 抓到後由 getCartAnchor 自動吸附到正確吊掛高度。
+                for (int d : new int[]{0, 1, -1, 2}) {
+                    int barY = idealY + d;
+                    if (barY <= cy) continue; // 鐵欄杆必須在礦車上方
+                    Block rail = cartLoc.getWorld().getBlockAt(x, barY, z);
+                    if (matches(rail, type)) {
+                        return new HangRailInfo(rail, type);
+                    }
                 }
-                Block slopeRail = cartLoc.getWorld().getBlockAt(x, railY + 1, z);
+                Block slopeRail = cartLoc.getWorld().getBlockAt(x, idealY + 1, z);
                 if (matches(slopeRail, type) && findSlope(slopeRail, type) != null) {
                     return new HangRailInfo(slopeRail, type);
                 }

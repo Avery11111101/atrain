@@ -248,7 +248,8 @@ public class StopManager {
         if (idx < 0) return "-";
         if (idx + 1 < line.getStopIds().size()) return nameOf(line.getStopIds().get(idx + 1));
         if (line.isCircular() && !line.getStopIds().isEmpty()) return nameOf(line.getStopIds().get(0));
-        return "終點";
+        return plugin.getLanguageManager().getRaw(
+                plugin.getLanguageManager().getDefaultLanguage(), "station.terminus");
     }
 
     private String nameOf(String stopId) {
@@ -285,8 +286,10 @@ public class StopManager {
 
     public String resolveDisplayPrev(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
-        if (line != null) return getPrevStopName(line, stop.getId());
-        return stop.getInfoPrev();
+        if (line == null) return stop.getInfoPrev();
+        return isReturnReversed(stop, at)
+                ? getNextStopName(line, stop.getId())
+                : getPrevStopName(line, stop.getId());
     }
 
     public String resolveDisplayNext(Stop stop) {
@@ -295,8 +298,23 @@ public class StopManager {
 
     public String resolveDisplayNext(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
-        if (line != null) return getNextStopName(line, stop.getId());
-        return stop.getInfoNext();
+        if (line == null) return stop.getInfoNext();
+        return isReturnReversed(stop, at)
+                ? getPrevStopName(line, stop.getId())
+                : getNextStopName(line, stop.getId());
+    }
+
+    /**
+     * 判斷是否需要在回程月台反向顯示上下站。
+     * 條件：站在回程月台，且未設定有效的 returnLineId（沒設、對應路線為 null 或不含本站）。
+     * 此時 resolveDisplayLine 會 fallback 到去程顯示路線，需將上下站對調。
+     */
+    private boolean isReturnReversed(Stop stop, Location at) {
+        if (at == null || !stop.isOnReturnPlatform(at)) return false;
+        String returnLineId = stop.getReturnLineId();
+        if (returnLineId == null) return true;
+        Line returnLine = plugin.getLineManager().getLine(returnLineId);
+        return returnLine == null || !returnLine.getStopIds().contains(stop.getId());
     }
 
     /** 將另一組金磚月台綁定為此站點的回程月台 */

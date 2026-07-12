@@ -382,7 +382,7 @@ public class GuiManager {
                     .name("§b" + line.getDisplayName() + " §7(" + line.getId() + ")")
                     .lore(List.of(
                             msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))),
-                            line.isCircular() ? "§a環線" : "§7單向",
+                            line.isCircular() ? msg(player, "gui.line_list.circular") : msg(player, "gui.line_list.oneway"),
                             "",
                             msg(player, "gui.click_to_manage")))
                     .build());
@@ -411,12 +411,17 @@ public class GuiManager {
     }
 
     public void openLineDetail(Player player, String lineId, int stopPage) {
+        openLineDetail(player, lineId, stopPage, null);
+    }
+
+    public void openLineDetail(Player player, String lineId, int stopPage, String returnStopId) {
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) return;
 
         GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_DETAIL);
         holder.set("line_id", lineId);
         holder.set("stop_page", String.valueOf(stopPage));
+        if (returnStopId != null) holder.set("return_stop_id", returnStopId);
         Inventory inv = Bukkit.createInventory(holder, 54,
                 msg(player, "gui.line_detail.title", safePh(Map.of("name", line.getDisplayName()))));
         holder.setInventory(inv);
@@ -493,7 +498,7 @@ public class GuiManager {
             inv.setItem(slot, new ItemBuilder(inLine ? Material.BARRIER : Material.GOLD_BLOCK)
                     .name((inLine ? "§7" : "§a") + stop.getDisplayName())
                     .lore(inLine
-                            ? List.of("§7已在路線中")
+                            ? List.of(msg(player, "gui.add_stop.in_line"))
                             : List.of(msg(player, "gui.add_stop.click")))
                     .build());
             if (!inLine) holder.set("stop_" + slot, stop.getId());

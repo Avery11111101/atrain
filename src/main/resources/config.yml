@@ -1,7 +1,18 @@
 config-version: 1
 
 settings:
-  cart_speed: 0.35
+  # 巡航滿速（直線路段全速；可自由調整，數值越大越快）
+  cart_speed: 0.6
+  # 接近轉彎 / 上下坡 / 非直線軌道時的減速上限
+  curve_speed: 0.4
+  # 轉彎 / 坡道「提前減速」的前方偵測格數（越大越早開始減速）
+  curve_lookahead: 5
+  # 插件控速 + 自動連結列車（true = 由插件掌管速度與連結；false = 純原版物理）
+  train_control: true
+  # 建議連結節數（參考值；相連車廂仍會整列連動，不會硬性拆列）
+  train_max_cars: 4
+  # 自動連結偵測距離（相鄰礦車中心距離在此範圍內視為同一列；過大會誤併鄰近他列）
+  train_couple_distance: 1.6
   cart_spawn_delay: 40
   cart_departure_delay: 80
   cart_despawn_delay: 20  # 空礦車刪除延遲（tick，20 = 1 秒）

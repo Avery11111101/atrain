@@ -134,6 +134,34 @@ public final class RailUtil {
         return dirs.isEmpty() ? null : dirs.get(0).clone();
     }
 
+    /**
+     * 沿軌道路徑檢查前方是否被實體阻擋（車身空間 = 軌道上方一格）。
+     * 會追蹤高度變化，只看自身路徑，避免立體交叉誤判上/下層結構為障礙。
+     */
+    public static boolean isRailPathBlocked(Location loc, Vector direction, int lookahead) {
+        if (direction == null) return false;
+        Vector flat = direction.clone();
+        flat.setY(0);
+        if (flat.lengthSquared() < 0.001) return false;
+        Vector step = dominantAxis(flat.normalize());
+
+        Block current = findRailBlock(loc);
+        if (current == null) return false;
+        for (int i = 1; i <= lookahead; i++) {
+            Block base = current.getRelative(
+                    (int) step.getX(), (int) step.getY(), (int) step.getZ());
+            Block next = railAtColumn(base);
+            if (next == null) {
+                // 軌道到盡頭：正前方車身高度有實體牆才算阻擋
+                return base.getType().isSolid() && !isRailMaterial(base.getType());
+            }
+            Block body = next.getRelative(BlockFace.UP);
+            if (body.getType().isSolid() && !isRailMaterial(body.getType())) return true;
+            current = next;
+        }
+        return false;
+    }
+
     public static boolean hasObstructionAhead(Location loc, Vector direction, double distance) {
         if (direction == null) return false;
         Vector norm = direction.clone();
@@ -147,6 +175,73 @@ public final class RailUtil {
         Block above = block.getRelative(BlockFace.UP);
         Block atEye = loc.clone().add(0, 0.5, 0).add(norm.clone().multiply(distance)).getBlock();
         return (atEye.getType().isSolid() && !isRailMaterial(atEye.getType()));
+    }
+
+    /** 該位置的軌道是否為爬升軌（上下坡），需保留原版 Y 分量以正常爬坡 */
+    public static boolean isAscendingRail(Location loc) {
+        Block rail = findRailBlock(loc);
+        if (rail == null) return false;
+        if (!(rail.getBlockData() instanceof Rail r)) return false;
+        return switch (r.getShape()) {
+            case ASCENDING_NORTH, ASCENDING_SOUTH, ASCENDING_EAST, ASCENDING_WEST -> true;
+            default -> false;
+        };
+    }
+
+    /** 該位置的軌道是否為轉彎（非直線）或上下坡（爬升軌） */
+    public static boolean isCurveOrSlopeRail(Location loc) {
+        return isCurveOrSlopeShape(findRailBlock(loc));
+    }
+
+    private static boolean isCurveOrSlopeShape(Block rail) {
+        if (rail == null || !(rail.getBlockData() instanceof Rail r)) return false;
+        return switch (r.getShape()) {
+            case SOUTH_EAST, SOUTH_WEST, NORTH_EAST, NORTH_WEST,
+                 ASCENDING_NORTH, ASCENDING_SOUTH, ASCENDING_EAST, ASCENDING_WEST -> true;
+            default -> false;
+        };
+    }
+
+    /** 取水平主軸單位方向，避免斜向探查誤跨到鄰軌 */
+    private static Vector dominantAxis(Vector v) {
+        if (Math.abs(v.getX()) >= Math.abs(v.getZ())) {
+            return new Vector(Math.signum(v.getX()), 0, 0);
+        }
+        return new Vector(0, 0, Math.signum(v.getZ()));
+    }
+
+    /** 在指定水平柱位找同層/上一層/下一層的軌道（處理爬升軌高度變化） */
+    private static Block railAtColumn(Block base) {
+        if (isRailMaterial(base.getType())) return base;
+        Block up = base.getRelative(BlockFace.UP);
+        if (isRailMaterial(up.getType())) return up;
+        Block down = base.getRelative(BlockFace.DOWN);
+        if (isRailMaterial(down.getType())) return down;
+        return null;
+    }
+
+    /**
+     * 從 loc 沿 direction「順著軌道路徑」逐格往前探查，若途中出現轉彎/上下坡則回傳 true。
+     * 會追蹤爬升軌造成的高度變化，且僅檢查自身路徑上的軌道，不會誤判上/下層立體交叉軌。
+     */
+    public static boolean curveOrSlopeAhead(Location loc, Vector direction, int lookahead) {
+        if (direction == null || direction.lengthSquared() < 0.001) return false;
+        Vector flat = direction.clone();
+        flat.setY(0);
+        if (flat.lengthSquared() < 0.001) return false;
+        Vector step = dominantAxis(flat.normalize());
+
+        Block current = findRailBlock(loc);
+        if (current == null) return false;
+        for (int i = 1; i <= lookahead; i++) {
+            Block base = current.getRelative(
+                    (int) step.getX(), (int) step.getY(), (int) step.getZ());
+            Block next = railAtColumn(base);
+            if (next == null) return false; // 路徑到此結束
+            if (isCurveOrSlopeShape(next)) return true;
+            current = next;
+        }
+        return false;
     }
 
     public static boolean isPoweredRail(Location loc) {

@@ -41,6 +41,9 @@ stop.display_rescanned: "<green>已重新掃描鑽石顯示塊，共 <gold>{coun
 
 station.display_info: "§7上一站: §f{prev} §8| §a本站: §f{current} §8| §7下一站: §f{next}"
 
+train.dwelling: "§e列車停靠中… §f{sec} §e秒後發車"
+train.departing: "§a列車發車！"
+
 cart.spawned: "<green><bold>列車已進站：</bold><white>{stop}<green>，歡迎搭乘！"
 cart.already_nearby: "<yellow>站內已有礦車，請直接上車。"
 cart.need_station: "<red>此處尚未註冊站點，請先 §e蹲下右鍵 §7建站。"

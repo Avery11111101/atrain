@@ -29,6 +29,8 @@ public class EmptyCartListener implements Listener {
     public void onExit(VehicleExitEvent event) {
         if (!(event.getVehicle() instanceof RideableMinecart cart)) return;
         if (TrainTaskRegistry.get(cart) != null) return;
+        // 列車控速啟用時，站內礦車視為列車車廂，不自動刪除以免拆散列車
+        if (plugin.getConfigManager().isTrainControlEnabled()) return;
         if (!plugin.getCartSpawnManager().isManagedStationCart(cart)) return;
 
         Bukkit.getScheduler().runTask(plugin, () -> {

@@ -33,11 +33,14 @@ public class StationDisplayListener implements Listener {
         Player player = event.getPlayer();
         Stop stop = plugin.getStopManager().getStopByDisplay(event.getTo());
         if (stop == null) {
-            lastStopId.remove(player.getUniqueId());
+            if (lastStopId.remove(player.getUniqueId()) != null) {
+                player.sendActionBar(net.kyori.adventure.text.Component.empty());
+            }
             return;
         }
-        if (stop.getId().equals(lastStopId.get(player.getUniqueId()))) return;
-        lastStopId.put(player.getUniqueId(), stop.getId());
+        String cacheKey = stop.getId() + "|" + (stop.isOnReturnPlatform(event.getTo()) ? "R" : "F");
+        if (cacheKey.equals(lastStopId.get(player.getUniqueId()))) return;
+        lastStopId.put(player.getUniqueId(), cacheKey);
         sendDisplay(player, stop);
     }
 
@@ -57,6 +60,7 @@ public class StationDisplayListener implements Listener {
     }
 
     private void sendDisplay(Player player, Stop stop) {
+        if (!plugin.getConfigManager().isActionbarEnabled()) return;
         var lang = plugin.getLanguageManager();
         StringBuilder text = new StringBuilder(lang.get(player, "station.display_info", Map.of(
                 "prev", TextUtil.escapePlain(plugin.getStopManager().resolveDisplayPrev(stop, player.getLocation())),
