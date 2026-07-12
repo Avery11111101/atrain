@@ -140,7 +140,9 @@ public final class AtrainPlugin extends JavaPlugin {
     public void reloadAll() {
         if (trainController != null) trainController.clearAll();
         if (cinematicTransitManager != null) cinematicTransitManager.clearAll();
-        if (routeRecordingManager != null) routeRecordingManager.clearAll();
+        if (routeRecordingManager != null) {
+            routeRecordingManager.stopAllForReload();
+        }
         if (routeRecordingManager != null) routeRecordingManager.start();
         if (vehicleListener != null) vehicleListener.getHangRailHandler().restoreAll();
         stationAutoStopListener.clearAll();

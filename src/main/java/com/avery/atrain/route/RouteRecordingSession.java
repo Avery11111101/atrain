@@ -30,19 +30,30 @@ public final class RouteRecordingSession {
     private Location lastSampleLoc;
     private final List<RoutePoint> currentSegmentPoints = new ArrayList<>();
     private boolean awaitingCart;
+    private boolean everHadCart;
+    private boolean notifiedCartLost;
     private boolean ended;
     private boolean autoFinished;
     private boolean dwelling;
     private int dwellTicksRemaining;
     private float savedMaxSpeed;
+    private List<RoutePoint> overwriteBackup;
+    private boolean overwriteApplied;
+    private boolean notifiedDwellWait;
 
     RouteRecordingSession(AtrainPlugin plugin, Player player, String lineId,
-                          int segmentIndex, TravelDirection direction) {
+                          int segmentIndex, TravelDirection direction, boolean clearOnFirstSample) {
         this.plugin = plugin;
         this.player = player;
         this.lineId = lineId;
         this.segmentIndex = segmentIndex;
         this.direction = direction != null ? direction : TravelDirection.FORWARD;
+        if (clearOnFirstSample) {
+            Line line = plugin.getLineManager().getLine(lineId);
+            if (line != null) {
+                overwriteBackup = new ArrayList<>(line.getSegmentPoints(segmentIndex, this.direction));
+            }
+        }
     }
 
     String getLineId() { return lineId; }
@@ -72,6 +83,11 @@ public final class RouteRecordingSession {
         currentSegmentPoints.clear();
     }
 
+    void detachCart() {
+        cart = null;
+        awaitingCart = true;
+    }
+
     void attachCart(RideableMinecart cart, Stop spawnStop) {
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null || spawnStop == null) return;
@@ -84,6 +100,8 @@ public final class RouteRecordingSession {
 
         this.cart = cart;
         awaitingCart = false;
+        everHadCart = true;
+        notifiedCartLost = false;
         lastSampleLoc = cart.getLocation().clone();
         sampleNow(cart.getLocation());
     }
@@ -99,21 +117,65 @@ public final class RouteRecordingSession {
 
     void discardCurrentSegment() {
         currentSegmentPoints.clear();
+        restoreOverwriteBackup();
+    }
+
+    private void restoreOverwriteBackup() {
+        if (overwriteBackup == null) return;
+        if (overwriteApplied) {
+            Line line = plugin.getLineManager().getLine(lineId);
+            if (line != null) {
+                if (overwriteBackup.isEmpty()) {
+                    line.clearSegment(segmentIndex, direction);
+                } else {
+                    line.setSegmentPoints(segmentIndex, direction, new ArrayList<>(overwriteBackup));
+                }
+                plugin.getDataStore().save();
+            }
+        }
+        overwriteBackup = null;
+        overwriteApplied = false;
+    }
+
+    private void maybeApplyOverwrite() {
+        if (overwriteBackup == null || overwriteApplied) return;
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+        line.clearSegment(segmentIndex, direction);
+        overwriteApplied = true;
     }
 
     boolean tick(long serverTick) {
         if (ended || !player.isOnline()) return false;
-        if (!hasCart()) return true;
-        if (!cart.getPassengers().contains(player)) return true;
+        if (!hasCart()) {
+            if (everHadCart && !notifiedCartLost) {
+                notifiedCartLost = true;
+                awaitingCart = true;
+                currentSegmentPoints.clear();
+                lastSampleLoc = null;
+                TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cart_lost"));
+            }
+            return true;
+        }
 
         if (dwelling) {
             holdCartStill();
+            if (!cart.getPassengers().contains(player)) {
+                if (!notifiedDwellWait) {
+                    notifiedDwellWait = true;
+                    TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_dwell_board"));
+                }
+                return !autoFinished;
+            }
+            notifiedDwellWait = false;
             dwellTicksRemaining--;
             if (dwellTicksRemaining <= 0) {
                 finishDwellAndAdvance();
             }
             return !autoFinished;
         }
+
+        if (!cart.getPassengers().contains(player)) return true;
 
         if (!RailUtil.isOnRail(cart.getLocation())) return true;
 
@@ -138,6 +200,7 @@ public final class RouteRecordingSession {
     }
 
     private void sampleNow(Location loc) {
+        maybeApplyOverwrite();
         Location snapped = RailUtil.snapToRailCenter(loc);
         currentSegmentPoints.add(new RoutePoint(snapped));
         lastSampleLoc = snapped.clone();
@@ -227,6 +290,8 @@ public final class RouteRecordingSession {
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) return;
         line.setSegmentPoints(segmentIndex, direction, new ArrayList<>(currentSegmentPoints));
+        overwriteBackup = null;
+        overwriteApplied = false;
         plugin.getDataStore().save();
     }
 

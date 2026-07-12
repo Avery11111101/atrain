@@ -15,8 +15,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.minecart.RideableMinecart;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** 分段路線錄製：站點到站點，到站自動接下一段 */
@@ -24,6 +27,7 @@ public final class RouteRecordingManager {
 
     private final AtrainPlugin plugin;
     private final Map<UUID, RouteRecordingSession> byPlayer = new HashMap<>();
+    private final Set<UUID> pendingRecordingCarts = new HashSet<>();
     private BukkitTask tickTask;
 
     public RouteRecordingManager(AtrainPlugin plugin) {
@@ -56,6 +60,7 @@ public final class RouteRecordingManager {
 
     public boolean isRecordingCart(UUID cartId) {
         if (cartId == null) return false;
+        if (pendingRecordingCarts.contains(cartId)) return true;
         for (RouteRecordingSession s : byPlayer.values()) {
             if (s.ownsCart(cartId)) return true;
         }
@@ -117,10 +122,10 @@ public final class RouteRecordingManager {
         }
 
         if (clearSegment) {
-            line.clearSegment(segmentIndex, dir);
+            // 延後至首次採樣時覆寫，取消錄製可還原舊軌跡
         }
 
-        RouteRecordingSession session = new RouteRecordingSession(plugin, player, lineId, segmentIndex, dir);
+        RouteRecordingSession session = new RouteRecordingSession(plugin, player, lineId, segmentIndex, dir, clearSegment);
         byPlayer.put(player.getUniqueId(), session);
         session.beginPending();
 
@@ -164,11 +169,16 @@ public final class RouteRecordingManager {
 
         if (session.hasCart()) {
             RideableMinecart existing = session.getCart();
-            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cart_exists"));
-            if (plugin.getConfigManager().isCartSpawnAutoMount() && existing != null) {
-                mountNextTick(player, existing);
+            double radius = plugin.getConfigManager().getCartSpawnRadius();
+            if (existing != null && existing.isValid() && !existing.isDead()
+                    && player.getLocation().distanceSquared(existing.getLocation()) <= radius * radius * 4) {
+                TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cart_exists"));
+                if (plugin.getConfigManager().isCartSpawnAutoMount()) {
+                    mountNextTick(player, existing);
+                }
+                return true;
             }
-            return true;
+            session.detachCart();
         }
 
         World world = rail.getWorld();
@@ -180,19 +190,26 @@ public final class RouteRecordingManager {
         Location spawnLoc = rail.getLocation().add(0.5, 0.0625, 0.5);
         double radius = plugin.getConfigManager().getCartSpawnRadius();
         for (var entity : world.getNearbyEntities(spawnLoc, radius, radius, radius)) {
-            if (!(entity instanceof Minecart) || !entity.isValid() || entity.isDead()) continue;
-            TextUtil.send(player, plugin.getLanguageManager().get(player, "cart.already_nearby"));
-            if (entity instanceof RideableMinecart rideable
-                    && plugin.getConfigManager().isCartSpawnAutoMount()) {
-                plugin.getCartSpawnManager().cancelDespawn(rideable.getUniqueId());
-                session.attachCart(rideable, stop);
+            if (!(entity instanceof RideableMinecart rideable) || !entity.isValid() || entity.isDead()) continue;
+            plugin.getCartSpawnManager().cancelDespawn(rideable.getUniqueId());
+            session.attachCart(rideable, stop);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cart_exists"));
+            if (plugin.getConfigManager().isCartSpawnAutoMount()) {
                 mountNextTick(player, rideable);
             }
-            return false;
+            return true;
         }
 
-        RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> entity.setGravity(true));
-        session.attachCart(cart, stop);
+        RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> {
+            entity.setGravity(true);
+            entity.setMaxSpeed((float) plugin.getConfigManager().getCartSpeed());
+            pendingRecordingCarts.add(entity.getUniqueId());
+        });
+        try {
+            session.attachCart(cart, stop);
+        } finally {
+            pendingRecordingCarts.remove(cart.getUniqueId());
+        }
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cart_spawned",
                 Map.of("stop", TextUtil.escapePlain(stop.getDisplayName()))));
 
@@ -281,7 +298,23 @@ public final class RouteRecordingManager {
             s.end();
         }
         byPlayer.clear();
+        pendingRecordingCarts.clear();
         stop();
+    }
+
+    /** 管理員 reload 前儲存並結束所有錄製 */
+    public void stopAllForReload() {
+        for (var entry : new ArrayList<>(byPlayer.entrySet())) {
+            RouteRecordingSession session = entry.getValue();
+            session.saveCurrentSegmentAndFinish();
+            session.end();
+            Player p = plugin.getServer().getPlayer(entry.getKey());
+            if (p != null && p.isOnline()) {
+                TextUtil.send(p, plugin.getLanguageManager().get(p, "route.recording_stop_reload"));
+            }
+        }
+        byPlayer.clear();
+        pendingRecordingCarts.clear();
     }
 
     private String formatLineName(String lineId) {

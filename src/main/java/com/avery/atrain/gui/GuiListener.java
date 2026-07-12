@@ -324,6 +324,7 @@ public class GuiListener implements Listener {
             return;
         }
         if (slot == GuiSlots.CREATE) {
+            if (blockLineEditDuringRecording(player, lineId)) return;
             gui.openLineAddStop(player, lineId, 0);
             return;
         }
@@ -364,25 +365,38 @@ public class GuiListener implements Listener {
                 if (stopId == null) return;
                 Stop stop = plugin.getStopManager().getStop(stopId);
                 if (stop == null) return;
-                if (event.getClick() == ClickType.LEFT) {
+                if (isPlainLeftClick(event)) {
                     teleportToStop(player, stop);
                     return;
                 }
-                if (event.getClick() == ClickType.RIGHT) {
+                if (isPlainRightClick(event)) {
                     gui.openStationEdit(player, stopId);
                     return;
                 }
-                if (event.getClick() == ClickType.SHIFT_LEFT) {
-                    plugin.getLineManager().moveStopInLine(lineId, stopId, -1);
+                if (isShiftLeftClick(event)) {
+                    if (blockLineEditDuringRecording(player, lineId)) return;
+                    if (plugin.getLineManager().moveStopInLine(lineId, stopId, -1)) {
+                        TextUtil.send(player, lang(player, "line.stop_moved_up",
+                                Map.of("stop", stop.getDisplayName())));
+                    } else {
+                        TextUtil.send(player, lang(player, "line.stop_move_failed"));
+                    }
                     gui.openLineDetail(player, lineId, stopPage);
                     return;
                 }
-                if (event.getClick() == ClickType.SHIFT_RIGHT) {
-                    plugin.getLineManager().moveStopInLine(lineId, stopId, 1);
+                if (isShiftRightClick(event)) {
+                    if (blockLineEditDuringRecording(player, lineId)) return;
+                    if (plugin.getLineManager().moveStopInLine(lineId, stopId, 1)) {
+                        TextUtil.send(player, lang(player, "line.stop_moved_down",
+                                Map.of("stop", stop.getDisplayName())));
+                    } else {
+                        TextUtil.send(player, lang(player, "line.stop_move_failed"));
+                    }
                     gui.openLineDetail(player, lineId, stopPage);
                     return;
                 }
                 if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+                    if (blockLineEditDuringRecording(player, lineId)) return;
                     String stopName = stop.getDisplayName();
                     gui.openConfirm(player, "remove_stop_from_line", stopId + "|" + lineId,
                             lang(player, "gui.confirm.remove_stop_from_line",
@@ -416,6 +430,13 @@ public class GuiListener implements Listener {
         }
         String lineId = holder.get("line_" + slot);
         if (lineId != null) {
+            var rm = plugin.getRouteRecordingManager();
+            if (rm != null && rm.isRecording(player) && lineId.equals(rm.getRecordingLineId(player))) {
+                player.closeInventory();
+                rm.stop(player);
+                gui.openRecordSelect(player, parsePage(holder));
+                return;
+            }
             gui.openRecordSegmentSelect(player, lineId);
         }
     }
@@ -432,7 +453,9 @@ public class GuiListener implements Listener {
 
         TravelDirection direction = TravelDirection.fromString(holder.get("direction"));
         var rm = plugin.getRouteRecordingManager();
-        boolean recordingThis = rm != null && rm.isRecordingLine(player, lineId, direction);
+        boolean recordingLine = rm != null && rm.isRecording(player) && lineId.equals(rm.getRecordingLineId(player));
+        TravelDirection activeDir = recordingLine ? rm.getRecordingDirection(player) : direction;
+        int segPage = parseInt(holder.get("seg_page"), 0);
 
         Inventory inv = holder.getInventory();
         if (isBackSlot(inv, slot)) {
@@ -441,24 +464,35 @@ public class GuiListener implements Listener {
         }
 
         if (slot == 2) {
-            gui.openRecordSegmentSelect(player, lineId, TravelDirection.FORWARD);
+            gui.openRecordSegmentSelect(player, lineId, TravelDirection.FORWARD, segPage);
             return;
         }
         if (slot == 6) {
-            gui.openRecordSegmentSelect(player, lineId, TravelDirection.REVERSE);
+            gui.openRecordSegmentSelect(player, lineId, TravelDirection.REVERSE, segPage);
             return;
         }
 
-        if (slot == 38 && recordingThis) {
+        if (slot == 38 && recordingLine) {
             player.closeInventory();
             rm.stop(player);
-            gui.openRecordSegmentSelect(player, lineId, direction);
+            gui.openRecordSegmentSelect(player, lineId, activeDir, segPage);
             return;
         }
-        if (slot == 42 && recordingThis) {
+        if (slot == 42 && recordingLine) {
             player.closeInventory();
             rm.cancel(player);
-            gui.openRecordSegmentSelect(player, lineId, direction);
+            gui.openRecordSegmentSelect(player, lineId, activeDir, segPage);
+            return;
+        }
+
+        if (slot == GuiSlots.PREV_PAGE) {
+            if (segPage > 0) gui.openRecordSegmentSelect(player, lineId, direction, segPage - 1);
+            return;
+        }
+        if (slot == GuiSlots.NEXT_PAGE) {
+            if ((segPage + 1) * 12 < line.getSegmentCount()) {
+                gui.openRecordSegmentSelect(player, lineId, direction, segPage + 1);
+            }
             return;
         }
 
@@ -467,13 +501,13 @@ public class GuiListener implements Listener {
         int segmentIndex = parseInt(segKey, -1);
         if (segmentIndex < 0) return;
 
-        if (recordingThis) {
+        if (recordingLine) {
             TextUtil.send(player, lang(player, "route.recording_must_stop_first"));
             return;
         }
         if (rm != null && rm.isRecording(player)) {
             TextUtil.send(player, lang(player, "route.recording_other_line",
-                    Map.of("line", rm.getRecordingLineId(player))));
+                    Map.of("line", formatRecordingLineName(rm.getRecordingLineId(player)))));
             return;
         }
 
@@ -490,8 +524,23 @@ public class GuiListener implements Listener {
 
         player.closeInventory();
         if (rm != null && rm.start(player, lineId, segmentIndex, direction, true)) {
-            gui.openRecordSegmentSelect(player, lineId, direction);
+            gui.openRecordSegmentSelect(player, lineId, direction, segPage);
         }
+    }
+
+    private boolean blockLineEditDuringRecording(Player player, String lineId) {
+        var rm = plugin.getRouteRecordingManager();
+        if (rm != null && rm.isRecording(player) && lineId.equals(rm.getRecordingLineId(player))) {
+            TextUtil.send(player, lang(player, "route.recording_line_locked"));
+            return true;
+        }
+        return false;
+    }
+
+    private String formatRecordingLineName(String lineId) {
+        if (lineId == null) return "?";
+        Line line = plugin.getLineManager().getLine(lineId);
+        return line != null ? line.getDisplayName() : lineId;
     }
 
     private String segmentLabel(Line line, int segmentIndex, TravelDirection direction, String part) {
@@ -531,6 +580,7 @@ public class GuiListener implements Listener {
         }
         String stopId = holder.get("stop_" + slot);
         if (stopId != null) {
+            if (blockLineEditDuringRecording(player, lineId)) return;
             plugin.getLineManager().addStopToLine(lineId, stopId, -1);
             Stop stop = plugin.getStopManager().getStop(stopId);
             String stopName = stop != null ? stop.getDisplayName() : stopId;
@@ -661,6 +711,7 @@ public class GuiListener implements Listener {
                 return;
             }
             String[] parts = holder.get("target_id").split("\\|", 2);
+            if (parts.length == 2 && blockLineEditDuringRecording(player, parts[1])) return;
             if (parts.length == 2) {
                 plugin.getLineManager().removeStopFromLine(parts[1], parts[0]);
                 Stop stop = plugin.getStopManager().getStop(parts[0]);
@@ -714,6 +765,22 @@ public class GuiListener implements Listener {
         }
         else if ("main".equals(type)) gui.openMain(player);
         else gui.openMain(player);
+    }
+
+    private boolean isPlainLeftClick(InventoryClickEvent event) {
+        return event.getClick().isLeftClick() && !event.isShiftClick();
+    }
+
+    private boolean isPlainRightClick(InventoryClickEvent event) {
+        return event.getClick().isRightClick() && !event.isShiftClick();
+    }
+
+    private boolean isShiftLeftClick(InventoryClickEvent event) {
+        return event.isShiftClick() && event.getClick().isLeftClick();
+    }
+
+    private boolean isShiftRightClick(InventoryClickEvent event) {
+        return event.isShiftClick() && event.getClick().isRightClick();
     }
 
     private int parsePage(GuiHolder holder) {

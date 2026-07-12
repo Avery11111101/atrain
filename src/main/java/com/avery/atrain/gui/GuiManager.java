@@ -159,8 +159,12 @@ public class GuiManager {
         openRecordSegmentSelect(player, lineId, TravelDirection.FORWARD);
     }
 
-    /** 選擇要錄製的路段（站點→站點），去程／回程獨立 */
     public void openRecordSegmentSelect(Player player, String lineId, TravelDirection direction) {
+        openRecordSegmentSelect(player, lineId, direction, 0);
+    }
+
+    /** 選擇要錄製的路段（站點→站點），去程／回程獨立 */
+    public void openRecordSegmentSelect(Player player, String lineId, TravelDirection direction, int segPage) {
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) return;
 
@@ -169,13 +173,17 @@ public class GuiManager {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.RECORD_SEGMENT);
         holder.set("line_id", lineId);
         holder.set("direction", dir.name());
+        holder.set("seg_page", String.valueOf(Math.max(0, segPage)));
         Inventory inv = Bukkit.createInventory(holder, 54,
                 msg(player, "gui.record_segment.title", safePh(Map.of("name", line.getDisplayName()))));
         holder.setInventory(inv);
 
         var rm = plugin.getRouteRecordingManager();
-        boolean recordingThis = rm != null && rm.isRecordingLine(player, lineId, dir);
-        int activeSeg = recordingThis && rm != null ? rm.getRecordingSegmentIndex(player) : -1;
+        boolean recordingLine = rm != null && rm.isRecording(player) && lineId.equals(rm.getRecordingLineId(player));
+        TravelDirection activeDir = recordingLine ? rm.getRecordingDirection(player) : dir;
+        int activeSeg = recordingLine ? rm.getRecordingSegmentIndex(player) : -1;
+        int page = Math.max(0, segPage);
+        int segStart = page * 12;
 
         inv.setItem(2, new ItemBuilder(dir == TravelDirection.FORWARD ? Material.LIME_DYE : Material.GRAY_DYE)
                 .name(msg(player, "gui.record_segment.tab_forward"))
@@ -191,40 +199,45 @@ public class GuiManager {
         int segCount = line.getSegmentCount();
         int[] slots = {19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32};
 
-        for (int i = 0; i < slots.length && i < segCount; i++) {
-            String fromId = line.getSegmentFromStopId(i, dir);
-            String toId = line.getSegmentToStopId(i, dir);
+        for (int i = 0; i < slots.length; i++) {
+            int segIndex = segStart + i;
+            if (segIndex >= segCount) break;
+            String fromId = line.getSegmentFromStopId(segIndex, dir);
+            String toId = line.getSegmentToStopId(segIndex, dir);
             Stop from = fromId != null ? plugin.getStopManager().getStop(fromId) : null;
             Stop to = toId != null ? plugin.getStopManager().getStop(toId) : null;
             String fromName = from != null ? from.getDisplayName() : (fromId != null ? fromId : "?");
             String toName = to != null ? to.getDisplayName() : (toId != null ? toId : "?");
 
-            boolean recorded = line.hasSegment(i, dir);
-            boolean active = recordingThis && i == activeSeg;
+            boolean recorded = line.hasSegment(segIndex, dir);
+            boolean active = recordingLine && activeDir == dir && segIndex == activeSeg;
             Material icon = active ? Material.REDSTONE_BLOCK
                     : (recorded ? Material.LIME_CARPET : Material.GRAY_CARPET);
 
             List<String> lore = new ArrayList<>();
             lore.add(msg(player, "gui.record_segment.leg", Map.of(
                     "from", fromName, "to", toName,
-                    "index", String.valueOf(i + 1), "total", String.valueOf(segCount))));
+                    "index", String.valueOf(segIndex + 1), "total", String.valueOf(segCount))));
             if (recorded) {
                 lore.add(msg(player, "gui.record_segment.recorded",
-                        Map.of("count", String.valueOf(line.getSegmentPoints(i, dir).size()))));
+                        Map.of("count", String.valueOf(line.getSegmentPoints(segIndex, dir).size()))));
             }
             if (active) {
                 lore.add(msg(player, "gui.record_segment.recording_now"));
-            } else if (!recordingThis) {
+            } else if (!recordingLine) {
                 lore.add(msg(player, "gui.record_segment.click_start"));
             }
             lore.add("");
 
             inv.setItem(slots[i], new ItemBuilder(icon)
-                    .name("§e#" + (i + 1) + " §a" + fromName + " §7→ §a" + toName)
+                    .name("§e#" + (segIndex + 1) + " §a" + fromName + " §7→ §a" + toName)
                     .lore(lore)
                     .build());
-            holder.set("seg_" + slots[i], String.valueOf(i));
+            holder.set("seg_" + slots[i], String.valueOf(segIndex));
         }
+
+        if (page > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
+        if (segStart + 12 < segCount) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
 
         if (segCount == 0) {
             inv.setItem(22, new ItemBuilder(Material.BARRIER)
@@ -232,15 +245,19 @@ public class GuiManager {
                     .build());
         }
 
-        if (recordingThis) {
+        if (recordingLine) {
             var session = rm.getSession(player);
             int pts = session != null ? session.getCurrentPointCount() : 0;
+            String dirKey = activeDir == TravelDirection.REVERSE
+                    ? "route.direction_reverse" : "route.direction_forward";
             inv.setItem(4, new ItemBuilder(Material.WRITABLE_BOOK)
                     .name(msg(player, "gui.record_segment.status"))
                     .lore(List.of(
                             msg(player, "gui.record_segment.status_lore", Map.of(
                                     "index", String.valueOf(activeSeg + 1),
                                     "points", String.valueOf(pts))),
+                            msg(player, "gui.record_segment.recording_dir",
+                                    Map.of("dir", msg(player, dirKey))),
                             msg(player, "gui.record_segment.await_hint")))
                     .build());
             inv.setItem(38, new ItemBuilder(Material.LIME_WOOL)

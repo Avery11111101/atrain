@@ -65,7 +65,9 @@ public class Line {
     }
 
     public int getSegmentCount() {
-        return Math.max(0, stopIds.size() - 1);
+        int n = stopIds.size();
+        if (n < 2) return 0;
+        return circular ? n : n - 1;
     }
 
     public List<RoutePoint> getSegmentPoints(int segmentIndex) {
@@ -151,11 +153,15 @@ public class Line {
         int to = stopIds.indexOf(toStopId);
         if (from < 0 || to < 0) return -1;
         if (direction == TravelDirection.FORWARD) {
-            if (to != from + 1) return -1;
-            return from;
+            if (to == from + 1) return from;
+            if (circular && from == stopIds.size() - 1 && to == 0) return from;
+            return -1;
         }
-        if (from != to + 1) return -1;
-        return stopIds.size() - 1 - from;
+        if (from == to + 1) return stopIds.size() - 1 - from;
+        if (circular && from == 0 && to == stopIds.size() - 1) {
+            return stopIds.size() - 1;
+        }
+        return -1;
     }
 
     public String getSegmentFromStopId(int segmentIndex) {
@@ -171,17 +177,35 @@ public class Line {
         if (direction == TravelDirection.FORWARD) {
             return stopIds.get(segmentIndex);
         }
-        int fromIdx = stopIds.size() - 1 - segmentIndex;
-        return fromIdx >= 0 && fromIdx < stopIds.size() ? stopIds.get(fromIdx) : null;
+        if (segmentIndex < stopIds.size() - 1) {
+            int fromIdx = stopIds.size() - 1 - segmentIndex;
+            return fromIdx >= 0 && fromIdx < stopIds.size() ? stopIds.get(fromIdx) : null;
+        }
+        if (circular && segmentIndex == stopIds.size() - 1) {
+            return stopIds.get(0);
+        }
+        return null;
     }
 
     public String getSegmentToStopId(int segmentIndex, TravelDirection direction) {
         if (segmentIndex < 0 || segmentIndex >= getSegmentCount()) return null;
         if (direction == TravelDirection.FORWARD) {
-            return stopIds.get(segmentIndex + 1);
+            if (segmentIndex < stopIds.size() - 1) {
+                return stopIds.get(segmentIndex + 1);
+            }
+            if (circular && segmentIndex == stopIds.size() - 1) {
+                return stopIds.get(0);
+            }
+            return null;
         }
-        int toIdx = stopIds.size() - 2 - segmentIndex;
-        return toIdx >= 0 ? stopIds.get(toIdx) : null;
+        if (segmentIndex < stopIds.size() - 1) {
+            int toIdx = stopIds.size() - 2 - segmentIndex;
+            return toIdx >= 0 ? stopIds.get(toIdx) : null;
+        }
+        if (circular && segmentIndex == stopIds.size() - 1) {
+            return stopIds.get(stopIds.size() - 1);
+        }
+        return null;
     }
 
     public String getNextStopId(String currentStopId) {

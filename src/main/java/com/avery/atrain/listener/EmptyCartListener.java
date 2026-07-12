@@ -45,6 +45,11 @@ public class EmptyCartListener implements Listener {
         if (!(event.getVehicle() instanceof RideableMinecart cart)) return;
         if (!(event.getExited() instanceof Player)) return;
 
+        if (plugin.getRouteRecordingManager() != null
+                && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) {
+            return;
+        }
+
         if (plugin.getCinematicTransitManager() != null
                 && plugin.getCinematicTransitManager().isManaged(cart)) {
             plugin.getCinematicTransitManager().cancelCart(cart.getUniqueId());

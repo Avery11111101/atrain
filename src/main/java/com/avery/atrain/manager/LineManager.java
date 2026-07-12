@@ -107,18 +107,19 @@ public class LineManager {
         plugin.getDataStore().save();
     }
 
-    public void moveStopInLine(String lineId, String stopId, int delta) {
+    public boolean moveStopInLine(String lineId, String stopId, int delta) {
         Line line = getLine(lineId);
-        if (line == null) return;
+        if (line == null) return false;
         List<String> ids = line.getStopIds();
         int idx = ids.indexOf(stopId);
-        if (idx < 0) return;
+        if (idx < 0) return false;
         int newIdx = idx + delta;
-        if (newIdx < 0 || newIdx >= ids.size()) return;
+        if (newIdx < 0 || newIdx >= ids.size()) return false;
         String item = ids.remove(idx);
         ids.add(newIdx, item);
         line.clearAllSegments();
         plugin.getDataStore().save();
+        return true;
     }
 
     public List<Line> getLinesAtStop(String stopId) {

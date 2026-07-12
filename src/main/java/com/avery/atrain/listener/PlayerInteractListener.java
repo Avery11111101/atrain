@@ -58,6 +58,11 @@ public class PlayerInteractListener implements Listener {
 
         Player player = event.getPlayer();
         if (player.isSneaking()) {
+            if (plugin.getRouteRecordingManager() != null
+                    && plugin.getRouteRecordingManager().isRecording(player)) {
+                handleCartSpawn(event, player, block);
+                return;
+            }
             handleStationEdit(event, player, block);
         } else {
             handleCartSpawn(event, player, block);
