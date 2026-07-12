@@ -39,6 +39,16 @@ public class StopManager {
         for (Stop stop : getAllStops()) {
             if (stop.containsInfoLocation(feet)) return stop;
         }
+        Block below = feet.getBlock();
+        Block stand = feet.clone().subtract(0, 1, 0).getBlock();
+        for (Block candidate : new Block[]{below, stand}) {
+            if (!StationUtil.isDisplayBlock(candidate.getType())) continue;
+            Stop adjacent = findStopAdjacentTo(candidate);
+            if (adjacent != null) {
+                rescanDisplayBlocks(adjacent);
+                return adjacent;
+            }
+        }
         return null;
     }
 
@@ -51,29 +61,134 @@ public class StopManager {
         return null;
     }
 
+    /** 方塊是否鄰近某站點的金磚月台（含鑽石顯示塊） */
+    public Stop findStopAdjacentTo(Block block) {
+        if (block == null || block.getWorld() == null) return null;
+        int x = block.getX(), y = block.getY(), z = block.getZ();
+        for (Stop stop : getAllStops()) {
+            if (!stop.getWorld().equals(block.getWorld().getName())) continue;
+            for (String gk : stop.getGoldBlocks()) {
+                int[] g = Stop.parseKey(gk);
+                if (g == null) continue;
+                if (Math.abs(g[0] - x) <= 1 && Math.abs(g[1] - y) <= 1 && Math.abs(g[2] - z) <= 1) {
+                    return stop;
+                }
+            }
+        }
+        return null;
+    }
+
     /** 從點擊的金磚/軌道掃描並建立或更新站點 */
-    public Stop registerFromBlock(Block clicked, String defaultName) {
+    public RegisterResult registerFromBlock(Block clicked, String defaultName) {
         Block gold = StationUtil.resolveGoldBlock(clicked);
         if (gold == null) return null;
 
-        Stop existing = findStopOwningGold(gold);
-        if (existing != null) return existing;
-
         Set<String> goldKeys = StationUtil.scanConnectedGoldPlatform(gold);
         if (goldKeys.isEmpty()) return null;
+
+        List<Stop> touched = findAllStopsOwningAnyGold(goldKeys);
+        if (!touched.isEmpty()) {
+            return new RegisterResult(mergeStopsInto(touched.get(0), touched, goldKeys), false);
+        }
 
         String world = gold.getWorld().getName();
         Set<String> displayKeys = StationUtil.scanAdjacentDisplayBlocks(goldKeys, world);
 
         String id = "stop_" + UUID.randomUUID().toString().substring(0, 8);
-        Stop stop = new Stop(id, defaultName, world);
+        String name = (defaultName != null && !defaultName.isBlank()) ? defaultName : id;
+        Stop stop = new Stop(id, name, world);
         stop.setGoldBlocks(new ArrayList<>(goldKeys));
         stop.setDisplayBlocks(new ArrayList<>(displayKeys));
         stop.setDwellTimeTicks(plugin.getConfigManager().getDefaultDwellTime());
 
         plugin.getDataStore().getStops().put(id, stop);
         plugin.getDataStore().save();
-        return stop;
+        return new RegisterResult(stop, true);
+    }
+
+    public record RegisterResult(Stop stop, boolean created) {}
+
+    private List<Stop> findAllStopsOwningAnyGold(Set<String> goldKeys) {
+        List<Stop> found = new ArrayList<>();
+        for (Stop stop : getAllStops()) {
+            for (String key : goldKeys) {
+                if (stop.getGoldBlocks().contains(key)) {
+                    found.add(stop);
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    private Stop mergeStopsInto(Stop primary, List<Stop> allTouched, Set<String> scannedGold) {
+        Set<String> merged = new LinkedHashSet<>(scannedGold);
+        for (Stop stop : allTouched) {
+            merged.addAll(stop.getGoldBlocks());
+        }
+        primary.setGoldBlocks(new ArrayList<>(merged));
+        Set<String> displays = StationUtil.scanAdjacentDisplayBlocks(merged, primary.getWorld());
+        primary.setDisplayBlocks(new ArrayList<>(displays));
+
+        for (int i = 1; i < allTouched.size(); i++) {
+            mergeTextFields(primary, allTouched.get(i));
+        }
+
+        for (int i = 1; i < allTouched.size(); i++) {
+            Stop other = allTouched.get(i);
+            String otherId = other.getId();
+            plugin.getDataStore().getStops().remove(otherId);
+            for (Line line : plugin.getLineManager().getAllLines()) {
+                List<String> ids = line.getStopIds();
+                for (int j = 0; j < ids.size(); j++) {
+                    if (otherId.equals(ids.get(j))) {
+                        ids.set(j, primary.getId());
+                    }
+                }
+                for (int j = ids.size() - 1; j > 0; j--) {
+                    if (ids.get(j).equals(ids.get(j - 1))) {
+                        ids.remove(j);
+                    }
+                }
+            }
+        }
+        plugin.getDataStore().save();
+        return primary;
+    }
+
+    private void mergeTextFields(Stop primary, Stop other) {
+        if (isUnset(primary.getInfoPrev()) && !isUnset(other.getInfoPrev())) {
+            primary.setInfoPrev(other.getInfoPrev());
+        }
+        if (isUnset(primary.getInfoNext()) && !isUnset(other.getInfoNext())) {
+            primary.setInfoNext(other.getInfoNext());
+        }
+        if (isUnset(primary.getKeyStation()) && !isUnset(other.getKeyStation())) {
+            primary.setKeyStation(other.getKeyStation());
+        }
+        if (isUnset(primary.getKeyDirection()) && !isUnset(other.getKeyDirection())) {
+            primary.setKeyDirection(other.getKeyDirection());
+        }
+        if (primary.getDisplayName().equals(primary.getId()) && !other.getDisplayName().equals(other.getId())) {
+            primary.setDisplayName(other.getDisplayName());
+        }
+        if (!other.getAdminInfo().isBlank()) {
+            if (primary.getAdminInfo().isBlank()) {
+                primary.setAdminInfo(other.getAdminInfo());
+            } else if (!primary.getAdminInfo().contains(other.getAdminInfo())) {
+                primary.setAdminInfo(primary.getAdminInfo() + " | " + other.getAdminInfo());
+            }
+        }
+        primary.setDwellTimeTicks(Math.max(primary.getDwellTimeTicks(), other.getDwellTimeTicks()));
+    }
+
+    private boolean isUnset(String value) {
+        return value == null || value.isBlank() || "-".equals(value);
+    }
+
+    public Stop refreshFromBlock(Block clicked) {
+        RegisterResult result = registerFromBlock(clicked, null);
+        return result != null ? result.stop() : null;
     }
 
     public boolean createStop(Stop stop) {

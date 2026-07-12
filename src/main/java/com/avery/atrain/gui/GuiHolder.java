@@ -11,9 +11,8 @@ public class GuiHolder implements InventoryHolder {
 
     public enum Type {
         MAIN, TUTORIAL, TUTORIAL_CATEGORY,
-        LINE_LIST, LINE_DETAIL, LINE_ADD_STOP, LINE_MANAGE_STOPS,
-        STOP_LIST,
-        LINE_CHOICE, CONFIRM, LANGUAGE, STATION_EDIT
+        STOP_LIST, STATION_EDIT,
+        CONFIRM, LANGUAGE
     }
 
     private final Type type;

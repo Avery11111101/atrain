@@ -19,6 +19,16 @@ public class Stop {
     /** 鑽石塊座標 "x,y,z"（資訊顯示用） */
     private final List<String> displayBlocks = new ArrayList<>();
     private int dwellTimeTicks = 80;
+    /** 資訊顯示：上一站（純文字，與路線無關） */
+    private String infoPrev = "-";
+    /** 資訊顯示：下一站（純文字，與路線無關） */
+    private String infoNext = "-";
+    /** 重點站名稱（轉乘/主要目的地提示） */
+    private String keyStation = "-";
+    /** 行駛方向（如：北上、南下、東向） */
+    private String keyDirection = "-";
+    /** 管理員專用備註（僅管理員看得到） */
+    private String adminInfo = "";
     private List<String> lineIds = new ArrayList<>();
 
     public Stop() {}
@@ -46,8 +56,25 @@ public class Stop {
         if (displayBlocks != null) this.displayBlocks.addAll(displayBlocks);
     }
     public int getDwellTimeTicks() { return dwellTimeTicks; }
-    public void setDwellTimeTicks(int dwellTimeTicks) { this.dwellTimeTicks = Math.max(20, dwellTimeTicks); }
+    public void setDwellTimeTicks(int dwellTimeTicks) { this.dwellTimeTicks = Math.max(0, dwellTimeTicks); }
+    public String getInfoPrev() { return infoPrev != null && !infoPrev.isBlank() ? infoPrev : "-"; }
+    public void setInfoPrev(String infoPrev) { this.infoPrev = infoPrev; }
+    public String getInfoNext() { return infoNext != null && !infoNext.isBlank() ? infoNext : "-"; }
+    public void setInfoNext(String infoNext) { this.infoNext = infoNext; }
+    public String getKeyStation() { return blankToDash(keyStation); }
+    public void setKeyStation(String keyStation) { this.keyStation = keyStation; }
+    public String getKeyDirection() { return blankToDash(keyDirection); }
+    public void setKeyDirection(String keyDirection) { this.keyDirection = keyDirection; }
+    public String getAdminInfo() { return adminInfo != null ? adminInfo : ""; }
+    public void setAdminInfo(String adminInfo) { this.adminInfo = adminInfo; }
+    public boolean hasKeyInfo() {
+        return !"-".equals(getKeyStation()) || !"-".equals(getKeyDirection());
+    }
     public List<String> getLineIds() { return lineIds; }
+
+    private static String blankToDash(String value) {
+        return value != null && !value.isBlank() ? value : "-";
+    }
     public void setLineIds(List<String> lineIds) { this.lineIds = lineIds != null ? lineIds : new ArrayList<>(); }
 
     public static String key(int x, int y, int z) {

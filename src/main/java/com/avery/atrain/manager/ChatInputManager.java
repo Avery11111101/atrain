@@ -9,8 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatInputManager {
 
     public enum Type {
-        LINE_SPEED,
-        STOP_NAME
+        STOP_NAME,
+        STOP_INFO_PREV,
+        STOP_INFO_NEXT,
+        STOP_KEY_STATION,
+        STOP_KEY_DIRECTION,
+        STOP_ADMIN_INFO
     }
 
     public record Pending(Type type, String contextId) {}

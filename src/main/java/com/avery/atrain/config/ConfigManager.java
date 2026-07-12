@@ -64,6 +64,8 @@ public class ConfigManager {
         return mat;
     }
 
+    public boolean isAutoStopEnabled() { return config.getBoolean("settings.auto_stop", false); }
+    public boolean isStationDisplayEnabled() { return config.getBoolean("settings.station_display", true); }
     public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.35); }
     public int getSpawnDelay() { return config.getInt("settings.cart_spawn_delay", 40); }
     public int getDepartureDelay() { return config.getInt("settings.cart_departure_delay", 80); }
@@ -87,7 +89,7 @@ public class ConfigManager {
     public double getSampleDistance() { return config.getDouble("route_recording.sample_distance", 2.0); }
     public String getDefaultLanguage() { return config.getString("default_language", "zh_TW"); }
 
-    public boolean isHangRailEnabled() { return config.getBoolean("hang_rail.enabled", true); }
+    public boolean isHangRailEnabled() { return config.getBoolean("hang_rail.enabled", false); }
     public List<HangRailType> getHangRailTypes() { return hangRailTypes; }
 
     public void setHangRailEnabled(boolean enabled) {

@@ -21,6 +21,13 @@ public class TrainTaskRegistry {
         return cart == null ? null : tasks.get(cart.getUniqueId());
     }
 
+    public static void cancelAllTasks() {
+        for (TrainMovementTask task : new java.util.ArrayList<>(tasks.values())) {
+            task.cancel();
+        }
+        tasks.clear();
+    }
+
     public void cancelAll() {
         for (TrainMovementTask task : tasks.values()) task.cancel();
         tasks.clear();

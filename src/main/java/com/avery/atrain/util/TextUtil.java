@@ -14,21 +14,36 @@ public final class TextUtil {
 
     private TextUtil() {}
 
+    /** 語系模板著色（可含 MiniMessage） */
     public static String colorize(String text) {
         if (text == null) return "";
         if (text.contains("<")) {
-            return LEGACY.serialize(MINI.deserialize(text));
+            try {
+                return LEGACY.serialize(MINI.deserialize(text));
+            } catch (Exception e) {
+                return escapePlain(text);
+            }
         }
         return text.replace('&', '§');
     }
 
+    /** 玩家輸入的純文字，避免被當成 MiniMessage / 色碼破壞 GUI */
+    public static String escapePlain(String text) {
+        if (text == null) return "";
+        return text.replace("&", "＆").replace("<", "‹").replace(">", "›");
+    }
+
     public static void send(Player player, String message) {
         if (message == null || message.isEmpty()) return;
-        if (message.contains("<")) {
-            player.sendMessage(MINI.deserialize(message));
-        } else {
-            player.sendMessage(colorize(message));
+        if (message.contains("<") && message.contains(">")) {
+            try {
+                player.sendMessage(MINI.deserialize(message));
+                return;
+            } catch (Exception ignored) {
+                // fall through
+            }
         }
+        player.sendMessage(colorize(message));
     }
 
     public static String format(String template, Map<String, String> placeholders) {
@@ -40,7 +55,14 @@ public final class TextUtil {
     }
 
     public static Component component(String message) {
-        if (message.contains("<")) return MINI.deserialize(message);
+        if (message == null) return Component.empty();
+        if (message.contains("<")) {
+            try {
+                return MINI.deserialize(message);
+            } catch (Exception e) {
+                return LEGACY.deserialize(escapePlain(message));
+            }
+        }
         return LEGACY.deserialize(colorize(message));
     }
 }

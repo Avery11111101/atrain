@@ -15,8 +15,6 @@ public class PlayerQuitListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        var player = event.getPlayer();
-        plugin.getChatInputManager().clear(player);
-        plugin.getPlayerInteractListener().clearPlayerState(player.getUniqueId());
+        plugin.getChatInputManager().clear(event.getPlayer());
     }
 }

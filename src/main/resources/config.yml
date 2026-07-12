@@ -6,6 +6,8 @@ settings:
   cart_departure_delay: 80
   cart_despawn_delay: 20
   default_dwell_time: 80
+  auto_stop: false
+  station_display: true
 
 movement:
   # 移動模式：false = 原版軌道物理（只調 maxSpeed，適合動力軌上坡）
@@ -33,7 +35,7 @@ default_language: zh_TW
 
 # 懸浮軌道（參考 TC-HangRail，預設開啟）
 hang_rail:
-  enabled: true
+  enabled: false
   types:
     - block: IRON_BARS
       offset: -2

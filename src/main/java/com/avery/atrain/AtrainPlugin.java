@@ -10,6 +10,8 @@ import com.avery.atrain.i18n.LanguageManager;
 import com.avery.atrain.listener.ChatInputListener;
 import com.avery.atrain.listener.PlayerInteractListener;
 import com.avery.atrain.listener.PlayerQuitListener;
+import com.avery.atrain.listener.StationAutoStopListener;
+import com.avery.atrain.listener.StationBlockListener;
 import com.avery.atrain.listener.StationDisplayListener;
 import com.avery.atrain.listener.VehicleListener;
 import com.avery.atrain.manager.ChatInputManager;
@@ -18,16 +20,12 @@ import com.avery.atrain.manager.StopManager;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AtrainPlugin extends JavaPlugin {
 
     private static AtrainPlugin instance;
-    private NamespacedKey minecartKey;
-    private NamespacedKey lineKey;
-    private NamespacedKey stopKey;
 
     private ConfigManager configManager;
     private DataStore dataStore;
@@ -36,16 +34,13 @@ public final class AtrainPlugin extends JavaPlugin {
     private StopManager stopManager;
     private ChatInputManager chatInputManager;
     private GuiManager guiManager;
-    private TrainTaskRegistry trainTaskRegistry;
+    private StationAutoStopListener stationAutoStopListener;
     private PlayerInteractListener playerInteractListener;
     private VehicleListener vehicleListener;
 
     @Override
     public void onEnable() {
         instance = this;
-        minecartKey = new NamespacedKey(this, "train_minecart");
-        lineKey = new NamespacedKey(this, "line_id");
-        stopKey = new NamespacedKey(this, "stop_id");
 
         configManager = new ConfigManager(this);
         dataStore = new DataStore(this);
@@ -53,8 +48,8 @@ public final class AtrainPlugin extends JavaPlugin {
         lineManager = new LineManager(this);
         stopManager = new StopManager(this);
         chatInputManager = new ChatInputManager();
-        trainTaskRegistry = new TrainTaskRegistry();
         guiManager = new GuiManager(this);
+        stationAutoStopListener = new StationAutoStopListener(this);
 
         configManager.load();
         languageManager.load();
@@ -65,10 +60,12 @@ public final class AtrainPlugin extends JavaPlugin {
         playerInteractListener = new PlayerInteractListener(this);
         pm.registerEvents(vehicleListener, this);
         pm.registerEvents(playerInteractListener, this);
+        pm.registerEvents(stationAutoStopListener, this);
         pm.registerEvents(new ChatInputListener(this), this);
         pm.registerEvents(new PlayerQuitListener(this), this);
         pm.registerEvents(new StationDisplayListener(this), this);
-        pm.registerEvents(new GuiListener(this, playerInteractListener), this);
+        pm.registerEvents(new StationBlockListener(this), this);
+        pm.registerEvents(new GuiListener(this), this);
 
         var trainCmd = new TrainCommand(this);
         getCommand("train").setExecutor(trainCmd);
@@ -77,19 +74,20 @@ public final class AtrainPlugin extends JavaPlugin {
         getCommand("lang").setExecutor(langCmd);
         getCommand("lang").setTabCompleter(langCmd);
 
-        getLogger().info("atrain 已啟用 (Paper 1.21+)");
+        getLogger().info("atrain 已啟用 — 站點資訊顯示（零指令、蹲下右鍵操作）");
     }
 
     @Override
     public void onDisable() {
-        trainTaskRegistry.cancelAll();
+        stationAutoStopListener.clearAll();
+        TrainTaskRegistry.cancelAllTasks();
         dataStore.save();
         getLogger().info("atrain 已停用");
     }
 
     public void reloadAll() {
-        trainTaskRegistry.shutdownAll();
-        playerInteractListener.clearAllPendingSpawn();
+        stationAutoStopListener.clearAll();
+        TrainTaskRegistry.cancelAllTasks();
         chatInputManager.clearAll();
         dataStore.save();
         configManager.load();
@@ -102,9 +100,6 @@ public final class AtrainPlugin extends JavaPlugin {
 
     public static AtrainPlugin getInstance() { return instance; }
 
-    public NamespacedKey getMinecartKey() { return minecartKey; }
-    public NamespacedKey getLineKey() { return lineKey; }
-    public NamespacedKey getStopKey() { return stopKey; }
     public ConfigManager getConfigManager() { return configManager; }
     public DataStore getDataStore() { return dataStore; }
     public LanguageManager getLanguageManager() { return languageManager; }
@@ -112,6 +107,5 @@ public final class AtrainPlugin extends JavaPlugin {
     public StopManager getStopManager() { return stopManager; }
     public ChatInputManager getChatInputManager() { return chatInputManager; }
     public GuiManager getGuiManager() { return guiManager; }
-    public TrainTaskRegistry getTrainTaskRegistry() { return trainTaskRegistry; }
-    public PlayerInteractListener getPlayerInteractListener() { return playerInteractListener; }
+    public StationAutoStopListener getStationAutoStopListener() { return stationAutoStopListener; }
 }

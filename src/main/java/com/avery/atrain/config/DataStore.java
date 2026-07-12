@@ -63,6 +63,11 @@ public class DataStore {
             stop.setWorld(ss.getString("world", "world"));
             stop.setLineIds(new ArrayList<>(ss.getStringList("lines")));
             stop.setDwellTimeTicks(ss.getInt("dwell_time", plugin.getConfigManager().getDefaultDwellTime()));
+            stop.setInfoPrev(ss.getString("info_prev", "-"));
+            stop.setInfoNext(ss.getString("info_next", "-"));
+            stop.setKeyStation(ss.getString("key_station", "-"));
+            stop.setKeyDirection(ss.getString("key_direction", "-"));
+            stop.setAdminInfo(ss.getString("admin_info", ""));
             stop.setGoldBlocks(ss.getStringList("gold_blocks"));
             stop.setDisplayBlocks(ss.getStringList("display_blocks"));
             stops.put(id, stop);
@@ -99,6 +104,11 @@ public class DataStore {
             yaml.set(path + ".world", stop.getWorld());
             yaml.set(path + ".lines", stop.getLineIds());
             yaml.set(path + ".dwell_time", stop.getDwellTimeTicks());
+            yaml.set(path + ".info_prev", stop.getInfoPrev());
+            yaml.set(path + ".info_next", stop.getInfoNext());
+            yaml.set(path + ".key_station", stop.getKeyStation());
+            yaml.set(path + ".key_direction", stop.getKeyDirection());
+            yaml.set(path + ".admin_info", stop.getAdminInfo());
             yaml.set(path + ".gold_blocks", stop.getGoldBlocks());
             yaml.set(path + ".display_blocks", stop.getDisplayBlocks());
         }
