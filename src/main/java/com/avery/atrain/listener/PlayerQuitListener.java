@@ -18,5 +18,13 @@ public class PlayerQuitListener implements Listener {
         plugin.getChatInputManager().clear(event.getPlayer());
         plugin.getBindPlatformManager().clear(event.getPlayer());
         plugin.getCartSpawnManager().clearCooldown(event.getPlayer());
+        if (event.getPlayer().getVehicle() instanceof org.bukkit.entity.minecart.RideableMinecart cart
+                && plugin.getCinematicTransitManager() != null) {
+            plugin.getCinematicTransitManager().cancelCart(cart.getUniqueId());
+        }
+        if (plugin.getRouteRecordingManager() != null
+                && plugin.getRouteRecordingManager().isRecording(event.getPlayer())) {
+            plugin.getRouteRecordingManager().stop(event.getPlayer());
+        }
     }
 }

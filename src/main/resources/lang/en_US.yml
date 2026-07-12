@@ -3,6 +3,7 @@ lang-version: 1
 plugin.reload: "<green>atrain config reloaded."
 
 error.no_permission: "<red>You don't have permission."
+error.block_protected: "<red>This registered station/speed block can only be broken by admins."
 error.players_only: "<red>Players only."
 
 selection.corner1: "<green>Corner 1 set. Click corner 2 with golden axe."
@@ -36,7 +37,41 @@ stop.not_found: "<red>Stop not found: {id}"
 stop.name_prompt: "<yellow>Enter stop name (current: <gold>{name}<yellow>), type cancel to abort:"
 stop.name_set: "<green>Stop name set to <gold>{name}"
 stop.name_empty: "<red>Stop name cannot be empty."
-stop.display_rescanned: "<green>Rescanned display blocks: <gold>{count}"
+stop.display_rescanned: "<green>Cleared legacy diamond display block data."
+
+speed_block.speed_prompt: "<yellow>Enter target speed (now: <gold>{speed}<yellow>, range 0.05~2.0), cancel to abort:"
+speed_block.speed_set: "<green>Speed block set to <gold>{speed}"
+speed_block.speed_invalid: "<red>Please enter a valid number."
+speed_block.speed_range: "<red>Speed must be between 0.05 and 2.0."
+speed_block.not_found: "<red>Speed block not found."
+speed_block.need_rail_above: "<yellow>Place rail above the diamond block for carts to use this speed."
+speed_block.opening: "§bOpening speed settings…"
+speed_block.look_at_block: "<yellow>Look at a speed diamond block or rail above it."
+speed_block.not_target: "<red>No speed block found (need §fdiamond block§r with rail on top)."
+command.help_speed: "<gold>/train speed <white>- Edit speed block you're looking at"
+command.help_version: "<gold>/train version <white>- Check plugin version"
+command.version: "<green>atrain version: <gold>{version} <green>(speed blocks + /train speed)"
+speed_block.created: "<green>Speed block registered, default speed <gold>{speed}"
+
+gui.speed_block.title: "§b§lMinecart Speed Block"
+gui.speed_block.current: "§bTarget speed: §f{speed}"
+gui.speed_block.hint:
+  - "§7Diamond block directly below rail"
+  - "§7Carts on this rail use this speed"
+  - "§7Can speed up or slow down"
+gui.speed_block.slower: "§c§lSlower"
+gui.speed_block.slower_lore: "§7-0.05 each click"
+gui.speed_block.faster: "§a§lFaster"
+gui.speed_block.faster_lore: "§7+0.05 each click"
+gui.speed_block.speed_value: "§e§lSpeed: §f{speed}"
+gui.speed_block.speed_value_lore: "§7Click to type exact value"
+gui.speed_block.preset_slow: "§8§lSlow §7(0.20)"
+gui.speed_block.preset_cruise: "§7§lCruise §7(default)"
+gui.speed_block.preset_fast: "§6§lFast §7(boost)"
+gui.speed_block.ramp: "§dRamp blocks: §f{blocks}"
+gui.speed_block.ramp_lore: "§7Smooth transition over this many blocks ahead"
+gui.speed_block.ramp_down: "§c§l-1 block"
+gui.speed_block.ramp_up: "§a§l+1 block"
 station.display_info: "§7Prev: §f{prev} §8| §aNow: §f{current} §8| §7Next: §f{next}"
 
 train.dwelling: "§eDwelling… departing in §f{sec}s"
@@ -286,15 +321,16 @@ tutorial.autostop.steps:
   - "§fDeparture\n§7Auto-resumes speed after dwell"
   - "§fToggle\n§7config.yml → settings.auto_stop"
 
-tutorial.display.title: "§b§lInfo Display"
-tutorial.display.summary:
-  - "§7Independent of auto-stop"
-  - "§7Plain text display you configure"
-tutorial.display.steps:
-  - "§fWhere\n§7Stand on gold block or diamond block"
-  - "§fContent\n§7Previous / current / next stop"
-  - "§fSetup\n§7Enter prev/next names in station GUI"
-  - "§fToggle\n§7config.yml → settings.station_display"
+tutorial.speedblock.title: "§b§lSpeed Blocks"
+tutorial.speedblock.summary:
+  - "§7Diamond block under rail"
+  - "§7Speed up or slow down carts"
+tutorial.speedblock.steps:
+  - "§fPlacement\n§7Put diamond block directly below rail"
+  - "§fConfigure\n§7Sneak + right-click diamond or rail above"
+  - "§fAdjust\n§7Use GUI +/- or click to type exact speed"
+  - "§fRamp\n§7Smooth transition over N blocks before zone"
+  - "§fPriority\n§7Curves > speed block > powered rail > cruise"
 
 tutorial.line.title: "§b§lCreating Lines"
 tutorial.line.summary:

@@ -37,6 +37,8 @@ public class StationAutoStopListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCreate(VehicleCreateEvent event) {
         if (!(event.getVehicle() instanceof RideableMinecart cart)) return;
+        if (plugin.getRouteRecordingManager() != null
+                && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) return;
         if (plugin.getConfigManager().isTrainControlEnabled()) return;
         if (!plugin.getConfigManager().isAutoStopEnabled()) return;
         Stop on = plugin.getStopManager().getStopAtRail(cart.getLocation());
@@ -59,6 +61,8 @@ public class StationAutoStopListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMove(VehicleMoveEvent event) {
         if (!(event.getVehicle() instanceof RideableMinecart cart)) return;
+        if (plugin.getRouteRecordingManager() != null
+                && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) return;
         if (plugin.getConfigManager().isTrainControlEnabled()) return;
         if (!plugin.getConfigManager().isAutoStopEnabled()) return;
 

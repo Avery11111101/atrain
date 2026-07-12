@@ -3,6 +3,7 @@ lang-version: 1
 plugin.reload: "<green>atrain 設定を再読み込みしました。"
 
 error.no_permission: "<red>権限がありません。"
+error.block_protected: "<red>登録済みの駅/速度ブロックは管理者のみ破壊できます。"
 error.players_only: "<red>プレイヤーのみ使用可能です。"
 
 selection.corner1: "<green>コーナー1を設定しました。金の斧でコーナー2をクリック。"
@@ -35,7 +36,41 @@ stop.not_found: "<red>駅が見つかりません: {id}"
 stop.name_prompt: "<yellow>駅名を入力（現在: <gold>{name}<yellow>）、cancel で取消："
 stop.name_set: "<green>駅名を <gold>{name} <green>に設定しました"
 stop.name_empty: "<red>駅名を入力してください。"
-stop.display_rescanned: "<green>表示用ダイヤを再スキャン: <gold>{count} <green>個"
+stop.display_rescanned: "<green>旧ダイヤ表示ブロックデータをクリアしました。"
+
+speed_block.speed_prompt: "<yellow>目標速度を入力（現在: <gold>{speed}<yellow>、範囲 0.05~2.0）、cancel で取消："
+speed_block.speed_set: "<green>速度ブロックを <gold>{speed} <green>に設定"
+speed_block.speed_invalid: "<red>有効な数値を入力してください。"
+speed_block.speed_range: "<red>速度は 0.05 ~ 2.0 の範囲です。"
+speed_block.not_found: "<red>速度ブロックが見つかりません。"
+speed_block.need_rail_above: "<yellow>ダイヤブロックの真上にレールを敷いてください。"
+speed_block.opening: "§b速度設定を開いています…"
+speed_block.look_at_block: "<yellow>速度ブロックまたは上のレールを見てから実行してください。"
+speed_block.not_target: "<red>速度ブロックが見つかりません（§fダイヤブロック§r + 上にレール）。"
+command.help_speed: "<gold>/train speed <white>- 見ている速度ブロックを編集"
+command.help_version: "<gold>/train version <white>- プラグインバージョン確認"
+command.version: "<green>atrain バージョン: <gold>{version} <green>（速度ブロック対応）"
+speed_block.created: "<green>速度ブロック登録、初期速度 <gold>{speed}"
+
+gui.speed_block.title: "§b§lトロッコ速度ブロック"
+gui.speed_block.current: "§b目標速度: §f{speed}"
+gui.speed_block.hint:
+  - "§7レール真下のダイヤブロック"
+  - "§7このレール上のトロッコに適用"
+  - "§7加速・減速どちらも可能"
+gui.speed_block.slower: "§c§l減速"
+gui.speed_block.slower_lore: "§7クリックごとに -0.05"
+gui.speed_block.faster: "§a§l加速"
+gui.speed_block.faster_lore: "§7クリックごとに +0.05"
+gui.speed_block.speed_value: "§e§l速度: §f{speed}"
+gui.speed_block.speed_value_lore: "§7クリックで数値入力"
+gui.speed_block.preset_slow: "§8§l低速 §7(0.20)"
+gui.speed_block.preset_cruise: "§7§l巡航 §7(デフォルト)"
+gui.speed_block.preset_fast: "§6§l高速 §7(ブースト)"
+gui.speed_block.ramp: "§d遷移ブロック: §f{blocks}"
+gui.speed_block.ramp_lore: "§7進入前に滑らかに加減速するブロック数"
+gui.speed_block.ramp_down: "§c§l-1 ブロック"
+gui.speed_block.ramp_up: "§a§l+1 ブロック"
 station.display_info: "§7前: §f{prev} §8| §a現: §f{current} §8| §7次: §f{next}"
 
 train.dwelling: "§e停車中… §f{sec} §e秒後に発車"
@@ -270,15 +305,16 @@ tutorial.autostop.steps:
   - "§f発車\n§7時間経過後に自動で速度復帰"
   - "§f切替\n§7config.yml → settings.auto_stop"
 
-tutorial.display.title: "§b§l情報表示"
-tutorial.display.summary:
-  - "§7自動停車とは無関係"
-  - "§7自由に設定するテキスト表示"
-tutorial.display.steps:
-  - "§f表示位置\n§7金ブロックまたはダイヤブロックの上"
-  - "§f表示内容\n§7前駅 / 現駅 / 次駅"
-  - "§f設定方法\n§7駅 GUI で前後駅名を入力"
-  - "§f切替\n§7config.yml → settings.station_display"
+tutorial.speedblock.title: "§b§l速度ブロック"
+tutorial.speedblock.summary:
+  - "§7レール下のダイヤブロック"
+  - "§7通過時に加速・減速"
+tutorial.speedblock.steps:
+  - "§f配置\n§7レール真下にダイヤブロック"
+  - "§f設定\n§7しゃがみ+右クリックで GUI"
+  - "§f調整\n§7GUI の +/- または数値入力"
+  - "§f遷移\n§7進入前 N ブロックで滑らかに変化"
+  - "§f優先順位\n§7カーブ減速 > 速度ブロック > 充電レール > 巡航"
 
 tutorial.line.title: "§b§l路線の作成"
 tutorial.line.summary:

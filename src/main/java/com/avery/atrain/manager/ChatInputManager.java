@@ -16,7 +16,8 @@ public class ChatInputManager {
         STOP_KEY_DIRECTION,
         STOP_ADMIN_INFO,
         LINE_CREATE,
-        LINE_RENAME
+        LINE_RENAME,
+        SPEED_BLOCK_SPEED
     }
 
     public record Pending(Type type, String contextId) {}

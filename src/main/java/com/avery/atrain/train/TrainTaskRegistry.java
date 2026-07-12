@@ -21,6 +21,12 @@ public class TrainTaskRegistry {
         return cart == null ? null : tasks.get(cart.getUniqueId());
     }
 
+    public static void cancel(Minecart cart) {
+        if (cart == null) return;
+        TrainMovementTask task = tasks.remove(cart.getUniqueId());
+        if (task != null) task.cancel();
+    }
+
     public static void cancelAllTasks() {
         for (TrainMovementTask task : new java.util.ArrayList<>(tasks.values())) {
             task.cancel();

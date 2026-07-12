@@ -4,8 +4,10 @@ import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.model.Line;
 import com.avery.atrain.model.Stop;
+import com.avery.atrain.model.TravelDirection;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.minecart.RideableMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
@@ -47,7 +49,10 @@ public class GuiListener implements Listener {
             case LINE_LIST -> handleLineList(player, slot, holder, gui, event);
             case LINE_DETAIL -> handleLineDetail(player, slot, holder, gui, event);
             case LINE_ADD_STOP -> handleLineAddStop(player, slot, holder, gui);
+            case RECORD_SELECT -> handleRecordSelect(player, slot, holder, gui);
+            case RECORD_SEGMENT -> handleRecordSegment(player, slot, holder, gui);
             case LANGUAGE -> handleLanguage(player, slot, holder, gui);
+            case SPEED_BLOCK_EDIT -> handleSpeedBlockEdit(player, slot, holder, gui);
             case CONFIRM -> handleConfirm(player, slot, holder, gui);
         }
     }
@@ -68,6 +73,13 @@ public class GuiListener implements Listener {
             case 10 -> gui.openTutorial(player);
             case 13 -> gui.openStopList(player, 0);
             case 16 -> gui.openLineList(player, 0);
+            case 22 -> {
+                if (!player.hasPermission("atrain.station.edit")) {
+                    TextUtil.send(player, lang(player, "error.no_permission"));
+                    return;
+                }
+                gui.openRecordSelect(player, 0);
+            }
             case 30 -> gui.openLanguage(player);
             case 32 -> {
                 if (!player.hasPermission("atrain.admin")) {
@@ -159,10 +171,22 @@ public class GuiListener implements Listener {
                 plugin.getDataStore().save();
                 gui.openStationEdit(player, stopId);
             }
-            case 33 -> {
-                plugin.getStopManager().rescanDisplayBlocks(stop);
-                TextUtil.send(player, lang(player, "stop.display_rescanned",
-                        Map.of("count", String.valueOf(stop.getDisplayBlocks().size()))));
+            case 30 -> {
+                if (!plugin.getConfigManager().isCinematicTransitEnabled()) break;
+                Line line = plugin.getStopManager().resolveDisplayLine(stop);
+                if (line == null) break;
+                int cur = stop.getTravelSecondsToNext(line.getId(), plugin.getConfigManager().getDefaultSegmentSeconds());
+                stop.setTravelSecondsToNext(line.getId(), cur - 5);
+                plugin.getDataStore().save();
+                gui.openStationEdit(player, stopId);
+            }
+            case 32 -> {
+                if (!plugin.getConfigManager().isCinematicTransitEnabled()) break;
+                Line line = plugin.getStopManager().resolveDisplayLine(stop);
+                if (line == null) break;
+                int cur = stop.getTravelSecondsToNext(line.getId(), plugin.getConfigManager().getDefaultSegmentSeconds());
+                stop.setTravelSecondsToNext(line.getId(), cur + 5);
+                plugin.getDataStore().save();
                 gui.openStationEdit(player, stopId);
             }
             case 28 -> {
@@ -320,6 +344,7 @@ public class GuiListener implements Listener {
                         lang(player, "gui.confirm.delete_line", Map.of("id", line.getDisplayName())),
                         "line_detail", lineId);
             }
+            case 40 -> gui.openRecordSegmentSelect(player, lineId);
             default -> {
                 String stopId = holder.get("stop_" + slot);
                 if (stopId == null) return;
@@ -341,6 +366,116 @@ public class GuiListener implements Listener {
                 }
             }
         }
+    }
+
+    private void handleRecordSelect(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        if (!player.hasPermission("atrain.station.edit")) {
+            TextUtil.send(player, lang(player, "error.no_permission"));
+            return;
+        }
+        Inventory inv = holder.getInventory();
+        if (isBackSlot(inv, slot)) {
+            gui.openMain(player);
+            return;
+        }
+        if (slot == GuiSlots.PREV_PAGE) {
+            int page = parsePage(holder);
+            if (page > 0) gui.openRecordSelect(player, page - 1);
+            return;
+        }
+        if (slot == GuiSlots.NEXT_PAGE) {
+            int page = parsePage(holder);
+            List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
+            if ((page + 1) * 28 < lines.size()) gui.openRecordSelect(player, page + 1);
+            return;
+        }
+        String lineId = holder.get("line_" + slot);
+        if (lineId != null) {
+            gui.openRecordSegmentSelect(player, lineId);
+        }
+    }
+
+    private void handleRecordSegment(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        if (!player.hasPermission("atrain.station.edit")) {
+            TextUtil.send(player, lang(player, "error.no_permission"));
+            return;
+        }
+        String lineId = holder.get("line_id");
+        if (lineId == null) return;
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+
+        TravelDirection direction = TravelDirection.fromString(holder.get("direction"));
+        var rm = plugin.getRouteRecordingManager();
+        boolean recordingThis = rm != null && rm.isRecordingLine(player, lineId, direction);
+
+        Inventory inv = holder.getInventory();
+        if (isBackSlot(inv, slot)) {
+            gui.openRecordSelect(player, 0);
+            return;
+        }
+
+        if (slot == 2) {
+            gui.openRecordSegmentSelect(player, lineId, TravelDirection.FORWARD);
+            return;
+        }
+        if (slot == 6) {
+            gui.openRecordSegmentSelect(player, lineId, TravelDirection.REVERSE);
+            return;
+        }
+
+        if (slot == 38 && recordingThis) {
+            player.closeInventory();
+            rm.stop(player);
+            gui.openRecordSegmentSelect(player, lineId, direction);
+            return;
+        }
+        if (slot == 42 && recordingThis) {
+            player.closeInventory();
+            rm.cancel(player);
+            gui.openRecordSegmentSelect(player, lineId, direction);
+            return;
+        }
+
+        String segKey = holder.get("seg_" + slot);
+        if (segKey == null) return;
+        int segmentIndex = parseInt(segKey, -1);
+        if (segmentIndex < 0) return;
+
+        if (recordingThis) {
+            TextUtil.send(player, lang(player, "route.recording_must_stop_first"));
+            return;
+        }
+        if (rm != null && rm.isRecording(player)) {
+            TextUtil.send(player, lang(player, "route.recording_other_line",
+                    Map.of("line", rm.getRecordingLineId(player))));
+            return;
+        }
+
+        if (line.hasSegment(segmentIndex, direction)) {
+            gui.openConfirm(player, "start_record_segment",
+                    lineId + "|" + segmentIndex + "|" + direction.name(),
+                    lang(player, "route.confirm_overwrite_segment",
+                            Map.of("from", segmentLabel(line, segmentIndex, direction, "from"),
+                                    "to", segmentLabel(line, segmentIndex, direction, "to"),
+                                    "count", String.valueOf(line.getSegmentPoints(segmentIndex, direction).size()))),
+                    "record_segment", lineId + "|" + direction.name());
+            return;
+        }
+
+        player.closeInventory();
+        if (rm != null && rm.start(player, lineId, segmentIndex, direction, true)) {
+            gui.openRecordSegmentSelect(player, lineId, direction);
+        }
+    }
+
+    private String segmentLabel(Line line, int segmentIndex, TravelDirection direction, String part) {
+        String id = "from".equals(part)
+                ? line.getSegmentFromStopId(segmentIndex, direction)
+                : line.getSegmentToStopId(segmentIndex, direction);
+        if (id == null) return "?";
+        Stop stop = plugin.getStopManager().getStop(id);
+        return stop != null ? stop.getDisplayName() : id;
     }
 
     private void handleLineAddStop(Player player, int slot, GuiHolder holder, GuiManager gui) {
@@ -384,6 +519,57 @@ public class GuiListener implements Listener {
         plugin.getChatInputManager().setPending(player, type, stopId);
         TextUtil.send(player, lang(player, key, ph));
         TextUtil.send(player, lang(player, "input.chat_hint"));
+    }
+
+    private void handleSpeedBlockEdit(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        if (!player.hasPermission("atrain.speed.edit")) {
+            TextUtil.send(player, lang(player, "error.no_permission"));
+            return;
+        }
+        String blockKey = holder.get("block_key");
+        if (blockKey == null) return;
+        var sbMgr = plugin.getSpeedBlockManager();
+        var sb = sbMgr.getByKey(blockKey);
+        if (sb == null) return;
+
+        switch (slot) {
+            case 11 -> {
+                sbMgr.updateSpeed(blockKey, sb.getSpeed() - 0.05);
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 13 -> {
+                player.closeInventory();
+                plugin.getChatInputManager().setPending(player, ChatInputManager.Type.SPEED_BLOCK_SPEED, blockKey);
+                TextUtil.send(player, lang(player, "speed_block.speed_prompt",
+                        Map.of("speed", String.format("%.2f", sb.getSpeed()))));
+                TextUtil.send(player, lang(player, "input.chat_hint"));
+            }
+            case 15 -> {
+                sbMgr.updateSpeed(blockKey, sb.getSpeed() + 0.05);
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 20 -> {
+                sbMgr.updateSpeed(blockKey, 0.2);
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 22 -> {
+                sbMgr.updateSpeed(blockKey, plugin.getConfigManager().getCartSpeed());
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 24 -> {
+                sbMgr.updateSpeed(blockKey, plugin.getConfigManager().getBoostSpeed());
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 30 -> {
+                sbMgr.updateRamp(blockKey, sb.getRamp() - 1);
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 32 -> {
+                sbMgr.updateRamp(blockKey, sb.getRamp() + 1);
+                gui.openSpeedBlockEdit(player, blockKey);
+            }
+            case 44 -> player.closeInventory();
+        }
     }
 
     private void handleLanguage(Player player, int slot, GuiHolder holder, GuiManager gui) {
@@ -450,6 +636,31 @@ public class GuiListener implements Listener {
             String returnId = holder.get("return_id");
             if (returnId != null) gui.openLineDetail(player, returnId, 0);
             else gui.openLineList(player, 0);
+            return;
+        }
+        if ("start_record_segment".equals(action)) {
+            if (!player.hasPermission("atrain.station.edit")) {
+                TextUtil.send(player, lang(player, "error.no_permission"));
+                return;
+            }
+            String[] parts = holder.get("target_id").split("\\|", 3);
+            if (parts.length < 2) return;
+            String lineId = parts[0];
+            int segmentIndex = parseInt(parts[1], 0);
+            TravelDirection direction = parts.length >= 3
+                    ? TravelDirection.fromString(parts[2]) : TravelDirection.FORWARD;
+            String returnId = holder.get("return_id");
+            player.closeInventory();
+            var rm = plugin.getRouteRecordingManager();
+            if (rm != null && rm.start(player, lineId, segmentIndex, direction, true)) {
+                if (returnId != null) {
+                    String[] ret = returnId.split("\\|", 2);
+                    String retLine = ret[0];
+                    TravelDirection retDir = ret.length >= 2
+                            ? TravelDirection.fromString(ret[1]) : direction;
+                    gui.openRecordSegmentSelect(player, retLine, retDir);
+                }
+            }
         }
     }
 
@@ -458,6 +669,13 @@ public class GuiListener implements Listener {
         String id = holder.get("return_id");
         if ("station_edit".equals(type) && id != null) gui.openStationEdit(player, id);
         else if ("line_detail".equals(type) && id != null) gui.openLineDetail(player, id, 0);
+        else if ("record_select".equals(type)) gui.openRecordSelect(player, parseInt(id, 0));
+        else if ("record_segment".equals(type) && id != null) {
+            String[] parts = id.split("\\|", 2);
+            TravelDirection dir = parts.length >= 2
+                    ? TravelDirection.fromString(parts[1]) : TravelDirection.FORWARD;
+            gui.openRecordSegmentSelect(player, parts[0], dir);
+        }
         else if ("main".equals(type)) gui.openMain(player);
         else gui.openMain(player);
     }

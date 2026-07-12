@@ -64,7 +64,7 @@ public class ConfigManager {
         return mat;
     }
 
-    public boolean isAutoStopEnabled() { return config.getBoolean("settings.auto_stop", false); }
+    public boolean isAutoStopEnabled() { return config.getBoolean("settings.auto_stop", true); }
     public boolean isStationDisplayEnabled() { return config.getBoolean("settings.station_display", true); }
     public boolean isCartSpawnEnabled() { return config.getBoolean("settings.cart_spawn", true); }
     public boolean isCartSpawnAutoMount() { return config.getBoolean("settings.cart_spawn_auto_mount", true); }
@@ -72,8 +72,16 @@ public class ConfigManager {
     public int getCartSpawnCooldownTicks() { return config.getInt("settings.cart_spawn_cooldown", 40); }
     public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.6); }
     public double getCurveSpeed() { return config.getDouble("settings.curve_speed", 0.4); }
+    public double getCurveSpeedRatio() { return config.getDouble("settings.curve_speed_ratio", 0.7); }
+    public double getBoostSpeed() { return config.getDouble("settings.boost_speed", 1.0); }
+    public boolean isPoweredBoost() { return config.getBoolean("settings.powered_boost", true); }
+    public double getSpeedBlockDefault() { return config.getDouble("speed_block.default_speed", 0.6); }
+    public int getSpeedBlockDefaultRamp() { return Math.max(0, config.getInt("speed_block.default_ramp", 4)); }
+    public double getSpeedBlockAcceleration() { return config.getDouble("speed_block.acceleration", 0.06); }
     public int getCurveLookahead() { return Math.max(1, config.getInt("settings.curve_lookahead", 5)); }
     public boolean isTrainControlEnabled() { return config.getBoolean("settings.train_control", true); }
+    public boolean isCinematicTransitEnabled() { return config.getBoolean("settings.cinematic_transit", true); }
+    public int getDefaultSegmentSeconds() { return Math.max(5, config.getInt("settings.default_segment_seconds", 30)); }
     public int getTrainMaxCars() { return Math.max(1, config.getInt("settings.train_max_cars", 4)); }
     public double getTrainCoupleDistance() { return config.getDouble("settings.train_couple_distance", 1.6); }
     public int getSpawnDelay() { return config.getInt("settings.cart_spawn_delay", 40); }
@@ -96,6 +104,7 @@ public class ConfigManager {
     public boolean isScoreboardEnabled() { return config.getBoolean("display.scoreboard_enabled", true); }
 
     public double getSampleDistance() { return config.getDouble("route_recording.sample_distance", 2.0); }
+    public int getRecordingDwellTicks() { return Math.max(0, config.getInt("route_recording.dwell_ticks", 80)); }
     public String getDefaultLanguage() { return config.getString("default_language", "zh_TW"); }
 
     public boolean isHangRailEnabled() { return config.getBoolean("hang_rail.enabled", false); }

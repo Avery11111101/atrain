@@ -3,6 +3,7 @@ lang-version: 1
 plugin.reload: "<green>atrain 配置已重新加载。"
 
 error.no_permission: "<red>你没有权限执行此操作。"
+error.block_protected: "<red>此为已注册的站点/调速方块，仅管理员可拆除。"
 error.players_only: "<red>此指令仅限玩家使用。"
 
 selection.corner1: "<green>已设定停靠区 §e角落 1<green>，请用金斧点击 §e角落 2<green>。"
@@ -35,7 +36,41 @@ stop.not_found: "<red>找不到站点: {id}"
 stop.name_prompt: "<yellow>请输入站点名称（目前: <gold>{name}<yellow>），输入 cancel 取消："
 stop.name_set: "<green>站点名称已设为 <gold>{name}"
 stop.name_empty: "<red>站名不可为空。"
-stop.display_rescanned: "<green>已重新扫描钻石显示块，共 <gold>{count} <green>个。"
+stop.display_rescanned: "<green>已清除旧版钻石显示块数据。"
+
+speed_block.speed_prompt: "<yellow>请输入目标速度（目前: <gold>{speed}<yellow>，范围 0.05~2.0），输入 cancel 取消："
+speed_block.speed_set: "<green>调速方块速度已设为 <gold>{speed}"
+speed_block.speed_invalid: "<red>请输入有效的数字。"
+speed_block.speed_range: "<red>速度须在 0.05 ~ 2.0 之间。"
+speed_block.not_found: "<red>找不到此调速方块设定。"
+speed_block.need_rail_above: "<yellow>请在钻石块正上方铺设铁轨，矿车经过才会套用速度。"
+speed_block.opening: "§b正在打开调速设置…"
+speed_block.look_at_block: "<yellow>请看向调速钻石块或上方铁轨后再执行此指令。"
+speed_block.not_target: "<red>视线前方找不到调速方块（需为 §f钻石块§r + 上方铁轨）。"
+command.help_speed: "<gold>/train speed <white>- 对准调速钻石块/铁轨开启速度设定"
+command.help_version: "<gold>/train version <white>- 查看插件版本"
+command.version: "<green>atrain 版本: <gold>{version} <green>（含调速方块、/train speed）"
+speed_block.created: "<green>已注册调速方块，默认速度 <gold>{speed}"
+
+gui.speed_block.title: "§b§l矿车调速方块"
+gui.speed_block.current: "§b目标速度: §f{speed}"
+gui.speed_block.hint:
+  - "§7放在铁轨正下方的钻石块"
+  - "§7矿车经过上方铁轨时套用此速度"
+  - "§7可加速或减速"
+gui.speed_block.slower: "§c§l减速"
+gui.speed_block.slower_lore: "§7每次 -0.05"
+gui.speed_block.faster: "§a§l加速"
+gui.speed_block.faster_lore: "§7每次 +0.05"
+gui.speed_block.speed_value: "§e§l速度: §f{speed}"
+gui.speed_block.speed_value_lore: "§7点击输入精确数值"
+gui.speed_block.preset_slow: "§8§l慢速 §7(0.20)"
+gui.speed_block.preset_cruise: "§7§l巡航 §7(默认)"
+gui.speed_block.preset_fast: "§6§l快速 §7(充能速度)"
+gui.speed_block.ramp: "§d过渡格数: §f{blocks}"
+gui.speed_block.ramp_lore: "§7进入调速段前几格开始平滑加减速"
+gui.speed_block.ramp_down: "§c§l减少 1 格"
+gui.speed_block.ramp_up: "§a§l增加 1 格"
 station.display_info: "§7上一站: §f{prev} §8| §a本站: §f{current} §8| §7下一站: §f{next}"
 
 train.dwelling: "§e列车停靠中… §f{sec} §e秒后发车"
@@ -270,15 +305,16 @@ tutorial.autostop.steps:
   - "§f发车\n§7时间到自动恢复速度"
   - "§f开关\n§7config.yml → settings.auto_stop"
 
-tutorial.display.title: "§b§l资讯显示"
-tutorial.display.summary:
-  - "§7与自动停车无关"
-  - "§7纯文字显示，自行设定"
-tutorial.display.steps:
-  - "§f显示位置\n§7站在金块或钻石块上"
-  - "§f显示内容\n§7上一站 / 本站 / 下一站"
-  - "§f设定方式\n§7站点 GUI 分别输入上下站名称"
-  - "§f开关\n§7config.yml → settings.station_display"
+tutorial.speedblock.title: "§b§l调速方块"
+tutorial.speedblock.summary:
+  - "§7铁轨下的钻石块"
+  - "§7经过时加速或减速"
+tutorial.speedblock.steps:
+  - "§f摆放方式\n§7在铁轨正下方放置钻石块"
+  - "§f设定速度\n§7蹲下右键钻石块或上方铁轨"
+  - "§f调整数值\n§7GUI 内 +/- 或点击输入精确速度"
+  - "§f过渡格数\n§7进入调速段前几格平滑加减速"
+  - "§f优先序\n§7转弯减速 > 调速方块 > 充能铁轨 > 一般巡航"
 
 tutorial.line.title: "§b§l建立路线"
 tutorial.line.summary:

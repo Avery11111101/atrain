@@ -55,7 +55,39 @@ public class ChatInputListener implements Listener {
             case STOP_ADMIN_INFO -> applyAdminInfo(player, pending, message);
             case LINE_CREATE -> applyLineCreate(player, message);
             case LINE_RENAME -> applyLineRename(player, pending, message);
+            case SPEED_BLOCK_SPEED -> applySpeedBlockSpeed(player, pending, message);
         }
+    }
+
+    private void applySpeedBlockSpeed(Player player, ChatInputManager.Pending pending, String message) {
+        if (!player.hasPermission("atrain.speed.edit")) {
+            plugin.getChatInputManager().clear(player);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "error.no_permission"));
+            return;
+        }
+        String blockKey = pending.contextId();
+        var sb = plugin.getSpeedBlockManager().getByKey(blockKey);
+        if (sb == null) {
+            plugin.getChatInputManager().clear(player);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "speed_block.not_found"));
+            return;
+        }
+        double speed;
+        try {
+            speed = Double.parseDouble(message.trim());
+        } catch (NumberFormatException e) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "speed_block.speed_invalid"));
+            return;
+        }
+        if (speed < 0.05 || speed > 2.0) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "speed_block.speed_range"));
+            return;
+        }
+        plugin.getSpeedBlockManager().updateSpeed(blockKey, speed);
+        plugin.getChatInputManager().clear(player);
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "speed_block.speed_set",
+                Map.of("speed", String.format("%.2f", speed))));
+        plugin.getGuiManager().openSpeedBlockEdit(player, blockKey);
     }
 
     private void applyLineCreate(Player player, String message) {
@@ -164,6 +196,10 @@ public class ChatInputListener implements Listener {
         }
         if (pending.type() == ChatInputManager.Type.LINE_RENAME) {
             plugin.getGuiManager().openLineDetail(player, pending.contextId(), 0);
+            return;
+        }
+        if (pending.type() == ChatInputManager.Type.SPEED_BLOCK_SPEED) {
+            plugin.getGuiManager().openSpeedBlockEdit(player, pending.contextId());
             return;
         }
         if (plugin.getStopManager().getStop(pending.contextId()) != null) {

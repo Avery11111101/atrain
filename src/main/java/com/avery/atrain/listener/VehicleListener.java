@@ -25,6 +25,9 @@ public class VehicleListener implements Listener {
         if (!(event.getVehicle() instanceof Minecart cart)) return;
         TrainMovementTask task = TrainTaskRegistry.get(cart);
         if (task != null) task.cancel();
+        if (plugin.getCinematicTransitManager() != null) {
+            plugin.getCinematicTransitManager().cancelCart(cart.getUniqueId());
+        }
     }
 
     // 懸浮軌道改由 HangRailTask 每 tick 主動吊住（見 HangRailTask），

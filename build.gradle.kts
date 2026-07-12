@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "1.0"
+version = "1.5.3"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

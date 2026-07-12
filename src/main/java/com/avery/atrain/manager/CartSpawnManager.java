@@ -29,6 +29,11 @@ public class CartSpawnManager {
     }
 
     public boolean trySpawn(Player player, Block clicked) {
+        if (plugin.getRouteRecordingManager() != null
+                && plugin.getRouteRecordingManager().isRecording(player)) {
+            return plugin.getRouteRecordingManager().spawnRecordingCart(player, clicked);
+        }
+
         var lang = plugin.getLanguageManager();
         var cfg = plugin.getConfigManager();
 
@@ -101,6 +106,17 @@ public class CartSpawnManager {
             if (player.isInsideVehicle()) return;
             cart.addPassenger(player);
             cancelDespawn(cart.getUniqueId());
+        });
+    }
+
+    /** 玩家下車後立即移除礦車（若已無其他乘客） */
+    public void despawnWhenEmpty(RideableMinecart cart) {
+        if (cart == null || cart.isDead()) return;
+        cancelDespawn(cart.getUniqueId());
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!cart.isValid() || cart.isDead()) return;
+            if (!cart.getPassengers().isEmpty()) return;
+            cart.remove();
         });
     }
 

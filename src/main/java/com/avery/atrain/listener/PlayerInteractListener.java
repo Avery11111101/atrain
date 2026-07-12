@@ -2,6 +2,7 @@ package com.avery.atrain.listener;
 
 import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.model.Stop;
+import com.avery.atrain.util.SpeedBlockInteract;
 import com.avery.atrain.util.StationUtil;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.block.Block;
@@ -14,7 +15,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 import java.util.Map;
 
-/** 金磚站點：蹲下右鍵編輯；一般右鍵召喚原版礦車 */
+/** 金磚站點：蹲下右鍵編輯；一般右鍵召喚原版礦車。軌下鑽石塊：右鍵調速。 */
 public class PlayerInteractListener implements Listener {
 
     private final AtrainPlugin plugin;
@@ -23,12 +24,37 @@ public class PlayerInteractListener implements Listener {
         this.plugin = plugin;
     }
 
+    /** 調速方塊：最高優先級，即使事件已被取消也處理 */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onSpeedBlockInteract(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
+        Block clicked = SpeedBlockInteract.resolveClickedBlock(event);
+        if (clicked == null) return;
+
+        // 鑽石塊或鐵軌（且下方柱內有鑽石）才介入
+        boolean relevant = StationUtil.isSpeedBlock(clicked.getType())
+                || StationUtil.isAnyRail(clicked.getType());
+        if (!relevant) return;
+
+        if (StationUtil.resolveSpeedBlock(clicked) == null
+                && !StationUtil.isSpeedBlock(clicked.getType())) {
+            return; // 一般鐵軌，下方無調速鑽石
+        }
+
+        SpeedBlockInteract.claimInteraction(event);
+        SpeedBlockInteract.tryOpenEditor(plugin, event.getPlayer(), clicked);
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onInteract(PlayerInteractEvent event) {
+    public void onStationInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         Block block = event.getClickedBlock();
-        if (block == null || !StationUtil.isGoldStationRail(block)) return;
+        if (block == null) return;
+        if (StationUtil.resolveSpeedBlock(block) != null) return;
+
+        if (!StationUtil.isGoldStationRail(block)) return;
 
         Player player = event.getPlayer();
         if (player.isSneaking()) {

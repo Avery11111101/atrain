@@ -1,7 +1,9 @@
 package com.avery.atrain.model;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Line {
     private String id;
@@ -10,7 +12,12 @@ public class Line {
     private double maxSpeed;
     private boolean circular;
     private List<String> stopIds = new ArrayList<>();
+    /** 合併後的去程全線軌跡（相容舊版） */
     private List<RoutePoint> routePoints = new ArrayList<>();
+    /** 去程：站點 i → 站點 i+1 */
+    private Map<Integer, List<RoutePoint>> forwardRouteSegments = new LinkedHashMap<>();
+    /** 回程：站點反序，段 0 = 最末站 → 倒數第二站 */
+    private Map<Integer, List<RoutePoint>> reverseRouteSegments = new LinkedHashMap<>();
 
     public Line() {}
 
@@ -35,6 +42,140 @@ public class Line {
     public void setStopIds(List<String> stopIds) { this.stopIds = stopIds; }
     public List<RoutePoint> getRoutePoints() { return routePoints; }
     public void setRoutePoints(List<RoutePoint> routePoints) { this.routePoints = routePoints; }
+
+    public Map<Integer, List<RoutePoint>> getForwardRouteSegments() { return forwardRouteSegments; }
+    public void setForwardRouteSegments(Map<Integer, List<RoutePoint>> segments) {
+        this.forwardRouteSegments = segments != null ? new LinkedHashMap<>(segments) : new LinkedHashMap<>();
+        rebuildRoutePoints();
+    }
+
+    public Map<Integer, List<RoutePoint>> getReverseRouteSegments() { return reverseRouteSegments; }
+    public void setReverseRouteSegments(Map<Integer, List<RoutePoint>> segments) {
+        this.reverseRouteSegments = segments != null ? new LinkedHashMap<>(segments) : new LinkedHashMap<>();
+    }
+
+    /** 相容舊 API：等同去程分段 */
+    public Map<Integer, List<RoutePoint>> getRouteSegments() { return forwardRouteSegments; }
+    public void setRouteSegments(Map<Integer, List<RoutePoint>> routeSegments) {
+        setForwardRouteSegments(routeSegments);
+    }
+
+    private Map<Integer, List<RoutePoint>> segmentsFor(TravelDirection direction) {
+        return direction == TravelDirection.REVERSE ? reverseRouteSegments : forwardRouteSegments;
+    }
+
+    public int getSegmentCount() {
+        return Math.max(0, stopIds.size() - 1);
+    }
+
+    public List<RoutePoint> getSegmentPoints(int segmentIndex) {
+        return getSegmentPoints(segmentIndex, TravelDirection.FORWARD);
+    }
+
+    public List<RoutePoint> getSegmentPoints(int segmentIndex, TravelDirection direction) {
+        List<RoutePoint> pts = segmentsFor(direction).get(segmentIndex);
+        return pts != null ? pts : List.of();
+    }
+
+    public boolean hasSegment(int segmentIndex) {
+        return hasSegment(segmentIndex, TravelDirection.FORWARD);
+    }
+
+    public boolean hasSegment(int segmentIndex, TravelDirection direction) {
+        List<RoutePoint> pts = segmentsFor(direction).get(segmentIndex);
+        return pts != null && !pts.isEmpty();
+    }
+
+    public int getRecordedSegmentCount() {
+        return getRecordedSegmentCount(TravelDirection.FORWARD);
+    }
+
+    public int getRecordedSegmentCount(TravelDirection direction) {
+        int n = 0;
+        for (int i = 0; i < getSegmentCount(); i++) {
+            if (hasSegment(i, direction)) n++;
+        }
+        return n;
+    }
+
+    public void setSegmentPoints(int segmentIndex, List<RoutePoint> points) {
+        setSegmentPoints(segmentIndex, TravelDirection.FORWARD, points);
+    }
+
+    public void setSegmentPoints(int segmentIndex, TravelDirection direction, List<RoutePoint> points) {
+        Map<Integer, List<RoutePoint>> map = segmentsFor(direction);
+        if (points == null || points.isEmpty()) {
+            map.remove(segmentIndex);
+        } else {
+            map.put(segmentIndex, new ArrayList<>(points));
+        }
+        if (direction == TravelDirection.FORWARD) {
+            rebuildRoutePoints();
+        }
+    }
+
+    public void clearSegment(int segmentIndex) {
+        clearSegment(segmentIndex, TravelDirection.FORWARD);
+    }
+
+    public void clearSegment(int segmentIndex, TravelDirection direction) {
+        segmentsFor(direction).remove(segmentIndex);
+        if (direction == TravelDirection.FORWARD) {
+            rebuildRoutePoints();
+        }
+    }
+
+    public void rebuildRoutePoints() {
+        routePoints.clear();
+        for (int i = 0; i < getSegmentCount(); i++) {
+            List<RoutePoint> seg = forwardRouteSegments.get(i);
+            if (seg != null && !seg.isEmpty()) {
+                routePoints.addAll(seg);
+            }
+        }
+    }
+
+    public int findSegmentIndex(String fromStopId, String toStopId) {
+        return findSegmentIndex(fromStopId, toStopId, TravelDirection.FORWARD);
+    }
+
+    public int findSegmentIndex(String fromStopId, String toStopId, TravelDirection direction) {
+        int from = stopIds.indexOf(fromStopId);
+        int to = stopIds.indexOf(toStopId);
+        if (from < 0 || to < 0) return -1;
+        if (direction == TravelDirection.FORWARD) {
+            if (to != from + 1) return -1;
+            return from;
+        }
+        if (from != to + 1) return -1;
+        return stopIds.size() - 1 - from;
+    }
+
+    public String getSegmentFromStopId(int segmentIndex) {
+        return getSegmentFromStopId(segmentIndex, TravelDirection.FORWARD);
+    }
+
+    public String getSegmentToStopId(int segmentIndex) {
+        return getSegmentToStopId(segmentIndex, TravelDirection.FORWARD);
+    }
+
+    public String getSegmentFromStopId(int segmentIndex, TravelDirection direction) {
+        if (segmentIndex < 0 || segmentIndex >= getSegmentCount()) return null;
+        if (direction == TravelDirection.FORWARD) {
+            return stopIds.get(segmentIndex);
+        }
+        int fromIdx = stopIds.size() - 1 - segmentIndex;
+        return fromIdx >= 0 && fromIdx < stopIds.size() ? stopIds.get(fromIdx) : null;
+    }
+
+    public String getSegmentToStopId(int segmentIndex, TravelDirection direction) {
+        if (segmentIndex < 0 || segmentIndex >= getSegmentCount()) return null;
+        if (direction == TravelDirection.FORWARD) {
+            return stopIds.get(segmentIndex + 1);
+        }
+        int toIdx = stopIds.size() - 2 - segmentIndex;
+        return toIdx >= 0 ? stopIds.get(toIdx) : null;
+    }
 
     public String getNextStopId(String currentStopId) {
         return getNextStopId(currentStopId, TravelDirection.FORWARD);

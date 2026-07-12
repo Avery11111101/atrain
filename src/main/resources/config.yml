@@ -1,59 +1,127 @@
+# ===============================================================
+#  atrain 設定檔
+#  修改後於遊戲內執行 /train reload 生效
+#  速度單位：方塊/tick（1 秒 = 20 tick）；時間單位大多為 tick
+#
+#  權限（預設皆僅 OP，可用 LuckPerms 授予特定身分組）：
+#    atrain.admin         管理員全權
+#    atrain.gui           開啟 GUI
+#    atrain.station.edit  編輯金磚站點
+#    atrain.speed.edit    編輯調速鑽石塊
+#    atrain.cart.spawn    站點召喚礦車
+#    atrain.block.break   拆除已註冊金磚/鑽石塊
+# ===============================================================
+
+# 設定檔版本（供插件升級自動遷移用，請勿手動更改）
 config-version: 1
 
 settings:
-  # 巡航滿速（直線路段全速；可自由調整，數值越大越快）
+  # 巡航滿速：直線路段的全速（方塊/tick，數值越大越快）
   cart_speed: 0.6
-  # 接近轉彎 / 上下坡 / 非直線軌道時的減速上限
+  # 減速上限：接近轉彎 / 上下坡 / 非直線軌道時的速度（通常 0.35~0.4 最穩）
   curve_speed: 0.4
-  # 轉彎 / 坡道「提前減速」的前方偵測格數（越大越早開始減速）
+  # 彎道減速比例：實際彎道速度 = max(curve_speed, 當前速度上限 × 此比例)，高速進彎時不會掉到幾乎歸零
+  curve_speed_ratio: 0.7
+  # 提前減速：轉彎 / 坡道的前方偵測格數（越大越早開始減速，避免入彎過快甩出）
   curve_lookahead: 5
-  # 插件控速 + 自動連結列車（true = 由插件掌管速度與連結；false = 純原版物理）
+  # 充能加速：經過「已通電的充能鐵軌（金色 Powered Rail）」時的衝刺速度
+  boost_speed: 1.0
+  # 是否啟用充能鐵軌加速（true = 只有踩到通電的充能鐵軌才會飆到 boost_speed）
+  powered_boost: true
+  # 列車控速總開關（true = 由插件掌管速度與自動連結；false = 完全回歸原版物理）
   train_control: true
-  # 建議連結節數（參考值；相連車廂仍會整列連動，不會硬性拆列）
+  # 站點導引模式（true = 不依賴鐵軌物理，依站點自訂秒數沿路徑移動並精準停靠下一站）
+  cinematic_transit: true
+  # 站點導引：未自訂時，站到下一站的預設行駛秒數
+  default_segment_seconds: 30
+  # 建議連結節數（參考值；實際相連車廂仍會整列連動，不會硬性拆列）
   train_max_cars: 4
-  # 自動連結偵測距離（相鄰礦車中心距離在此範圍內視為同一列；過大會誤併鄰近他列）
+  # 自動連結偵測距離：相鄰礦車中心距離在此範圍內視為同一列（過大會誤併鄰近他列）
   train_couple_distance: 1.6
+  # 站點生成礦車的前置延遲（tick，20 = 1 秒）
   cart_spawn_delay: 40
+  # 發車前的延遲（tick，20 = 1 秒）
   cart_departure_delay: 80
-  cart_despawn_delay: 20  # 空礦車刪除延遲（tick，20 = 1 秒）
+  # 空礦車自動刪除延遲（tick，20 = 1 秒）
+  cart_despawn_delay: 20
+  # 到站停靠時間（tick，20 = 1 秒；80 = 停 4 秒後自動發車。各站可另設，設 0 = 過站不停）
   default_dwell_time: 80
-  auto_stop: false
+  # 到站自動停留（true = 列車駛入站點會停 default_dwell_time 再自動發車）
+  auto_stop: true
+  # 站點資訊顯示（true = 於動作列/標題顯示目前站點與下一站等資訊）
   station_display: true
+  # 站點自動生成礦車（true = 玩家靠近設定好的站點時自動生出可乘坐礦車）
   cart_spawn: true
+  # 生成礦車後自動讓玩家上車（true = 生車即上車，配合上車自動發車可一坐即走）
   cart_spawn_auto_mount: true
+  # 站點生成礦車的偵測半徑（格；玩家與站點距離在此內才觸發生成）
   cart_spawn_radius: 2.5
+  # 同站點重複生成礦車的冷卻時間（tick，避免短時間內狂生礦車）
   cart_spawn_cooldown: 40
 
 movement:
-  # 移動模式：false = 原版軌道物理（只調 maxSpeed，適合動力軌上坡）
-  # true  = 路徑導引糾偏（複雜路網防飄線，但可能與上坡動力軌衝突）
+  # 移動模式：
+  #   false = 原版軌道物理（只調整 maxSpeed，最穩、適合動力軌上坡）
+  #   true  = 路徑導引糾偏（複雜路網防止飄線，但可能與上坡動力軌衝突）
   path_guidance: false
+  # 路徑導引糾偏強度（0~1，越大越貼合路線但越易抖動；僅 path_guidance=true 生效）
   guidance_strength: 0.65
+  # 路徑導引糾偏的執行間隔（tick，越小越即時但越吃效能；僅 path_guidance=true 生效）
   guidance_interval_ticks: 2
+  # 卡住自動脫困（true = 偵測到列車停滯時給推力嘗試脫困；僅路徑導引相關）
   stall_recovery: false
+  # 判定「卡住」需連續停滯的 tick 數，達到後才嘗試脫困
   stall_recovery_ticks: 10
+  # 路徑導引下的最低巡航速度，避免爬坡/糾偏過程中完全停住（僅 path_guidance=true 生效）
   min_cruise_speed: 0.06
-  # 前方有阻擋時停止推力
+  # 前方障礙偵測：true = 沿軌道偵測到實體阻擋時停止推力，避免撞牆卡死
   obstruction_check: true
+  # 前方障礙偵測的距離（格；沿軌道往前檢查的範圍）
   obstruction_distance: 1.2
 
 display:
+  # 到站大標題顯示（螢幕中央 Title）
   title_enabled: true
+  # 動作列顯示（螢幕下方 ActionBar，顯示目前/下一站等即時資訊）
   actionbar_enabled: true
+  # 計分板側欄顯示（螢幕右側路線資訊）
   scoreboard_enabled: true
 
 route_recording:
+  # 錄製路線時的取樣間距（格，越小越精細但記錄點越多）
   sample_distance: 2.0
+  # 錄製時每到站停留時間（tick，80 = 4 秒）
+  dwell_ticks: 80
+  # 錄製/設定站點時，是否自動吸附到最近的鐵軌
   auto_snap_rail: true
 
+# 預設語系（可用：zh_TW 繁中 / zh_CN 簡中 / en_US 英文 / ja_JP 日文）
 default_language: zh_TW
 
-# 懸浮軌道（參考 TC-HangRail，預設開啟）
+# ===============================================================
+#  調速方塊（鐵軌正下方的鑽石塊）
+# ===============================================================
+speed_block:
+  # 新放置或首次蹲下右鍵設定的預設目標速度（方塊/tick）
+  default_speed: 0.6
+  # 進入調速段前的平滑過渡格數（0 = 到達該格才瞬間變速）
+  default_ramp: 4
+  # 每 tick 朝目標速度逼近的加減速幅度（方塊/tick²，參考 TrainCarts Launcher）
+  acceleration: 0.06
+
+# ===============================================================
+#  懸浮軌道（吊掛式軌道，參考 TC-HangRail）
+# ===============================================================
 hang_rail:
+  # 懸浮軌道總開關（預設關閉；true = 礦車會吊掛在指定方塊下方/上方沿其行駛）
   enabled: false
+  # 懸浮方塊清單：
+  #   block  = 方塊種類（如 IRON_BARS 鐵欄杆）
+  #   offset = 礦車相對該方塊的垂直格數（負數 = 吊在方塊下方，正數 = 浮在方塊上方）
   types:
+    # 鐵欄杆：礦車吊掛在其下方 2 格
     - block: IRON_BARS
       offset: -2
-    # 範例：在紅色羊毛上方懸浮
+    # 範例：在紅色羊毛「上方」1 格浮行
     # - block: RED_WOOL
     #   offset: 1

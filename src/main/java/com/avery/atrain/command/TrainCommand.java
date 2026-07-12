@@ -1,6 +1,7 @@
 package com.avery.atrain.command;
 
 import com.avery.atrain.AtrainPlugin;
+import com.avery.atrain.util.SpeedBlockInteract;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -59,6 +60,8 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 }
                 plugin.reloadAll();
             }
+            case "speed" -> openSpeedBlock(sender, lang);
+            case "version" -> sendVersion(sender, lang);
             case "help" -> sendHelp(sender);
             default -> {
                 if (sender instanceof Player p) TextUtil.send(p, lang.get(p, "command.unknown"));
@@ -79,6 +82,31 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
         plugin.getGuiManager().openMain(p);
     }
 
+    /** 對準調速方塊開啟編輯 GUI（右鍵無反應時的後備方式） */
+    private void openSpeedBlock(CommandSender sender, com.avery.atrain.i18n.LanguageManager lang) {
+        if (!(sender instanceof Player p)) {
+            sender.sendMessage(TextUtil.colorize(lang.getRaw(lang.getDefaultLanguage(), "error.players_only")));
+            return;
+        }
+        var target = SpeedBlockInteract.rayTarget(p, 6);
+        if (target == null) {
+            TextUtil.send(p, lang.get(p, "speed_block.look_at_block"));
+            return;
+        }
+        if (!SpeedBlockInteract.tryOpenEditor(plugin, p, target)) {
+            TextUtil.send(p, lang.get(p, "speed_block.not_target"));
+        }
+    }
+
+    private void sendVersion(CommandSender sender, com.avery.atrain.i18n.LanguageManager lang) {
+        String ver = plugin.getDescription().getVersion();
+        String msg = lang.getRaw(
+                sender instanceof Player p ? lang.getPlayerLanguage(p) : lang.getDefaultLanguage(),
+                "command.version");
+        msg = msg.replace("{version}", ver);
+        sender.sendMessage(TextUtil.colorize(msg));
+    }
+
     private void sendHelp(CommandSender sender) {
         String langCode = sender instanceof Player p
                 ? plugin.getLanguageManager().getPlayerLanguage(p)
@@ -88,6 +116,8 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 plugin.getLanguageManager().getRaw(langCode, "command.help_gui"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_stops"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_lines"),
+                plugin.getLanguageManager().getRaw(langCode, "command.help_speed"),
+                plugin.getLanguageManager().getRaw(langCode, "command.help_version"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_lang"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_reload")
         );
@@ -99,7 +129,7 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filter(List.of("gui", "stops", "lines", "reload", "help"), args[0]);
+            return filter(List.of("gui", "stops", "lines", "speed", "version", "reload", "help"), args[0]);
         }
         return List.of();
     }

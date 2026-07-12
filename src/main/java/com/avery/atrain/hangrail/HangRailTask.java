@@ -43,6 +43,10 @@ public class HangRailTask {
         for (World world : Bukkit.getWorlds()) {
             for (Minecart cart : world.getEntitiesByClass(Minecart.class)) {
                 if (!cart.isValid() || cart.isDead()) continue;
+                if (plugin.getCinematicTransitManager() != null
+                        && plugin.getCinematicTransitManager().isManaged(cart.getUniqueId())) continue;
+                if (plugin.getRouteRecordingManager() != null
+                        && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) continue;
                 handler.hold(cart);
             }
         }

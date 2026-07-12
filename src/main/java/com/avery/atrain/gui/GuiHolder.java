@@ -13,6 +13,8 @@ public class GuiHolder implements InventoryHolder {
         MAIN, TUTORIAL, TUTORIAL_CATEGORY,
         STOP_LIST, STATION_EDIT,
         LINE_LIST, LINE_DETAIL, LINE_ADD_STOP,
+        RECORD_SELECT, RECORD_SEGMENT,
+        SPEED_BLOCK_EDIT,
         CONFIRM, LANGUAGE
     }
 

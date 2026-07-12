@@ -16,26 +16,26 @@ commands:
 
 permissions:
   atrain.admin:
-    description: 管理員權限
+    description: 管理員全權限（含方塊保護、reload、刪除站點、管理員備註）
     default: op
     children:
       atrain.gui: true
-      atrain.use: true
-      atrain.create: true
       atrain.station.edit: true
+      atrain.speed.edit: true
       atrain.cart.spawn: true
+      atrain.block.break: true
   atrain.gui:
-    description: 開啟管理介面
-    default: true
-  atrain.use:
-    description: 已保留供相容，目前無特殊限制
-    default: true
-  atrain.create:
-    description: 已保留供相容
+    description: 開啟管理介面（/train gui、站點/路線列表）
     default: op
   atrain.station.edit:
-    description: 蹲下右鍵編輯金磚站點
-    default: true
+    description: 蹲下右鍵編輯金磚站點、建立站點
+    default: op
+  atrain.speed.edit:
+    description: 蹲下右鍵編輯軌下調速鑽石塊
+    default: op
   atrain.cart.spawn:
-    description: 在站點右鍵召喚原版礦車
-    default: true
+    description: 在站點右鍵召喚原版礦車（非蹲下）
+    default: op
+  atrain.block.break:
+    description: 破壞已註冊的金磚站點方塊與調速鑽石塊
+    default: op

@@ -1,6 +1,8 @@
 package com.avery.atrain;
 
+import com.avery.atrain.cinematic.CinematicTransitManager;
 import com.avery.atrain.command.LangCommand;
+import com.avery.atrain.route.RouteRecordingManager;
 import com.avery.atrain.command.TrainCommand;
 import com.avery.atrain.config.ConfigManager;
 import com.avery.atrain.config.DataStore;
@@ -20,6 +22,7 @@ import com.avery.atrain.manager.BindPlatformManager;
 import com.avery.atrain.manager.CartSpawnManager;
 import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
+import com.avery.atrain.manager.SpeedBlockManager;
 import com.avery.atrain.manager.StopManager;
 import com.avery.atrain.train.TrainController;
 import com.avery.atrain.train.TrainTaskRegistry;
@@ -38,6 +41,7 @@ public final class AtrainPlugin extends JavaPlugin {
     private LineManager lineManager;
     private StopManager stopManager;
     private CartSpawnManager cartSpawnManager;
+    private SpeedBlockManager speedBlockManager;
     private ChatInputManager chatInputManager;
     private BindPlatformManager bindPlatformManager;
     private GuiManager guiManager;
@@ -45,6 +49,8 @@ public final class AtrainPlugin extends JavaPlugin {
     private PlayerInteractListener playerInteractListener;
     private VehicleListener vehicleListener;
     private TrainController trainController;
+    private CinematicTransitManager cinematicTransitManager;
+    private RouteRecordingManager routeRecordingManager;
     private HangRailTask hangRailTask;
 
     @Override
@@ -57,6 +63,7 @@ public final class AtrainPlugin extends JavaPlugin {
         lineManager = new LineManager(this);
         stopManager = new StopManager(this);
         cartSpawnManager = new CartSpawnManager(this);
+        speedBlockManager = new SpeedBlockManager(this);
         chatInputManager = new ChatInputManager();
         bindPlatformManager = new BindPlatformManager();
         guiManager = new GuiManager(this);
@@ -65,6 +72,7 @@ public final class AtrainPlugin extends JavaPlugin {
         configManager.load();
         languageManager.load();
         dataStore.load();
+        speedBlockManager.load();
 
         var pm = getServer().getPluginManager();
         vehicleListener = new VehicleListener(this);
@@ -87,12 +95,24 @@ public final class AtrainPlugin extends JavaPlugin {
         getCommand("lang").setTabCompleter(langCmd);
 
         trainController = new TrainController(this);
-        trainController.start();
+        if (configManager.isTrainControlEnabled()) {
+            trainController.start();
+        }
+
+        cinematicTransitManager = new CinematicTransitManager(this);
+        if (configManager.isCinematicTransitEnabled()) {
+            cinematicTransitManager.start();
+        }
+
+        routeRecordingManager = new RouteRecordingManager(this);
+        routeRecordingManager.start();
 
         hangRailTask = new HangRailTask(this, vehicleListener.getHangRailHandler());
         hangRailTask.start();
 
-        getLogger().info("atrain 已啟用 — 站點顯示 + 連結列車控速");
+        getLogger().info("atrain v" + getDescription().getVersion()
+                + " 已啟用 — 站點導引:" + configManager.isCinematicTransitEnabled()
+                + " 列車控速:" + configManager.isTrainControlEnabled());
     }
 
     @Override
@@ -101,16 +121,27 @@ public final class AtrainPlugin extends JavaPlugin {
             trainController.stop();
             trainController.clearAll();
         }
+        if (cinematicTransitManager != null) {
+            cinematicTransitManager.stop();
+            cinematicTransitManager.clearAll();
+        }
+        if (routeRecordingManager != null) {
+            routeRecordingManager.clearAll();
+        }
         if (hangRailTask != null) hangRailTask.stop();
         if (vehicleListener != null) vehicleListener.getHangRailHandler().restoreAll();
         stationAutoStopListener.clearAll();
         TrainTaskRegistry.cancelAllTasks();
         dataStore.save();
+        if (speedBlockManager != null) speedBlockManager.save();
         getLogger().info("atrain 已停用");
     }
 
     public void reloadAll() {
         if (trainController != null) trainController.clearAll();
+        if (cinematicTransitManager != null) cinematicTransitManager.clearAll();
+        if (routeRecordingManager != null) routeRecordingManager.clearAll();
+        if (routeRecordingManager != null) routeRecordingManager.start();
         if (vehicleListener != null) vehicleListener.getHangRailHandler().restoreAll();
         stationAutoStopListener.clearAll();
         TrainTaskRegistry.cancelAllTasks();
@@ -120,6 +151,7 @@ public final class AtrainPlugin extends JavaPlugin {
         configManager.load();
         languageManager.load();
         dataStore.load();
+        speedBlockManager.load();
         for (Player player : Bukkit.getOnlinePlayers()) {
             TextUtil.send(player, languageManager.get(player, "plugin.reload"));
         }
@@ -133,8 +165,12 @@ public final class AtrainPlugin extends JavaPlugin {
     public LineManager getLineManager() { return lineManager; }
     public StopManager getStopManager() { return stopManager; }
     public CartSpawnManager getCartSpawnManager() { return cartSpawnManager; }
+    public SpeedBlockManager getSpeedBlockManager() { return speedBlockManager; }
     public ChatInputManager getChatInputManager() { return chatInputManager; }
     public BindPlatformManager getBindPlatformManager() { return bindPlatformManager; }
     public GuiManager getGuiManager() { return guiManager; }
     public StationAutoStopListener getStationAutoStopListener() { return stationAutoStopListener; }
+    public TrainController getTrainController() { return trainController; }
+    public CinematicTransitManager getCinematicTransitManager() { return cinematicTransitManager; }
+    public RouteRecordingManager getRouteRecordingManager() { return routeRecordingManager; }
 }

@@ -1,15 +1,20 @@
 package com.avery.atrain.model;
 
+import com.avery.atrain.util.RailUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-/** 虛擬路線站點：金磚上鋪軌道即月台，鄰近鑽石塊顯示站名資訊 */
+/** 虛擬路線站點：金磚上鋪軌道即月台；站點資訊改為站在金磚上查看 */
 public class Stop {
     private String id;
     private String displayName;
@@ -36,6 +41,8 @@ public class Stop {
     /** 回程月台金磚座標（其餘金磚視為去程月台） */
     private final List<String> returnGoldBlocks = new ArrayList<>();
     private List<String> lineIds = new ArrayList<>();
+    /** 各路線由此站發車到下一站的行駛秒數（lineId -> 秒） */
+    private final Map<String, Integer> lineTravelSeconds = new HashMap<>();
 
     public Stop() {}
 
@@ -87,20 +94,104 @@ public class Stop {
         if (keys != null) returnGoldBlocks.addAll(keys);
     }
 
-    /** 玩家是否站在回程月台（金磚或鑽石顯示塊） */
+    /** 玩家是否站在去程月台 */
+    public boolean isOnForwardPlatform(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        return isOnPlatformGold(loc, forwardGoldKeys());
+    }
+
+    /** 玩家是否站在回程月台 */
     public boolean isOnReturnPlatform(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
         if (returnGoldBlocks.isEmpty()) return false;
+        return isOnPlatformGold(loc, returnGoldBlocks);
+    }
+
+    /** 依行駛方向取得月台鐵軌上的礦車停靠點 */
+    public Location getRailLocation(TravelDirection direction) {
+        World w = Bukkit.getWorld(world);
+        if (w == null) return null;
+        List<String> keys = direction == TravelDirection.REVERSE && !returnGoldBlocks.isEmpty()
+                ? returnGoldBlocks
+                : forwardGoldKeys();
+        if (keys.isEmpty()) return null;
+        for (String k : keys) {
+            Location rail = railLocationForGoldKey(w, k);
+            if (rail != null) return rail;
+        }
+        return null;
+    }
+
+    private List<String> forwardGoldKeys() {
+        List<String> forward = new ArrayList<>();
+        for (String k : goldBlocks) {
+            if (!returnGoldBlocks.contains(k)) forward.add(k);
+        }
+        if (forward.isEmpty()) return new ArrayList<>(goldBlocks);
+        return forward;
+    }
+
+    private boolean isOnPlatformGold(Location loc, List<String> platformKeys) {
+        if (platformKeys.isEmpty()) return false;
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
         String k1 = key(x, y, z);
         String k2 = key(x, y - 1, z);
-        return returnGoldBlocks.contains(k1) || returnGoldBlocks.contains(k2);
+        if (platformKeys.contains(k1) || platformKeys.contains(k2)) return true;
+        Block rail = RailUtil.findRailBlock(loc);
+        if (rail != null) {
+            Block below = rail.getRelative(BlockFace.DOWN);
+            for (int d = 0; d <= 4; d++) {
+                String bk = key(below.getX(), below.getY(), below.getZ());
+                if (platformKeys.contains(bk)) return true;
+                below = below.getRelative(BlockFace.DOWN);
+            }
+        }
+        return false;
+    }
+
+    private Location railLocationForGoldKey(World w, String goldKey) {
+        int[] p = parseKey(goldKey);
+        if (p == null) return null;
+        Block gold = w.getBlockAt(p[0], p[1], p[2]);
+        Block above = gold.getRelative(BlockFace.UP);
+        if (RailUtil.isRailMaterial(above.getType())) {
+            return RailUtil.cartPositionOnRail(above);
+        }
+        for (int dy = 1; dy <= 3; dy++) {
+            Block up = gold.getRelative(0, dy, 0);
+            if (RailUtil.isRailMaterial(up.getType())) {
+                return RailUtil.cartPositionOnRail(up);
+            }
+        }
+        Block nearest = RailUtil.findNearestRailBlock(
+                new Location(w, p[0] + 0.5, p[1] + 1.0, p[2] + 0.5), 3);
+        if (nearest != null) return RailUtil.cartPositionOnRail(nearest);
+        return new Location(w, p[0] + 0.5, p[1] + 1.0, p[2] + 0.5);
     }
 
     private static String blankToDash(String value) {
         return value != null && !value.isBlank() ? value : "-";
     }
     public void setLineIds(List<String> lineIds) { this.lineIds = lineIds != null ? lineIds : new ArrayList<>(); }
+
+    public Map<String, Integer> getLineTravelSeconds() { return lineTravelSeconds; }
+
+    public void setLineTravelSeconds(Map<String, Integer> map) {
+        lineTravelSeconds.clear();
+        if (map != null) lineTravelSeconds.putAll(map);
+    }
+
+    /** 由此站沿指定路線到下一站的行駛秒數；未設則用預設值 */
+    public int getTravelSecondsToNext(String lineId, int defaultSeconds) {
+        if (lineId == null) return defaultSeconds;
+        Integer v = lineTravelSeconds.get(lineId);
+        return v != null && v > 0 ? v : defaultSeconds;
+    }
+
+    public void setTravelSecondsToNext(String lineId, int seconds) {
+        if (lineId == null) return;
+        lineTravelSeconds.put(lineId, Math.max(5, Math.min(seconds, 600)));
+    }
 
     public static String key(int x, int y, int z) {
         return x + "," + y + "," + z;
@@ -129,29 +220,34 @@ public class Stop {
         return hasDisplayBlock(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
-    /** 玩家站立位置是否應顯示站點資訊（鑽石塊或金磚月台） */
+    /** 玩家站立位置是否應顯示站點資訊（金磚月台） */
     public boolean containsInfoLocation(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        if (hasDisplayBlock(x, y, z) || hasGoldBlock(x, y, z)) return true;
-        return hasDisplayBlock(x, y - 1, z) || hasGoldBlock(x, y - 1, z);
+        if (hasGoldBlock(x, y, z)) return true;
+        return hasGoldBlock(x, y - 1, z);
     }
 
     public boolean containsRail(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
-        World w = loc.getWorld();
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
         if (hasGoldBlock(x, y - 1, z)) return true;
         if (hasGoldBlock(x, y, z)) return true;
+        org.bukkit.block.Block rail = com.avery.atrain.util.RailUtil.findRailBlock(loc);
+        if (rail != null) {
+            org.bukkit.block.Block below = rail.getRelative(org.bukkit.block.BlockFace.DOWN);
+            if (hasGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
+            for (int d = 2; d <= 4; d++) {
+                below = below.getRelative(org.bukkit.block.BlockFace.DOWN);
+                if (hasGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
+            }
+        }
         return false;
     }
 
+    /** 去程月台鐵軌位置（相容舊 API） */
     public Location getPrimaryRailLocation() {
-        World w = Bukkit.getWorld(world);
-        if (w == null || goldBlocks.isEmpty()) return null;
-        int[] p = parseKey(goldBlocks.get(0));
-        if (p == null) return null;
-        return new Location(w, p[0] + 0.5, p[1] + 1.0, p[2] + 0.5);
+        return getRailLocation(TravelDirection.FORWARD);
     }
 
     public void addGoldBlock(int x, int y, int z) {

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** 站在金磚/鑽石塊上顯示站點資訊（與自動停車、路線無關） */
+/** 站在金磚月台上顯示站點資訊（與自動停車、路線無關） */
 public class StationDisplayListener implements Listener {
 
     private final AtrainPlugin plugin;

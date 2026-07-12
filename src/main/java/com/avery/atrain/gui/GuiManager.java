@@ -3,6 +3,7 @@ package com.avery.atrain.gui;
 import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.model.Line;
 import com.avery.atrain.model.Stop;
+import com.avery.atrain.model.TravelDirection;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -72,6 +73,11 @@ public class GuiManager {
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.lines_lore"))
                 .build());
 
+        inv.setItem(22, new ItemBuilder(Material.WRITABLE_BOOK)
+                .name(msg(player, "gui.main.record"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.main.record_lore"))
+                .build());
+
         inv.setItem(30, new ItemBuilder(Material.NAME_TAG)
                 .name(msg(player, "gui.main.language"))
                 .lore(msg(player, "gui.main.language_lore", Map.of(
@@ -99,12 +105,165 @@ public class GuiManager {
         player.openInventory(inv);
     }
 
+    /** 主選單「軌道錄製」：選擇要錄製的路線 */
+    public void openRecordSelect(Player player, int page) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.RECORD_SELECT);
+        holder.set("page", String.valueOf(page));
+        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.record_select.title"));
+        holder.setInventory(inv);
+
+        List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+        String recordingLineId = plugin.getRouteRecordingManager() != null
+                ? plugin.getRouteRecordingManager().getRecordingLineId(player) : null;
+
+        for (int i = start; i < Math.min(start + perPage, lines.size()); i++) {
+            Line line = lines.get(i);
+            if (slot % 9 == 8) slot += 2;
+            boolean recording = line.getId().equals(recordingLineId);
+            int segFwd = line.getRecordedSegmentCount(TravelDirection.FORWARD);
+            int segRev = line.getRecordedSegmentCount(TravelDirection.REVERSE);
+            List<String> lore = new ArrayList<>();
+            lore.add(msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))));
+            lore.add(msg(player, "gui.record_segment.line_progress_dir",
+                    Map.of("forward", String.valueOf(segFwd),
+                            "reverse", String.valueOf(segRev),
+                            "total", String.valueOf(line.getSegmentCount()))));
+            lore.add("");
+            lore.add(msg(player, recording ? "gui.record_select.stop" : "gui.record_select.start"));
+            inv.setItem(slot, new ItemBuilder(recording ? Material.REDSTONE_BLOCK : Material.MAP)
+                    .name("§d" + line.getDisplayName() + " §7(" + line.getId() + ")")
+                    .lore(lore)
+                    .build());
+            holder.set("line_" + slot, line.getId());
+            slot++;
+        }
+
+        if (lines.isEmpty()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name(msg(player, "gui.record_select.no_lines"))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.record_select.no_lines_lore"))
+                    .build());
+        }
+
+        if (page > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
+        if (start + perPage < lines.size()) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openRecordSegmentSelect(Player player, String lineId) {
+        openRecordSegmentSelect(player, lineId, TravelDirection.FORWARD);
+    }
+
+    /** 選擇要錄製的路段（站點→站點），去程／回程獨立 */
+    public void openRecordSegmentSelect(Player player, String lineId, TravelDirection direction) {
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+
+        TravelDirection dir = direction != null ? direction : TravelDirection.FORWARD;
+
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.RECORD_SEGMENT);
+        holder.set("line_id", lineId);
+        holder.set("direction", dir.name());
+        Inventory inv = Bukkit.createInventory(holder, 54,
+                msg(player, "gui.record_segment.title", safePh(Map.of("name", line.getDisplayName()))));
+        holder.setInventory(inv);
+
+        var rm = plugin.getRouteRecordingManager();
+        boolean recordingThis = rm != null && rm.isRecordingLine(player, lineId, dir);
+        int activeSeg = recordingThis && rm != null ? rm.getRecordingSegmentIndex(player) : -1;
+
+        inv.setItem(2, new ItemBuilder(dir == TravelDirection.FORWARD ? Material.LIME_DYE : Material.GRAY_DYE)
+                .name(msg(player, "gui.record_segment.tab_forward"))
+                .lore(List.of(msg(player, "gui.record_segment.tab_forward_lore",
+                        Map.of("count", String.valueOf(line.getRecordedSegmentCount(TravelDirection.FORWARD))))))
+                .build());
+        inv.setItem(6, new ItemBuilder(dir == TravelDirection.REVERSE ? Material.LIME_DYE : Material.GRAY_DYE)
+                .name(msg(player, "gui.record_segment.tab_reverse"))
+                .lore(List.of(msg(player, "gui.record_segment.tab_reverse_lore",
+                        Map.of("count", String.valueOf(line.getRecordedSegmentCount(TravelDirection.REVERSE))))))
+                .build());
+
+        int segCount = line.getSegmentCount();
+        int[] slots = {19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32};
+
+        for (int i = 0; i < slots.length && i < segCount; i++) {
+            String fromId = line.getSegmentFromStopId(i, dir);
+            String toId = line.getSegmentToStopId(i, dir);
+            Stop from = fromId != null ? plugin.getStopManager().getStop(fromId) : null;
+            Stop to = toId != null ? plugin.getStopManager().getStop(toId) : null;
+            String fromName = from != null ? from.getDisplayName() : (fromId != null ? fromId : "?");
+            String toName = to != null ? to.getDisplayName() : (toId != null ? toId : "?");
+
+            boolean recorded = line.hasSegment(i, dir);
+            boolean active = recordingThis && i == activeSeg;
+            Material icon = active ? Material.REDSTONE_BLOCK
+                    : (recorded ? Material.LIME_CARPET : Material.GRAY_CARPET);
+
+            List<String> lore = new ArrayList<>();
+            lore.add(msg(player, "gui.record_segment.leg", Map.of(
+                    "from", fromName, "to", toName,
+                    "index", String.valueOf(i + 1), "total", String.valueOf(segCount))));
+            if (recorded) {
+                lore.add(msg(player, "gui.record_segment.recorded",
+                        Map.of("count", String.valueOf(line.getSegmentPoints(i, dir).size()))));
+            }
+            if (active) {
+                lore.add(msg(player, "gui.record_segment.recording_now"));
+            } else if (!recordingThis) {
+                lore.add(msg(player, "gui.record_segment.click_start"));
+            }
+            lore.add("");
+
+            inv.setItem(slots[i], new ItemBuilder(icon)
+                    .name("§e#" + (i + 1) + " §a" + fromName + " §7→ §a" + toName)
+                    .lore(lore)
+                    .build());
+            holder.set("seg_" + slots[i], String.valueOf(i));
+        }
+
+        if (segCount == 0) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name(msg(player, "route.need_two_stops"))
+                    .build());
+        }
+
+        if (recordingThis) {
+            var session = rm.getSession(player);
+            int pts = session != null ? session.getCurrentPointCount() : 0;
+            inv.setItem(4, new ItemBuilder(Material.WRITABLE_BOOK)
+                    .name(msg(player, "gui.record_segment.status"))
+                    .lore(List.of(
+                            msg(player, "gui.record_segment.status_lore", Map.of(
+                                    "index", String.valueOf(activeSeg + 1),
+                                    "points", String.valueOf(pts))),
+                            msg(player, "gui.record_segment.await_hint")))
+                    .build());
+            inv.setItem(38, new ItemBuilder(Material.LIME_WOOL)
+                    .name(msg(player, "gui.record_segment.stop_btn"))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.record_segment.stop_lore"))
+                    .build());
+            inv.setItem(42, new ItemBuilder(Material.RED_WOOL)
+                    .name(msg(player, "gui.record_segment.cancel_btn"))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.record_segment.cancel_lore"))
+                    .build());
+        }
+
+        fillBorder(inv);
+        addBack(inv, player);
+        player.openInventory(inv);
+    }
+
     public void openTutorial(Player player) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.TUTORIAL);
         Inventory inv = Bukkit.createInventory(holder, 45, msg(player, "gui.tutorial.title"));
         holder.setInventory(inv);
 
-        String[] cats = {"quickstart", "stop", "autostop", "display", "hangrail"};
+        String[] cats = {"quickstart", "stop", "autostop", "speedblock", "hangrail"};
         Material[] icons = {Material.LIME_DYE, Material.GOLD_BLOCK, Material.MINECART,
                 Material.DIAMOND_BLOCK, Material.IRON_BARS};
         int[] slots = {11, 13, 15, 21, 23};
@@ -246,20 +405,27 @@ public class GuiManager {
                     .name(msg(player, "gui.station_edit.dwell_up"))
                     .build());
         }
+        if (plugin.getConfigManager().isCinematicTransitEnabled() && displayLine != null) {
+            int travelSec = stop.getTravelSecondsToNext(displayLine.getId(),
+                    plugin.getConfigManager().getDefaultSegmentSeconds());
+            inv.setItem(30, new ItemBuilder(Material.REDSTONE_BLOCK)
+                    .name(msg(player, "gui.station_edit.travel_down"))
+                    .build());
+            inv.setItem(31, new ItemBuilder(Material.MINECART)
+                    .name(msg(player, "gui.station_edit.travel", Map.of(
+                            "sec", String.valueOf(travelSec),
+                            "next", next)))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.station_edit.travel_lore"))
+                    .build());
+            inv.setItem(32, new ItemBuilder(Material.GLOWSTONE)
+                    .name(msg(player, "gui.station_edit.travel_up"))
+                    .build());
+        }
         inv.setItem(29, new ItemBuilder(Material.GOLD_BLOCK)
                 .name(msg(player, "gui.station_edit.gold_count",
                         Map.of("count", String.valueOf(stop.getGoldBlocks().size()))))
                 .lore(msg(player, "gui.station_edit.gold_hint"))
                 .build());
-        inv.setItem(31, new ItemBuilder(Material.DIAMOND_BLOCK)
-                .name(msg(player, "gui.station_edit.display_count",
-                        Map.of("count", String.valueOf(stop.getDisplayBlocks().size()))))
-                .lore(msg(player, "gui.station_edit.display_hint"))
-                .build());
-        inv.setItem(33, new ItemBuilder(Material.EMERALD)
-                .name(msg(player, "gui.station_edit.rescan_display"))
-                .build());
-
         int returnGoldCount = stop.getReturnGoldBlocks().size();
         inv.setItem(28, new ItemBuilder(Material.IRON_BLOCK)
                 .name(msg(player, "gui.station_edit.bind_return"))
@@ -471,6 +637,23 @@ public class GuiManager {
         if (stopPage > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
         if (start + perPage < stopIds.size()) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
 
+        boolean recordingThis = plugin.getRouteRecordingManager() != null
+                && lineId.equals(plugin.getRouteRecordingManager().getRecordingLineId(player));
+        boolean awaitingCart = recordingThis && plugin.getRouteRecordingManager().isAwaitingCart(player);
+        int segIdx = recordingThis ? plugin.getRouteRecordingManager().getRecordingSegmentIndex(player) : -1;
+        int pointCount = line.getRoutePoints().size();
+        inv.setItem(40, new ItemBuilder(recordingThis ? Material.REDSTONE_BLOCK : Material.MAP)
+                .name(msg(player, recordingThis ? "gui.line_detail.manage_record" : "gui.line_detail.record"))
+                .lore(recordingThis
+                        ? List.of(
+                            msg(player, awaitingCart ? "gui.line_detail.recording_await_cart"
+                                    : "gui.record_segment.status_lore", Map.of(
+                                    "index", String.valueOf(segIdx + 1),
+                                    "points", String.valueOf(pointCount))),
+                            msg(player, "gui.line_detail.record_control_hint"))
+                        : plugin.getLanguageManager().getList(player, "gui.line_detail.record_lore"))
+                .build());
+
         fillBorder(inv);
         addBack(inv, player);
         player.openInventory(inv);
@@ -537,5 +720,70 @@ public class GuiManager {
         lore.add("");
         lore.add(msg(player, "gui.station_edit.manage_lines_hint"));
         return lore;
+    }
+
+    /** 調速方塊編輯（軌下鑽石塊） */
+    public void openSpeedBlockEdit(Player player, String blockKey) {
+        var sbMgr = plugin.getSpeedBlockManager();
+        com.avery.atrain.model.SpeedBlock sb = sbMgr.getByKey(blockKey);
+        if (sb == null) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "speed_block.not_found"));
+            return;
+        }
+
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.SPEED_BLOCK_EDIT);
+        holder.set("block_key", blockKey);
+        String title = msg(player, "gui.speed_block.title");
+        Inventory inv;
+        try {
+            inv = Bukkit.createInventory(holder, 45, TextUtil.component(title));
+        } catch (Exception e) {
+            inv = Bukkit.createInventory(holder, 45, title);
+        }
+        holder.setInventory(inv);
+
+        String speedStr = String.format("%.2f", sb.getSpeed());
+        inv.setItem(4, new ItemBuilder(Material.DIAMOND_BLOCK)
+                .name(msg(player, "gui.speed_block.current", Map.of("speed", speedStr)))
+                .lore(plugin.getLanguageManager().getList(player, "gui.speed_block.hint"))
+                .build());
+
+        inv.setItem(11, new ItemBuilder(Material.RED_DYE)
+                .name(msg(player, "gui.speed_block.slower"))
+                .lore(msg(player, "gui.speed_block.slower_lore"))
+                .build());
+        inv.setItem(13, new ItemBuilder(Material.MINECART)
+                .name(msg(player, "gui.speed_block.speed_value", Map.of("speed", speedStr)))
+                .lore(msg(player, "gui.speed_block.speed_value_lore"))
+                .build());
+        inv.setItem(15, new ItemBuilder(Material.LIME_DYE)
+                .name(msg(player, "gui.speed_block.faster"))
+                .lore(msg(player, "gui.speed_block.faster_lore"))
+                .build());
+
+        inv.setItem(20, new ItemBuilder(Material.COAL)
+                .name(msg(player, "gui.speed_block.preset_slow"))
+                .build());
+        inv.setItem(22, new ItemBuilder(Material.IRON_INGOT)
+                .name(msg(player, "gui.speed_block.preset_cruise"))
+                .build());
+        inv.setItem(24, new ItemBuilder(Material.GOLD_INGOT)
+                .name(msg(player, "gui.speed_block.preset_fast"))
+                .build());
+
+        inv.setItem(29, new ItemBuilder(Material.CLOCK)
+                .name(msg(player, "gui.speed_block.ramp", Map.of("blocks", String.valueOf(sb.getRamp()))))
+                .lore(msg(player, "gui.speed_block.ramp_lore"))
+                .build());
+        inv.setItem(30, new ItemBuilder(Material.REDSTONE)
+                .name(msg(player, "gui.speed_block.ramp_down"))
+                .build());
+        inv.setItem(32, new ItemBuilder(Material.GLOWSTONE_DUST)
+                .name(msg(player, "gui.speed_block.ramp_up"))
+                .build());
+
+        fillBorder(inv);
+        addClose(inv, player);
+        player.openInventory(inv);
     }
 }

@@ -19,8 +19,67 @@ public final class StationUtil {
         return type == Material.GOLD_BLOCK;
     }
 
+    /**
+     * 鑽石塊已改用途為「礦車調速方塊」（見 SpeedBlockManager），
+     * 不再作為站點顯示塊——站點資訊改為站在金磚上查看。
+     * 保留此方法回傳 false，讓舊有的顯示掃描自動失效。
+     */
     public static boolean isDisplayBlock(Material type) {
+        return false;
+    }
+
+    public static boolean isSpeedBlock(Material type) {
         return type == Material.DIAMOND_BLOCK;
+    }
+
+    /** 鐵軌正下方是否為鑽石調速方塊 */
+    public static boolean hasSpeedBlockBelow(Block rail) {
+        if (rail == null || !isAnyRail(rail.getType())) return false;
+        return isSpeedBlock(rail.getRelative(BlockFace.DOWN).getType());
+    }
+
+    /**
+     * 從鐵軌所在柱向下搜尋調速鑽石塊（最多 {@code maxDepth} 格）。
+     * 允許金磚等方塊夾在鐵軌與鑽石之間。
+     */
+    public static Block findSpeedBlockBelow(Block rail, int maxDepth) {
+        if (rail == null) return null;
+        Block cur = rail;
+        for (int i = 0; i < maxDepth; i++) {
+            cur = cur.getRelative(BlockFace.DOWN);
+            if (isSpeedBlock(cur.getType())) return cur;
+            if (cur.getType().isAir()) break;
+        }
+        return null;
+    }
+
+    public static Block findSpeedBlockBelow(Block rail) {
+        return findSpeedBlockBelow(rail, 5);
+    }
+
+    /** 該柱從鑽石塊往上是否找得到鐵軌（含正上方與爬升軌相鄰格） */
+    public static boolean hasRailAbove(Block diamond) {
+        if (diamond == null || !isSpeedBlock(diamond.getType())) return false;
+        Block above = diamond.getRelative(BlockFace.UP);
+        if (isAnyRail(above.getType())) return true;
+        // 爬升軌：鐵軌可能在斜上方同一柱
+        for (BlockFace face : new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST}) {
+            Block adj = above.getRelative(face);
+            if (isAnyRail(adj.getType())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 從點擊的方塊解析調速鑽石塊：可直接點鑽石塊，或點其上方（含間隔）的鐵軌。
+     */
+    public static Block resolveSpeedBlock(Block clicked) {
+        if (clicked == null) return null;
+        if (isSpeedBlock(clicked.getType())) return clicked;
+        if (isAnyRail(clicked.getType())) {
+            return findSpeedBlockBelow(clicked);
+        }
+        return null;
     }
 
     public static boolean isAnyRail(Material type) {

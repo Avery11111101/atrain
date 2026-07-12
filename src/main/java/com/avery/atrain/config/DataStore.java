@@ -40,6 +40,28 @@ public class DataStore {
             line.setMaxSpeed(ls.getDouble("max_speed", 0.35));
             line.setCircular(ls.getBoolean("circular", false));
             line.setStopIds(new ArrayList<>(ls.getStringList("stops")));
+            List<String> rawPoints = ls.getStringList("route_points");
+            Map<Integer, List<com.avery.atrain.model.RoutePoint>> forwardSegs = loadSegmentSection(
+                    ls.getConfigurationSection("route_segments_forward"));
+            if (forwardSegs.isEmpty()) {
+                forwardSegs = loadSegmentSection(ls.getConfigurationSection("route_segments"));
+            }
+            Map<Integer, List<com.avery.atrain.model.RoutePoint>> reverseSegs = loadSegmentSection(
+                    ls.getConfigurationSection("route_segments_reverse"));
+            if (!forwardSegs.isEmpty()) {
+                line.setForwardRouteSegments(forwardSegs);
+            }
+            if (!reverseSegs.isEmpty()) {
+                line.setReverseRouteSegments(reverseSegs);
+            }
+            if (forwardSegs.isEmpty() && reverseSegs.isEmpty() && rawPoints != null && !rawPoints.isEmpty()) {
+                List<com.avery.atrain.model.RoutePoint> pts = new ArrayList<>();
+                for (String s : rawPoints) {
+                    com.avery.atrain.model.RoutePoint rp = com.avery.atrain.model.RoutePoint.fromString(s);
+                    if (rp != null) pts.add(rp);
+                }
+                line.setRoutePoints(pts);
+            }
             lines.put(id, line);
         }
     }
@@ -73,6 +95,14 @@ public class DataStore {
             stop.setAdminInfo(ss.getString("admin_info", ""));
             stop.setGoldBlocks(ss.getStringList("gold_blocks"));
             stop.setDisplayBlocks(ss.getStringList("display_blocks"));
+            ConfigurationSection travelSec = ss.getConfigurationSection("travel_seconds");
+            if (travelSec != null) {
+                Map<String, Integer> travel = new HashMap<>();
+                for (String lid : travelSec.getKeys(false)) {
+                    travel.put(lid, travelSec.getInt(lid, 0));
+                }
+                stop.setLineTravelSeconds(travel);
+            }
             stops.put(id, stop);
         }
     }
@@ -92,6 +122,14 @@ public class DataStore {
             yaml.set(path + ".max_speed", line.getMaxSpeed());
             yaml.set(path + ".circular", line.isCircular());
             yaml.set(path + ".stops", line.getStopIds());
+            line.rebuildRoutePoints();
+            List<String> pointStrings = new ArrayList<>();
+            for (com.avery.atrain.model.RoutePoint rp : line.getRoutePoints()) {
+                pointStrings.add(rp.toDataString());
+            }
+            yaml.set(path + ".route_points", pointStrings);
+            writeSegmentSection(yaml, path + ".route_segments_forward", line.getForwardRouteSegments());
+            writeSegmentSection(yaml, path + ".route_segments_reverse", line.getReverseRouteSegments());
         }
         try { yaml.save(file); } catch (IOException e) {
             plugin.getLogger().severe("無法儲存 lines.yml: " + e.getMessage());
@@ -117,6 +155,11 @@ public class DataStore {
             yaml.set(path + ".admin_info", stop.getAdminInfo());
             yaml.set(path + ".gold_blocks", stop.getGoldBlocks());
             yaml.set(path + ".display_blocks", stop.getDisplayBlocks());
+            if (!stop.getLineTravelSeconds().isEmpty()) {
+                for (Map.Entry<String, Integer> e : stop.getLineTravelSeconds().entrySet()) {
+                    yaml.set(path + ".travel_seconds." + e.getKey(), e.getValue());
+                }
+            }
         }
         try { yaml.save(file); } catch (IOException e) {
             plugin.getLogger().severe("無法儲存 stops.yml: " + e.getMessage());
@@ -125,4 +168,32 @@ public class DataStore {
 
     public Map<String, Line> getLines() { return lines; }
     public Map<String, Stop> getStops() { return stops; }
+
+    private static Map<Integer, List<com.avery.atrain.model.RoutePoint>> loadSegmentSection(ConfigurationSection sec) {
+        Map<Integer, List<com.avery.atrain.model.RoutePoint>> segments = new LinkedHashMap<>();
+        if (sec == null) return segments;
+        for (String key : sec.getKeys(false)) {
+            try {
+                int idx = Integer.parseInt(key);
+                List<com.avery.atrain.model.RoutePoint> pts = new ArrayList<>();
+                for (String s : sec.getStringList(key)) {
+                    com.avery.atrain.model.RoutePoint rp = com.avery.atrain.model.RoutePoint.fromString(s);
+                    if (rp != null) pts.add(rp);
+                }
+                if (!pts.isEmpty()) segments.put(idx, pts);
+            } catch (NumberFormatException ignored) {}
+        }
+        return segments;
+    }
+
+    private static void writeSegmentSection(YamlConfiguration yaml, String basePath,
+            Map<Integer, List<com.avery.atrain.model.RoutePoint>> segments) {
+        for (Map.Entry<Integer, List<com.avery.atrain.model.RoutePoint>> e : segments.entrySet()) {
+            List<String> segStrings = new ArrayList<>();
+            for (com.avery.atrain.model.RoutePoint rp : e.getValue()) {
+                segStrings.add(rp.toDataString());
+            }
+            yaml.set(basePath + "." + e.getKey(), segStrings);
+        }
+    }
 }

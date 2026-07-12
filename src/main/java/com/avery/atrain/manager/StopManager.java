@@ -35,19 +35,8 @@ public class StopManager {
 
     public Stop getStopByDisplay(Location loc) {
         if (loc == null) return null;
-        Location feet = loc.clone();
         for (Stop stop : getAllStops()) {
-            if (stop.containsInfoLocation(feet)) return stop;
-        }
-        Block below = feet.getBlock();
-        Block stand = feet.clone().subtract(0, 1, 0).getBlock();
-        for (Block candidate : new Block[]{below, stand}) {
-            if (!StationUtil.isDisplayBlock(candidate.getType())) continue;
-            Stop adjacent = findStopAdjacentTo(candidate);
-            if (adjacent != null) {
-                rescanDisplayBlocks(adjacent);
-                return adjacent;
-            }
+            if (stop.containsInfoLocation(loc)) return stop;
         }
         return null;
     }
@@ -56,12 +45,33 @@ public class StopManager {
         if (goldBlock == null) return null;
         String key = Stop.key(goldBlock.getX(), goldBlock.getY(), goldBlock.getZ());
         for (Stop stop : getAllStops()) {
-            if (stop.getGoldBlocks().contains(key)) return stop;
+            if (stop.getGoldBlocks().contains(key) || stop.getReturnGoldBlocks().contains(key)) {
+                return stop;
+            }
         }
         return null;
     }
 
-    /** 方塊是否鄰近某站點的金磚月台（含鑽石顯示塊） */
+    /** 該金磚是否為已註冊站點的一部分（受保護不可被一般玩家破壞） */
+    public boolean isProtectedGold(Block block) {
+        return findStopOwningGold(block) != null;
+    }
+
+    /** 管理員破壞金磚後，從站點資料移除；若站點無金磚則刪除站點 */
+    public void unregisterGoldBlock(Block block) {
+        Stop stop = findStopOwningGold(block);
+        if (stop == null) return;
+        String key = Stop.key(block.getX(), block.getY(), block.getZ());
+        stop.getGoldBlocks().remove(key);
+        stop.getReturnGoldBlocks().remove(key);
+        if (stop.getGoldBlocks().isEmpty()) {
+            deleteStop(stop.getId());
+        } else {
+            plugin.getDataStore().save();
+        }
+    }
+
+    /** 方塊是否鄰近某站點的金磚月台 */
     public Stop findStopAdjacentTo(Block block) {
         if (block == null || block.getWorld() == null) return null;
         int x = block.getX(), y = block.getY(), z = block.getZ();
@@ -92,13 +102,11 @@ public class StopManager {
         }
 
         String world = gold.getWorld().getName();
-        Set<String> displayKeys = StationUtil.scanAdjacentDisplayBlocks(goldKeys, world);
 
         String id = "stop_" + UUID.randomUUID().toString().substring(0, 8);
         String name = (defaultName != null && !defaultName.isBlank()) ? defaultName : id;
         Stop stop = new Stop(id, name, world);
         stop.setGoldBlocks(new ArrayList<>(goldKeys));
-        stop.setDisplayBlocks(new ArrayList<>(displayKeys));
         stop.setDwellTimeTicks(plugin.getConfigManager().getDefaultDwellTime());
 
         plugin.getDataStore().getStops().put(id, stop);
@@ -127,8 +135,6 @@ public class StopManager {
             merged.addAll(stop.getGoldBlocks());
         }
         primary.setGoldBlocks(new ArrayList<>(merged));
-        Set<String> displays = StationUtil.scanAdjacentDisplayBlocks(merged, primary.getWorld());
-        primary.setDisplayBlocks(new ArrayList<>(displays));
 
         for (int i = 1; i < allTouched.size(); i++) {
             mergeTextFields(primary, allTouched.get(i));
@@ -221,11 +227,10 @@ public class StopManager {
         return true;
     }
 
+    /** 鑽石塊已改為調速方塊，此方法保留相容性（清空舊顯示塊資料） */
     public void rescanDisplayBlocks(Stop stop) {
         if (stop == null) return;
-        Set<String> displays = StationUtil.scanAdjacentDisplayBlocks(
-                new LinkedHashSet<>(stop.getGoldBlocks()), stop.getWorld());
-        stop.setDisplayBlocks(new ArrayList<>(displays));
+        stop.setDisplayBlocks(List.of());
         plugin.getDataStore().save();
     }
 
@@ -339,12 +344,8 @@ public class StopManager {
             }
         } else {
             for (String k : scanned) {
-                if (!primary.getGoldBlocks().contains(k)) primary.getGoldBlocks().add(k);
                 if (!primary.getReturnGoldBlocks().contains(k)) primary.getReturnGoldBlocks().add(k);
             }
-            Set<String> displays = StationUtil.scanAdjacentDisplayBlocks(
-                    new LinkedHashSet<>(primary.getGoldBlocks()), primary.getWorld());
-            primary.setDisplayBlocks(new ArrayList<>(displays));
         }
         plugin.getDataStore().save();
         return true;
