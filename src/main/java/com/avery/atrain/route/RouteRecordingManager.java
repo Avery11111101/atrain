@@ -129,7 +129,8 @@ public final class RouteRecordingManager {
                 Map.of("line", line.getFormattedName(),
                         "count", String.valueOf(line.getRecordedSegmentCount(dir)),
                         "dir", plugin.getLanguageManager().get(player, dirKey))));
-        TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_spawn_hint"));
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_spawn_hint",
+                Map.of("sec", String.valueOf(plugin.getConfigManager().getRecordingDwellTicks() / 20))));
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_segment_start",
                 RouteRecordingSession.segmentLabel(plugin, line, segmentIndex, dir)));
         return true;

@@ -224,8 +224,12 @@ public class Stop {
     public boolean containsInfoLocation(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        if (hasGoldBlock(x, y, z)) return true;
-        return hasGoldBlock(x, y - 1, z);
+        if (hasGoldBlock(x, y, z) || hasReturnGoldBlock(x, y, z)) return true;
+        return hasGoldBlock(x, y - 1, z) || hasReturnGoldBlock(x, y - 1, z);
+    }
+
+    public boolean hasReturnGoldBlock(int x, int y, int z) {
+        return returnGoldBlocks.contains(key(x, y, z));
     }
 
     public boolean containsRail(Location loc) {

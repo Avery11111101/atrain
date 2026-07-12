@@ -227,6 +227,41 @@ public class StopManager {
         return true;
     }
 
+    /** 將玩家傳送至站點月台（優先去程鐵軌，否則取金磚上方） */
+    public boolean teleportPlayerToStop(Player player, Stop stop) {
+        if (player == null || stop == null) return false;
+        org.bukkit.Location loc = stop.getPrimaryRailLocation();
+        if (loc == null) {
+            loc = resolveTeleportFallback(stop);
+        }
+        if (loc == null) return false;
+        loc = loc.clone();
+        org.bukkit.Location from = player.getLocation();
+        loc.setYaw(from.getYaw());
+        loc.setPitch(from.getPitch());
+        return player.teleport(loc);
+    }
+
+    private org.bukkit.Location resolveTeleportFallback(Stop stop) {
+        org.bukkit.World w = org.bukkit.Bukkit.getWorld(stop.getWorld());
+        if (w == null) return null;
+        for (String k : stop.getGoldBlocks()) {
+            org.bukkit.Location loc = locationAboveGold(w, k);
+            if (loc != null) return loc;
+        }
+        for (String k : stop.getReturnGoldBlocks()) {
+            org.bukkit.Location loc = locationAboveGold(w, k);
+            if (loc != null) return loc;
+        }
+        return null;
+    }
+
+    private org.bukkit.Location locationAboveGold(org.bukkit.World w, String goldKey) {
+        int[] p = Stop.parseKey(goldKey);
+        if (p == null) return null;
+        return new org.bukkit.Location(w, p[0] + 0.5, p[1] + 1.0, p[2] + 0.5);
+    }
+
     /** 鑽石塊已改為調速方塊，此方法保留相容性（清空舊顯示塊資料） */
     public void rescanDisplayBlocks(Stop stop) {
         if (stop == null) return;
@@ -311,15 +346,31 @@ public class StopManager {
 
     /**
      * 判斷是否需要在回程月台反向顯示上下站。
-     * 條件：站在回程月台，且未設定有效的 returnLineId（沒設、對應路線為 null 或不含本站）。
-     * 此時 resolveDisplayLine 會 fallback 到去程顯示路線，需將上下站對調。
+     * 同線反向（含 returnLineId 指向去程同一條路線）需對調；僅獨立回程路線（不同 lineId）時沿用該線站序。
      */
     private boolean isReturnReversed(Stop stop, Location at) {
         if (at == null || !stop.isOnReturnPlatform(at)) return false;
         String returnLineId = stop.getReturnLineId();
         if (returnLineId == null) return true;
         Line returnLine = plugin.getLineManager().getLine(returnLineId);
-        return returnLine == null || !returnLine.getStopIds().contains(stop.getId());
+        if (returnLine == null || !returnLine.getStopIds().contains(stop.getId())) return true;
+        Line forwardLine = resolveForwardDisplayLine(stop);
+        return forwardLine == null || forwardLine.getId().equals(returnLine.getId());
+    }
+
+    /** 去程顯示路線（不考慮玩家站在哪側月台） */
+    private Line resolveForwardDisplayLine(Stop stop) {
+        if (stop == null) return null;
+        String displayId = stop.getDisplayLineId();
+        if (displayId != null) {
+            Line line = plugin.getLineManager().getLine(displayId);
+            if (line != null && line.getStopIds().contains(stop.getId())) return line;
+        }
+        for (String lineId : stop.getLineIds()) {
+            Line line = plugin.getLineManager().getLine(lineId);
+            if (line != null && line.getStopIds().contains(stop.getId())) return line;
+        }
+        return null;
     }
 
     /** 將另一組金磚月台綁定為此站點的回程月台 */
@@ -332,22 +383,55 @@ public class StopManager {
         Set<String> scanned = StationUtil.scanConnectedGoldPlatform(gold);
         if (scanned.isEmpty()) return false;
 
+        for (String k : scanned) {
+            if (primary.getGoldBlocks().contains(k) && !primary.getReturnGoldBlocks().contains(k)) {
+                return false;
+            }
+        }
+
         Stop other = findStopOwningGold(gold);
         if (other != null && other.getId().equals(primaryId)) return false;
 
         if (other != null) {
-            mergeStopsInto(primary, List.of(other), scanned);
-            for (String k : other.getGoldBlocks()) {
-                if (!primary.getReturnGoldBlocks().contains(k)) {
-                    primary.getReturnGoldBlocks().add(k);
-                }
-            }
+            absorbStopAsReturnPlatform(primary, other, scanned);
         } else {
-            for (String k : scanned) {
-                if (!primary.getReturnGoldBlocks().contains(k)) primary.getReturnGoldBlocks().add(k);
-            }
+            attachReturnGoldBlocks(primary, scanned);
         }
         plugin.getDataStore().save();
         return true;
+    }
+
+    private void attachReturnGoldBlocks(Stop stop, Set<String> goldKeys) {
+        for (String k : goldKeys) {
+            int[] p = Stop.parseKey(k);
+            if (p != null) stop.addGoldBlock(p[0], p[1], p[2]);
+            if (!stop.getReturnGoldBlocks().contains(k)) stop.getReturnGoldBlocks().add(k);
+        }
+    }
+
+    /** 將另一站點的金磚月台併入本站回程月台（站名與路線資料保留，不當成去程月台合併） */
+    private void absorbStopAsReturnPlatform(Stop primary, Stop other, Set<String> returnGold) {
+        mergeTextFields(primary, other);
+
+        Set<String> keys = new LinkedHashSet<>(returnGold);
+        keys.addAll(other.getGoldBlocks());
+        keys.addAll(other.getReturnGoldBlocks());
+        attachReturnGoldBlocks(primary, keys);
+
+        String otherId = other.getId();
+        plugin.getDataStore().getStops().remove(otherId);
+        for (Line line : plugin.getLineManager().getAllLines()) {
+            List<String> ids = line.getStopIds();
+            for (int j = 0; j < ids.size(); j++) {
+                if (otherId.equals(ids.get(j))) {
+                    ids.set(j, primary.getId());
+                }
+            }
+            for (int j = ids.size() - 1; j > 0; j--) {
+                if (ids.get(j).equals(ids.get(j - 1))) {
+                    ids.remove(j);
+                }
+            }
+        }
     }
 }

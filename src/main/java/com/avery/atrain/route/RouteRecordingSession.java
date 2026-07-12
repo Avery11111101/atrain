@@ -10,6 +10,7 @@ import com.avery.atrain.util.TextUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.minecart.RideableMinecart;
+import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,9 @@ public final class RouteRecordingSession {
     private boolean awaitingCart;
     private boolean ended;
     private boolean autoFinished;
+    private boolean dwelling;
+    private int dwellTicksRemaining;
+    private float savedMaxSpeed;
 
     RouteRecordingSession(AtrainPlugin plugin, Player player, String lineId,
                           int segmentIndex, TravelDirection direction) {
@@ -101,11 +105,27 @@ public final class RouteRecordingSession {
         if (ended || !player.isOnline()) return false;
         if (!hasCart()) return true;
         if (!cart.getPassengers().contains(player)) return true;
+
+        if (dwelling) {
+            holdCartStill();
+            dwellTicksRemaining--;
+            if (dwellTicksRemaining <= 0) {
+                finishDwellAndAdvance();
+            }
+            return !autoFinished;
+        }
+
         if (!RailUtil.isOnRail(cart.getLocation())) return true;
 
         sampleIfMoved(cart.getLocation());
         checkSegmentDestination(cart.getLocation());
         return !autoFinished;
+    }
+
+    private void holdCartStill() {
+        if (cart == null || !cart.isValid()) return;
+        cart.setVelocity(new Vector(0, 0, 0));
+        cart.setMaxSpeed(0);
     }
 
     private void sampleIfMoved(Location loc) {
@@ -124,6 +144,7 @@ public final class RouteRecordingSession {
     }
 
     private void checkSegmentDestination(Location loc) {
+        if (dwelling) return;
         Stop stop = plugin.getStopManager().getStopAtRail(loc);
         if (stop == null) return;
 
@@ -133,14 +154,57 @@ public final class RouteRecordingSession {
         String destId = line.getSegmentToStopId(segmentIndex, direction);
         if (destId == null || !destId.equals(stop.getId())) return;
 
-        completeSegmentAt(stop, line);
+        beginDwellAtDestination(stop, line);
     }
 
-    private void completeSegmentAt(Stop destStop, Line line) {
+    private void beginDwellAtDestination(Stop destStop, Line line) {
+        if (dwelling) return;
+
         persistCurrentSegment();
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_segment_done",
                 segmentLabel(plugin, line, segmentIndex, direction)));
 
+        int dwell = plugin.getConfigManager().getRecordingDwellTicks();
+        if (dwell <= 0) {
+            advanceToNextSegment(line);
+            return;
+        }
+
+        dwelling = true;
+        dwellTicksRemaining = dwell;
+        savedMaxSpeed = cart != null ? (float) cart.getMaxSpeed() : 0f;
+        if (savedMaxSpeed < 0.01f) {
+            savedMaxSpeed = (float) plugin.getConfigManager().getCartSpeed();
+        }
+        holdCartStill();
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_dwelling",
+                Map.of("sec", String.valueOf((dwell + 19) / 20))));
+    }
+
+    private void finishDwellAndAdvance() {
+        dwelling = false;
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) {
+            autoFinished = true;
+            return;
+        }
+        advanceToNextSegment(line);
+        if (!autoFinished && cart != null && cart.isValid()) {
+            cart.setMaxSpeed(savedMaxSpeed);
+            Vector push = pickDepartDirection(cart.getLocation());
+            if (push != null) {
+                cart.setVelocity(push.multiply(Math.max(savedMaxSpeed, 0.12)));
+            }
+        }
+    }
+
+    private Vector pickDepartDirection(Location loc) {
+        var dirs = RailUtil.getRailDirections(loc);
+        if (dirs.isEmpty()) return null;
+        return dirs.get(0).clone();
+    }
+
+    private void advanceToNextSegment(Line line) {
         int next = segmentIndex + 1;
         if (next >= line.getSegmentCount()) {
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_finished_line"));

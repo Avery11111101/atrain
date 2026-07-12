@@ -474,7 +474,7 @@ public class GuiManager {
             lore.add(msg(player, "gui.stop_list.lines", Map.of("count", String.valueOf(lineCount))));
         }
         lore.add("");
-        lore.add(msg(player, "gui.click_to_manage"));
+        lore.addAll(plugin.getLanguageManager().getList(player, "gui.stop_list.click_lore"));
         return lore;
     }
 

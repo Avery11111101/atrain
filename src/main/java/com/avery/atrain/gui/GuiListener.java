@@ -44,7 +44,7 @@ public class GuiListener implements Listener {
             case TUTORIAL_CATEGORY -> {
                 if (isBackSlot(event.getInventory(), slot)) gui.openTutorial(player);
             }
-            case STOP_LIST -> handleStopList(player, slot, holder, gui);
+            case STOP_LIST -> handleStopList(player, slot, holder, gui, event);
             case STATION_EDIT -> handleStationEdit(player, slot, holder, gui, event);
             case LINE_LIST -> handleLineList(player, slot, holder, gui, event);
             case LINE_DETAIL -> handleLineDetail(player, slot, holder, gui, event);
@@ -114,7 +114,7 @@ public class GuiListener implements Listener {
         if (cat != null) gui.openTutorialCategory(player, cat);
     }
 
-    private void handleStopList(Player player, int slot, GuiHolder holder, GuiManager gui) {
+    private void handleStopList(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
         Inventory inv = holder.getInventory();
         if (isBackSlot(inv, slot)) { gui.openMain(player); return; }
         if (slot == GuiSlots.PREV_PAGE) {
@@ -134,7 +134,15 @@ public class GuiListener implements Listener {
                 TextUtil.send(player, lang(player, "error.no_permission"));
                 return;
             }
-            gui.openStationEdit(player, stopId);
+            Stop stop = plugin.getStopManager().getStop(stopId);
+            if (stop == null) return;
+            if (event.getClick() == ClickType.LEFT) {
+                teleportToStop(player, stop);
+                return;
+            }
+            if (event.getClick() == ClickType.RIGHT) {
+                gui.openStationEdit(player, stopId);
+            }
         }
     }
 
@@ -348,21 +356,32 @@ public class GuiListener implements Listener {
             default -> {
                 String stopId = holder.get("stop_" + slot);
                 if (stopId == null) return;
-                if (event.isShiftClick()) {
-                    Stop stop = plugin.getStopManager().getStop(stopId);
-                    String stopName = stop != null ? stop.getDisplayName() : stopId;
+                Stop stop = plugin.getStopManager().getStop(stopId);
+                if (stop == null) return;
+                if (event.getClick() == ClickType.LEFT) {
+                    teleportToStop(player, stop);
+                    return;
+                }
+                if (event.getClick() == ClickType.RIGHT) {
+                    gui.openStationEdit(player, stopId);
+                    return;
+                }
+                if (event.getClick() == ClickType.SHIFT_LEFT) {
+                    plugin.getLineManager().moveStopInLine(lineId, stopId, -1);
+                    gui.openLineDetail(player, lineId, stopPage);
+                    return;
+                }
+                if (event.getClick() == ClickType.SHIFT_RIGHT) {
+                    plugin.getLineManager().moveStopInLine(lineId, stopId, 1);
+                    gui.openLineDetail(player, lineId, stopPage);
+                    return;
+                }
+                if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+                    String stopName = stop.getDisplayName();
                     gui.openConfirm(player, "remove_stop_from_line", stopId + "|" + lineId,
                             lang(player, "gui.confirm.remove_stop_from_line",
                                     Map.of("stop", stopName, "line", line.getDisplayName())),
                             "line_detail", lineId);
-                    return;
-                }
-                if (event.getClick() == ClickType.LEFT) {
-                    plugin.getLineManager().moveStopInLine(lineId, stopId, -1);
-                    gui.openLineDetail(player, lineId, stopPage);
-                } else if (event.getClick() == ClickType.RIGHT) {
-                    plugin.getLineManager().moveStopInLine(lineId, stopId, 1);
-                    gui.openLineDetail(player, lineId, stopPage);
                 }
             }
         }
@@ -511,6 +530,17 @@ public class GuiListener implements Listener {
             String stopName = stop != null ? stop.getDisplayName() : stopId;
             TextUtil.send(player, lang(player, "line.stop_added", Map.of("stop", stopName, "line", line.getDisplayName())));
             gui.openLineDetail(player, lineId, 0);
+        }
+    }
+
+    private void teleportToStop(Player player, Stop stop) {
+        if (plugin.getStopManager().teleportPlayerToStop(player, stop)) {
+            player.closeInventory();
+            TextUtil.send(player, lang(player, "stop.teleported",
+                    Map.of("name", stop.getDisplayName())));
+        } else {
+            TextUtil.send(player, lang(player, "stop.teleport_failed",
+                    Map.of("name", stop.getDisplayName())));
         }
     }
 
