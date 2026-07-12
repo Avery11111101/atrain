@@ -263,10 +263,10 @@ public class GuiManager {
         Inventory inv = Bukkit.createInventory(holder, 45, msg(player, "gui.tutorial.title"));
         holder.setInventory(inv);
 
-        String[] cats = {"quickstart", "stop", "autostop", "speedblock", "hangrail"};
-        Material[] icons = {Material.LIME_DYE, Material.GOLD_BLOCK, Material.MINECART,
-                Material.DIAMOND_BLOCK, Material.IRON_BARS};
-        int[] slots = {11, 13, 15, 21, 23};
+        String[] cats = {"quickstart", "stop", "ride", "autostop", "speedblock", "hangrail"};
+        Material[] icons = {Material.LIME_DYE, Material.GOLD_BLOCK, Material.COMPASS,
+                Material.MINECART, Material.DIAMOND_BLOCK, Material.IRON_BARS};
+        int[] slots = {10, 12, 14, 21, 23, 31};
 
         for (int i = 0; i < cats.length; i++) {
             inv.setItem(slots[i], new ItemBuilder(icons[i])
