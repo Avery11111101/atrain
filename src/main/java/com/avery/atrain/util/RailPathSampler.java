@@ -66,6 +66,12 @@ public final class RailPathSampler {
 
     private static Location snapToRail(Location loc) {
         if (loc == null) return null;
+        // 避免在未加載區塊中同步尋找方塊，這會觸發區塊載入並可能導致主線程卡死（Watchdog 判定為 Infinite Loop）
+        int chunkX = loc.getBlockX() >> 4;
+        int chunkZ = loc.getBlockZ() >> 4;
+        if (!loc.getWorld().isChunkLoaded(chunkX, chunkZ)) {
+            return loc.clone();
+        }
         Block rail = RailUtil.findNearestRailBlock(loc, 4);
         if (rail != null) return RailUtil.cartPositionOnRail(rail);
         return loc.clone();
@@ -242,6 +248,9 @@ public final class RailPathSampler {
 
             double dist = a.distance(b);
             int steps = Math.max(1, (int) Math.ceil(dist / DENSIFY_STEP));
+            // 限制最大步數，避免極遠距離（例如跨越數千格的直線飛行）產生過多節點導致記憶體與運算過載
+            if (steps > 1000) steps = 1000;
+            
             for (int s = 1; s <= steps; s++) {
                 double t = s / (double) steps;
                 Location mid = new Location(a.getWorld(),
