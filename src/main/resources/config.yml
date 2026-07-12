@@ -1,0 +1,41 @@
+config-version: 1
+
+settings:
+  cart_speed: 0.35
+  cart_spawn_delay: 40
+  cart_departure_delay: 80
+  cart_despawn_delay: 20
+
+movement:
+  # 路徑導引：沿錄製軌跡糾偏，防止飄到別的路線
+  path_guidance: true
+  guidance_strength: 0.65
+  guidance_interval_ticks: 2
+  # 失速恢復：沿軌道方向補速（非歷史方向），避免轉彎撞牆回彈
+  stall_recovery: true
+  stall_recovery_ticks: 10
+  min_cruise_speed: 0.06
+  # 前方有阻擋時停止推力
+  obstruction_check: true
+  obstruction_distance: 1.2
+
+display:
+  title_enabled: true
+  actionbar_enabled: true
+  scoreboard_enabled: true
+
+route_recording:
+  sample_distance: 2.0
+  auto_snap_rail: true
+
+default_language: zh_TW
+
+# 懸浮軌道（參考 TC-HangRail，預設開啟）
+hang_rail:
+  enabled: true
+  types:
+    - block: IRON_BARS
+      offset: -2
+    # 範例：在紅色羊毛上方懸浮
+    # - block: RED_WOOL
+    #   offset: 1

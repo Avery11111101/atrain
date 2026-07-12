@@ -1,0 +1,338 @@
+lang-version: 1
+
+plugin.reload: "<green>atrain 設定を再読み込みしました。"
+
+error.no_permission: "<red>権限がありません。"
+error.players_only: "<red>プレイヤーのみ使用可能です。"
+
+selection.corner1: "<green>コーナー1を設定しました。金の斧でコーナー2をクリック。"
+selection.corner2: "<green>コーナー2を設定しました。GUIで駅を作成できます。"
+
+command.help_header: "<green>===== atrain ヘルプ ====="
+command.help_gui: "<gold>/train gui <white>- 管理GUIを開く"
+command.help_lines: "<gold>/train lines <white>- 路線一覧を開く"
+command.help_stops: "<gold>/train stops <white>- 駅一覧を開く"
+command.help_line_create: "<gold>/train line create <white>- 新路線を作成"
+command.help_record: "<gold>/train record <路線ID> <white>- 軌道録画開始"
+command.help_lang: "<gold>/lang <言語> <white>- 言語切替"
+command.help_reload: "<gold>/train reload <white>- 設定再読み込み"
+command.unknown: "<red>不明なコマンド。/train help を参照"
+command.record_usage: "<red>使い方: /train record <路線ID>"
+
+lang.usage: "<yellow>使い方: /lang <言語コード>"
+lang.available: "<gray>利用可能: <white>{langs}"
+lang.not_found: "<red>言語が見つかりません: {lang}"
+lang.changed: "<green>言語を <gold>{lang} <green>に変更しました"
+
+line.created: "<green>路線を作成: <gold>{id}"
+line.deleted: "<green>路線を削除: <gold>{id}"
+line.not_found: "<red>路線が見つかりません: {id}"
+
+stop.created: "<green>駅を作成: <gold>{id}"
+stop.deleted: "<green>駅を削除: <gold>{id}"
+stop.need_selection: "<red>金の斧で2つのコーナーを選択してください"
+stop.point_set: "<green>停車ポイントを設定しました。"
+stop.yaw_set: "<green>発車方向: <gold>{yaw}°"
+
+route.recording_start: "<green>路線 <gold>{line} <green>の録画を開始"
+route.recording_stop: "<green>軌道録画を保存しました。"
+
+ride.spawning: "<gray><gold>{line} <gray>の列車を準備中..."
+ride.departing: "<green>{line} 発車 → <white>{stop}"
+ride.approaching: "<yellow><white>{stop} <yellow>に接近中"
+ride.arrived: "<green><white>{stop} <green>に到着"
+
+gui.back: "§7← 戻る"
+gui.close: "§c閉じる"
+gui.click_to_manage: "§eクリックで管理"
+gui.record_hint: "<yellow>路線を選択し、詳細画面で軌道録画を開始してください。"
+
+gui.main.title: "§8atrain §7- メインメニュー"
+gui.main.tutorial: "§a§lチュートリアル"
+gui.main.tutorial_lore:
+  - "§7ステップバイステップガイド"
+  - "§eクリックで開く"
+gui.main.lines: "§b§l路線管理"
+gui.main.lines_lore:
+  - "§7路線の作成・編集"
+  - "§eクリックで開く"
+gui.main.stops: "§6§l駅管理"
+gui.main.stops_lore:
+  - "§7停車区域の作成"
+  - "§eクリックで開く"
+gui.main.record: "§d§l軌道録画"
+gui.main.record_lore:
+  - "§7路線を選んで軌道を録画"
+  - "§7パス誘導に使用"
+  - ""
+  - "§eクリックで路線選択"
+gui.main.language: "§f§l言語設定"
+gui.main.language_lore: "§7現在: §f{lang}"
+gui.main.reload: "§c§l再読み込み"
+gui.main.reload_lore: "§7設定を再読み込み"
+gui.main.create_stop: "§6§lクイック駅作成"
+gui.main.create_stop_lore:
+  - "§7金の斧で2コーナー選択"
+  - "§7範囲を決めてクリック"
+  - ""
+  - "§eクリックで作成"
+gui.main.create_line: "§a§lクイック路線作成"
+gui.main.create_line_lore:
+  - "§7新路線を自動作成"
+  - "§7編集画面を開く"
+  - ""
+  - "§eクリックで作成"
+gui.main.quick_setup: "§e§lセットアップガイド"
+gui.main.quick_setup_lore:
+  - "§74ステップで構築"
+  - "§7範囲→駅→路線→録画"
+  - ""
+  - "§eクリックで開く"
+
+gui.record_select.title: "§8録画する路線を選択"
+gui.record_select.start: "§aクリックで録画開始"
+gui.record_select.stop: "§cクリックで録画停止"
+gui.record_select.no_lines: "§c路線がありません"
+gui.record_select.no_lines_lore: "§7先に路線を作成して駅を追加"
+
+gui.quick_setup.title: "§8セットアップガイド"
+gui.quick_setup.step1: "§6§lステップ1：範囲選択"
+gui.quick_setup.step1_hint: "<yellow>金の斧で2コーナーを右クリック"
+gui.quick_setup.selection_ready: "§a✔ 2コーナー選択済み"
+gui.quick_setup.selection_missing: "§c✘ 未選択（2コーナー必要）"
+gui.quick_setup.step2: "§a§lステップ2：駅作成"
+gui.quick_setup.step2_hint: "§7駅を作成してホーム設定"
+gui.quick_setup.step3: "§b§lステップ3：路線作成"
+gui.quick_setup.step3_hint: "§7路線を作成して駅を追加"
+gui.quick_setup.step4: "§d§lステップ4：軌道録画"
+gui.quick_setup.step4_hint: "§7トロッコに乗って路線を選択"
+
+gui.tutorial.title: "§8チュートリアル"
+gui.line_list.title: "§8路線一覧"
+gui.line_list.stops_count: "§7駅数: §f{count}"
+gui.line_list.route_count: "§7軌跡点: §f{count}"
+gui.line_list.create: "§a§l+ 新路線作成"
+gui.line_list.create_lore: "§7自動作成して編集"
+
+gui.line_detail.title: "§8路線: {name}"
+gui.line_detail.rename: "§e名前変更"
+gui.line_detail.speed: "§b速度: §f{speed}"
+gui.line_detail.record: "§d§l軌道録画"
+gui.line_detail.record_lore:
+  - "§7クリックで開始"
+  - "§7トロッコで走行"
+gui.line_detail.manage_stops: "§6駅管理"
+gui.line_detail.add_stop_hint: "<yellow>駅を路線に追加"
+gui.line_detail.delete: "§c§l路線削除"
+gui.line_detail.delete_lore: "§7元に戻せません"
+
+gui.stop_list.title: "§8駅一覧"
+gui.stop_list.world: "§7ワールド: §f{world}"
+gui.stop_list.lines: "§7路線数: §f{count}"
+gui.stop_list.create: "§a§l+ 新駅作成"
+gui.stop_list.create_lore:
+  - "§7コーナー選択が必要"
+
+gui.stop_detail.title: "§8駅: {name}"
+gui.stop_detail.set_point: "§a§l停車ポイント設定"
+gui.stop_detail.set_point_lore: "§7現在地を停車点に"
+gui.stop_detail.set_yaw: "§e§l発車方向設定"
+gui.stop_detail.set_yaw_lore: "§7向いている方向 (§f{yaw}°§7)"
+gui.stop_detail.teleport: "§b§lテレポート"
+gui.stop_detail.delete: "§c§l駅削除"
+
+gui.line_choice.title: "§8路線選択 - {stop}"
+gui.line_choice.click: "§eクリックで乗車"
+
+gui.language.title: "§8言語設定"
+gui.language.current: "§a✔ 使用中"
+gui.language.click: "§eクリックで切替"
+
+gui.confirm.title: "§8確認"
+gui.confirm.yes: "§a§lはい"
+gui.confirm.no: "§c§lいいえ"
+gui.confirm.delete_line: "§7路線 §f{id} <7>を削除？"
+gui.confirm.delete_stop: "§7駅 §f{id} <7>を削除？"
+
+tutorial.quickstart.title: "§a§lクイックスタート"
+tutorial.quickstart.summary:
+  - "§75分で開始"
+tutorial.quickstart.steps:
+  - "§f金の斧でコーナー選択"
+  - "§fGUIで駅作成"
+  - "§f停車ポイント設定"
+  - "§f路線作成と軌道録画"
+  - "§f動力レールを右クリックで乗車"
+
+tutorial.stop.title: "§6§l駅の作成"
+tutorial.stop.summary:
+  - "§7停車区域の設定"
+tutorial.stop.steps:
+  - "§f金の斧で範囲選択"
+  - "§f動力レールに停車点"
+  - "§f発車方向を設定"
+
+tutorial.line.title: "§b§l路線の作成"
+tutorial.line.summary:
+  - "§7駅を接続"
+tutorial.line.steps:
+  - "§f路線を作成"
+  - "§f順番に駅を追加"
+  - "§f速度を調整"
+
+tutorial.route.title: "§d§l軌道録画"
+tutorial.route.summary:
+  - "§7パス誘導の核心"
+tutorial.route.steps:
+  - "§f/train record <ID>"
+  - "§f正しいルートで走行"
+  - "§f/train stoprecord"
+
+tutorial.ride.title: "§e§l乗車体験"
+tutorial.ride.summary:
+  - "§7プレイヤーの乗り方"
+tutorial.ride.steps:
+  - "§f動力レールを右クリック"
+  - "§f自動誘導走行"
+  - "§f自動停車"
+
+command.help_addstop: "<gold>/train line addstop <路線ID> <駅ID> <white>- 駅を路線に追加"
+error.world_not_loaded: "<red>ワールドが読み込まれていません。トロッコを生成できません。"
+gui.add_stop.click: "§eクリックでこの路線に追加"
+gui.add_stop.title: "§8駅追加 → {line}"
+gui.line_detail.add_stop: "§a§l+ 駅を追加"
+gui.line_detail.add_stop_lore: "§7既存の駅から選択"
+gui.line_detail.circular_off: "§7環状モード [オフ]"
+gui.line_detail.circular_on: "§a§l環状モード [オン]"
+gui.line_detail.no_stops: "§8(駅なし)"
+gui.line_detail.stop_record: "§c§l録画停止"
+line.circular_off: "<yellow>環状モードをオフにしました"
+line.circular_on: "<green>環状モードをオンにしました"
+line.create_failed: "<red>路線の作成に失敗しました。IDが重複している可能性があります。"
+line.default_name: "新路線 {id}"
+line.speed_set: "<green>路線速度を <gold>{speed} <green>に設定しました"
+line.stop_added: "<green>駅 <gold>{stop} <green>を路線 <gold>{line} <green>に追加しました"
+ride.already_spawning: "<yellow>列車準備中です。しばらくお待ちください..."
+ride.derailed: "<red>列車が脱線しました。運行を終了します。"
+ride.line_missing: "<red>路線データが見つかりません。運行をキャンセルしました。"
+ride.no_lines_at_stop: "<red>駅 <white>{stop} <red>には路線がありません。GUIで追加してください。"
+ride.no_next_stop: "<yellow>次の駅がありません。列車は停車します。"
+ride.terminus: "<green>§l終点に到着しました。お降りください。"
+route.confirm_overwrite: "<yellow>この路線には <gold>{count} <yellow>個の軌跡点があります。移動後に上書きされます。続行しますか？"
+route.not_recording: "<yellow>現在軌道を録画していません。"
+route.recording_toggle: "§d§l軌道録画 / 停止"
+selection.corner1_reset: "<green>選択をリセットし、§eコーナー1<green>を設定しました。"
+stop.create_failed: "<red>駅の作成に失敗しました。"
+stop.default_name: "新駅 {id}"
+stop.need_powered_rail: "<red>動力レールまたはハングレールの上に立ってから停車点を設定してください。"
+stop.no_point: "<red>停車点が設定されていません。"
+
+route.need_cart: "<red>先にトロッコに乗ってから録画を開始してください。"
+route.use_gui_confirm: "<yellow>/train gui → 路線詳細 → 軌道録画で上書き確認を行ってください。"
+route.confirm_overwrite_cmd: "<yellow>路線に {count} 個の軌跡点があります。/train line clearroute <路線> または GUI を使用してください。"
+route.cleared: "<green>路線 <gold>{line} <green>から <gold>{count} <green>個の軌跡点を削除しました。"
+route.recording_stop_reload: "<yellow>管理者のリロードにより録画が中止されました。"
+selection.different_world: "<red>コーナー2はコーナー1と同じワールドである必要があります。"
+ride.no_route: "<red>この路線には軌道が録画されていません。先に録画してください。"
+ride.no_stops: "<red>この路線に駅がありません。GUIで駅を追加してください。"
+line.stop_removed: "<green>駅 <gold>{stop} <green>を路線 <gold>{line} <green>から削除しました"
+stop.not_found: "<red>駅が見つかりません: {id}"
+command.help_clearroute: "<gold>/train line clearroute <路線ID> <white>- 軌跡点をクリア"
+command.line_usage: "<yellow>用法: /train line create|addstop|clearroute ..."
+gui.line_detail.speed_down: "§c§l減速"
+gui.line_detail.clear_route: "§e§l軌跡点をクリア"
+gui.line_detail.clear_route_lore: "§7現在 §f{count} §7点"
+gui.add_stop.create_stop: "§a§l+ 新駅作成"
+gui.add_stop.create_stop_lore: "§7作成後この路線に追加"
+gui.add_stop.empty: "§c追加できる駅がありません"
+gui.add_stop.empty_lore: "§7先に駅を作成するか下をクリック"
+gui.stop_list.empty: "§c駅がありません"
+gui.stop_list.empty_lore: "§7下の §a+ 新駅作成 §7をクリック"
+gui.manage_stops.title: "§8駅管理 - {line}"
+gui.manage_stops.remove_hint: "§cクリックで路線から削除"
+gui.confirm.remove_stop_from_line: "§7駅 §f{stop} §7を路線 §f{line} §7から削除しますか？"
+gui.confirm.clear_route: "§7路線 §f{id} §7の §f{count} §7軌跡点をクリアしますか？"
+
+route.recording_other_line: "<yellow>路線 <gold>{line} <yellow>を録画中です。その路線ページで停止してください。"
+command.addstop_usage: "<red>用法: /train line addstop <路線ID> <駅ID>"
+command.clearroute_usage: "<red>用法: /train line clearroute <路線ID>"
+gui.confirm.reload: "§7リロードしますか？§c走行中の列車と録画は中止されます。"
+hangrail.enabled: "<green>ハングレール有効"
+hangrail.disabled: "<yellow>ハングレール無効"
+gui.main.hangrail_on: "§a§lハングレール §2[ON]"
+gui.main.hangrail_off: "§c§lハングレール §4[OFF]"
+gui.main.hangrail_lore:
+  - "§7鉄格子の下を走行"
+  - "§eクリックで切替"
+tutorial.hangrail.title: "§f§lハングレール"
+tutorial.hangrail.summary:
+  - "§7空中レール"
+tutorial.hangrail.steps:
+  - "§f鉄格子を水平に配置"
+  - "§f下2ブロックから導入"
+  - "§fGUIまたはconfigで切替"
+tutorial.advanced.title: "§5§l詳細設定"
+tutorial.advanced.summary:
+  - "§7config.yml 調整"
+tutorial.advanced.steps:
+  - "§fpath_guidance パス誘導"
+  - "§fstall_recovery 失速回復"
+  - "§fobstruction_check 反発防止"
+
+stop.forward_set: "<green>站點 <gold>{id} <green>去程月台已設定。"
+
+stop.return_set: "<green>站點 <gold>{id} <green>回程月台已設定。"
+
+stop.no_forward_point: "<red>尚未設定去程月台。"
+
+stop.no_return_point: "<red>尚未設定回程月台。"
+
+stop.platform_unset: "<red>此軌道尚未綁定去程或回程月台，請至 GUI 設定。"
+
+stop.platform_forward: "去程"
+
+stop.platform_return: "回程"
+
+stop.platform_conflict: "<red>去程與回程朝向過近，可能對撞，請分開軌道或調整面向。"
+
+stop.platform_same_rail_warn: "<yellow>去回在同一軌道上，建議改用兩條平行軌道（一來一回）。"
+
+ride.spawning_dir: "<gray>準備 <gold>{line} <gray>@ <white>{stop} <gray>（<white>{dir}<gray>）"
+
+ride.direction_forward: "去程"
+
+ride.direction_reverse: "回程"
+
+ride.no_direction: "<red>此站無法朝 <white>{dir} <red>方向發車（可能已是終點）。"
+
+gui.stop_detail.set_forward: "§a§l設定去程月台"
+
+gui.stop_detail.set_forward_lore: "- "§7站在去程動力軌上"
+
+gui.stop_detail.set_return: "§c§l設定回程月台"
+
+gui.stop_detail.set_return_lore: "- "§7站在回程動力軌上"
+
+gui.stop_detail.tp_forward: "§b§l傳送至去程月台"
+
+gui.stop_detail.tp_return: "§b§l傳送至回程月台"
+
+gui.stop_detail.platform_status: "§e§l月台狀態"
+
+gui.stop_detail.platform_status_ok: "§a兩側月台已分開，可正常營運"
+
+gui.stop_detail.platform_status_same_rail_warn: "§e去回在同一軌道但方向相反\n§7可運作，建議改用兩條平行軌道"
+
+gui.stop_detail.platform_status_same_direction_block: "§c去回方向過近，可能對撞\n§7請調整朝向或分開軌道"
+
+gui.line_detail.platforms: "§e§l去回程月台"
+
+gui.line_detail.platforms_lore: "§7檢查各路線站點的去程/回程設定"
+
+gui.line_platforms.title: "§8去回程檢查 - {line}"
+
+gui.line_platforms.forward: "§7去程: {status}"
+
+gui.line_platforms.return: "§7回程: {status}"
+
+gui.line_platforms.click_edit: "§e點擊編輯站點月台"

@@ -1,0 +1,343 @@
+lang-version: 1
+
+plugin.reload: "<green>atrain config reloaded."
+
+error.no_permission: "<red>You don't have permission."
+error.players_only: "<red>Players only."
+
+selection.corner1: "<green>Corner 1 set. Click corner 2 with golden axe."
+selection.corner2: "<green>Corner 2 set. Create a stop in GUI."
+
+command.help_header: "<green>===== atrain Help ====="
+command.help_gui: "<gold>/train gui <white>- Open management GUI"
+command.help_lines: "<gold>/train lines <white>- Open line list"
+command.help_stops: "<gold>/train stops <white>- Open stop list"
+command.help_line_create: "<gold>/train line create <white>- Quick create line"
+command.help_record: "<gold>/train record <lineID> <white>- Start route recording"
+command.help_lang: "<gold>/lang <code> <white>- Switch language"
+command.help_reload: "<gold>/train reload <white>- Reload config"
+command.unknown: "<red>Unknown command. Use /train help"
+command.record_usage: "<red>Usage: /train record <lineID>"
+
+lang.usage: "<yellow>Usage: /lang <code>"
+lang.available: "<gray>Available: <white>{langs}"
+lang.not_found: "<red>Language not found: {lang}"
+lang.changed: "<green>Language set to <gold>{lang}"
+
+line.created: "<green>Line created: <gold>{id}"
+line.deleted: "<green>Line deleted: <gold>{id}"
+line.not_found: "<red>Line not found: {id}"
+
+stop.created: "<green>Stop created: <gold>{id}"
+stop.deleted: "<green>Stop deleted: <gold>{id}"
+stop.need_selection: "<red>Select two corners with golden axe first"
+stop.point_set: "<green>Stop point set."
+stop.yaw_set: "<green>Launch yaw set to <gold>{yaw}°"
+
+route.recording_start: "<green>Recording route <gold>{line}"
+route.recording_stop: "<green>Route recording saved."
+route.confirm_overwrite: "<yellow>Line has <gold>{count} <yellow>route points. Recording will overwrite after you move. Continue?"
+route.confirm_overwrite_cmd: "<yellow>Line has {count} route points. Use /train line clearroute <line> or GUI to confirm overwrite."
+route.need_cart: "<red>Board a minecart before recording."
+route.use_gui_confirm: "<yellow>Use /train gui → line details → record route for overwrite confirmation."
+route.cleared: "<green>Cleared <gold>{count} <green>route points from <gold>{line}"
+route.recording_stop_reload: "<yellow>Recording stopped due to admin reload."
+route.not_recording: "<yellow>You are not recording a route."
+route.recording_toggle: "§d§lRecord / Stop"
+
+ride.spawning: "<gray>Preparing train on <gold>{line}..."
+ride.departing: "<green>{line} departing → <white>{stop}"
+ride.approaching: "<yellow>Approaching <white>{stop}"
+ride.arrived: "<green>Arrived at <white>{stop}"
+
+gui.back: "§7← Back"
+gui.close: "§cClose"
+gui.click_to_manage: "§eClick to manage"
+gui.record_hint: "<yellow>Select a line and start recording in line details."
+
+gui.main.title: "§8atrain §7- Main Menu"
+gui.main.tutorial: "§a§lTutorial"
+gui.main.tutorial_lore:
+  - "§7Step-by-step guides"
+  - "§eClick to open"
+gui.main.lines: "§b§lLine Management"
+gui.main.lines_lore:
+  - "§7Create and edit lines"
+  - "§eClick to open"
+gui.main.stops: "§6§lStop Management"
+gui.main.stops_lore:
+  - "§7Create stop zones"
+  - "§eClick to open"
+gui.main.record: "§d§lRoute Recording"
+gui.main.record_lore:
+  - "§7Select line and record path"
+  - "§7For path guidance"
+  - ""
+  - "§eClick to select line"
+gui.main.language: "§f§lLanguage"
+gui.main.language_lore: "§7Current: §f{lang}"
+gui.main.reload: "§c§lReload"
+gui.main.reload_lore: "§7Reload config"
+gui.main.create_stop: "§6§lQuick Create Stop"
+gui.main.create_stop_lore:
+  - "§7Select two corners first"
+  - "§7Then click to create"
+  - ""
+  - "§eClick to create"
+gui.main.create_line: "§a§lQuick Create Line"
+gui.main.create_line_lore:
+  - "§7Auto-create a new line"
+  - "§7Opens line editor"
+  - ""
+  - "§eClick to create"
+gui.main.quick_setup: "§e§lQuick Setup"
+gui.main.quick_setup_lore:
+  - "§74-step full setup"
+  - "§7Zone → Stop → Line → Record"
+  - ""
+  - "§eClick to open"
+
+gui.record_select.title: "§8Select Line to Record"
+gui.record_select.start: "§aClick to start recording"
+gui.record_select.stop: "§cClick to stop recording"
+gui.record_select.no_lines: "§cNo lines yet"
+gui.record_select.no_lines_lore: "§7Create a line and add stops first"
+
+gui.quick_setup.title: "§8Quick Setup"
+gui.quick_setup.step1: "§6§lStep 1: Select Zone"
+gui.quick_setup.step1_hint: "<yellow>Right-click two corners with golden axe"
+gui.quick_setup.selection_ready: "§a✔ Both corners selected"
+gui.quick_setup.selection_missing: "§c✘ Not selected yet (need 2 corners)"
+gui.quick_setup.step2: "§a§lStep 2: Create Stop"
+gui.quick_setup.step2_hint: "§7Create stop and set platforms"
+gui.quick_setup.step3: "§b§lStep 3: Create Line"
+gui.quick_setup.step3_hint: "§7Create line and add stops"
+gui.quick_setup.step4: "§d§lStep 4: Record Route"
+gui.quick_setup.step4_hint: "§7Ride cart and select line to record"
+
+gui.tutorial.title: "§8Tutorial"
+gui.line_list.title: "§8Lines"
+gui.line_list.stops_count: "§7Stops: §f{count}"
+gui.line_list.route_count: "§7Route points: §f{count}"
+gui.line_list.create: "§a§l+ Create Line"
+gui.line_list.create_lore: "§7Auto-create and edit"
+
+gui.line_detail.title: "§8Line: {name}"
+gui.line_detail.rename: "§eRename"
+gui.line_detail.speed: "§bSpeed: §f{speed}"
+gui.line_detail.record: "§d§lRecord Route"
+gui.line_detail.record_lore:
+  - "§7Click to start"
+  - "§7Ride the track"
+gui.line_detail.manage_stops: "§6Manage Stops"
+gui.line_detail.add_stop_hint: "<yellow>Add stops to this line"
+gui.line_detail.delete: "§c§lDelete Line"
+gui.line_detail.delete_lore: "§7Cannot undo"
+
+gui.stop_list.title: "§8Stops"
+gui.stop_list.world: "§7World: §f{world}"
+gui.stop_list.lines: "§7Lines: §f{count}"
+gui.stop_list.create: "§a§l+ Create Stop"
+gui.stop_list.create_lore:
+  - "§7Select corners first"
+
+gui.stop_detail.title: "§8Stop: {name}"
+gui.stop_detail.set_point: "§a§lSet Stop Point"
+gui.stop_detail.set_point_lore: "§7Use your current position"
+gui.stop_detail.set_yaw: "§e§lSet Launch Direction"
+gui.stop_detail.set_yaw_lore: "§7Use your facing (§f{yaw}°§7)"
+gui.stop_detail.teleport: "§b§lTeleport"
+gui.stop_detail.delete: "§c§lDelete Stop"
+
+gui.line_choice.title: "§8Choose Line - {stop}"
+gui.line_choice.click: "§eClick to board"
+
+gui.language.title: "§8Language"
+gui.language.current: "§a✔ Current"
+gui.language.click: "§eClick to switch"
+
+gui.confirm.title: "§8Confirm"
+gui.confirm.yes: "§a§lYes"
+gui.confirm.no: "§c§lNo"
+gui.confirm.delete_line: "§7Delete line §f{id}§7?"
+gui.confirm.delete_stop: "§7Delete stop §f{id}§7?"
+
+tutorial.quickstart.title: "§a§lQuick Start"
+tutorial.quickstart.summary:
+  - "§75-minute setup"
+tutorial.quickstart.steps:
+  - "§fSelect corners with golden axe"
+  - "§fCreate stop in GUI"
+  - "§fSet stop point on powered rail"
+  - "§fCreate line and record route"
+  - "§fRight-click rail to ride"
+
+tutorial.stop.title: "§6§lCreating Stops"
+tutorial.stop.summary:
+  - "§7Stop zone setup"
+tutorial.stop.steps:
+  - "§fGolden axe selects zone"
+  - "§fSet stop point on powered rail"
+  - "§fSet launch direction"
+
+tutorial.line.title: "§b§lCreating Lines"
+tutorial.line.summary:
+  - "§7Connect stops"
+tutorial.line.steps:
+  - "§fCreate a line"
+  - "§fAdd stops in order"
+  - "§fAdjust speed"
+
+tutorial.route.title: "§d§lRoute Recording"
+tutorial.route.summary:
+  - "§7Path guidance core"
+tutorial.route.steps:
+  - "§f/train record <lineID>"
+  - "§fRide the correct path"
+  - "§f/train stoprecord"
+
+tutorial.ride.title: "§e§lRiding"
+tutorial.ride.summary:
+  - "§7How players board"
+tutorial.ride.steps:
+  - "§fRight-click powered rail"
+  - "§fAuto-guided movement"
+  - "§fAuto-stop at stations"
+
+selection.corner1_reset: "<green>Selection reset. Corner 1 set."
+selection.different_world: "<red>Corner 2 must be in the same world as corner 1."
+
+ride.no_lines_at_stop: "<red>Stop <white>{stop} <red>has no lines. Add one in GUI."
+ride.no_route: "<red>This line has no recorded route. Record the track first."
+ride.no_stops: "<red>This line has no stops. Add stops in GUI."
+ride.no_next_stop: "<yellow>No next stop. Train will wait."
+ride.terminus: "<green>Terminus reached. Please disembark."
+ride.derailed: "<red>Train derailed. Trip ended."
+ride.already_spawning: "<yellow>Train is preparing, please wait..."
+ride.line_missing: "<red>Line data missing. Trip cancelled."
+
+error.world_not_loaded: "<red>World not loaded. Cannot spawn minecart."
+
+line.stop_added: "<green>Added stop <gold>{stop} <green>to line <gold>{line}"
+line.stop_removed: "<green>Removed stop <gold>{stop} <green>from line <gold>{line}"
+line.speed_set: "<green>Line speed set to <gold>{speed}"
+line.circular_on: "<green>Circular mode enabled"
+line.circular_off: "<yellow>Circular mode disabled"
+line.create_failed: "<red>Failed to create line."
+line.default_name: "New Line {id}"
+stop.default_name: "New Stop {id}"
+
+stop.need_powered_rail: "<red>Stand on powered rail or hang rail to set stop point."
+stop.no_point: "<red>Stop point not set."
+stop.create_failed: "<red>Failed to create stop."
+stop.not_found: "<red>Stop not found: {id}"
+
+command.help_addstop: "<gold>/train line addstop <lineID> <stopID> <white>- Add stop to line"
+command.help_clearroute: "<gold>/train line clearroute <lineID> <white>- Clear route points"
+command.line_usage: "<yellow>Usage: /train line create|addstop|clearroute ..."
+
+gui.line_detail.speed_down: "§c§lDecrease Speed"
+gui.line_detail.stop_record: "§c§lStop Recording"
+gui.line_detail.add_stop: "§a§l+ Add Stop"
+gui.line_detail.add_stop_lore: "§7Pick from existing stops"
+gui.line_detail.no_stops: "§8(No stops)"
+gui.line_detail.circular_on: "§a§lCircular [ON]"
+gui.line_detail.circular_off: "§7Circular [OFF]"
+gui.line_detail.clear_route: "§e§lClear Route Points"
+gui.line_detail.clear_route_lore: "§7Currently §f{count} §7points"
+gui.add_stop.title: "§8Add Stop → {line}"
+gui.add_stop.click: "§eClick to add"
+gui.add_stop.create_stop: "§a§l+ Create Stop"
+gui.add_stop.create_stop_lore: "§7Create then add to this line"
+gui.add_stop.empty: "§cNo stops available"
+gui.add_stop.empty_lore: "§7Create a stop first, or click below"
+gui.stop_list.empty: "§cNo stops yet"
+gui.stop_list.empty_lore: "§7Click §a+ Create Stop §7below"
+gui.manage_stops.title: "§8Manage Stops - {line}"
+gui.manage_stops.remove_hint: "§cClick to remove from line"
+gui.confirm.remove_stop_from_line: "§7Remove stop §f{stop} §7from line §f{line}§7?"
+gui.confirm.clear_route: "§7Clear §f{count} §7route points from §f{id}§7?"
+
+route.recording_other_line: "<yellow>Currently recording line <gold>{line}<yellow>. Stop from that line's page."
+command.addstop_usage: "<red>Usage: /train line addstop <lineID> <stopID>"
+command.clearroute_usage: "<red>Usage: /train line clearroute <lineID>"
+gui.confirm.reload: "§7Reload config? §cActive trains and recordings will stop."
+hangrail.enabled: "<green>Hang rail enabled"
+hangrail.disabled: "<yellow>Hang rail disabled"
+gui.main.hangrail_on: "§a§lHang Rail §2[ON]"
+gui.main.hangrail_off: "§c§lHang Rail §4[OFF]"
+gui.main.hangrail_lore:
+  - "§7Minecarts ride below iron bars"
+  - "§eClick to toggle"
+tutorial.hangrail.title: "§f§lHang Rail"
+tutorial.hangrail.summary:
+  - "§7Aerial track system"
+tutorial.hangrail.steps:
+  - "§fPlace IRON_BARS horizontally"
+  - "§fLead in from rail 2 blocks below"
+  - "§fToggle in GUI or config"
+tutorial.advanced.title: "§5§lAdvanced"
+tutorial.advanced.summary:
+  - "§7config.yml tuning"
+tutorial.advanced.steps:
+  - "§fpath_guidance - steer along route"
+  - "§fstall_recovery - rail-aware boost"
+  - "§fobstruction_check - prevent bounce"
+
+stop.forward_set: "<green>Stop <gold>{id} <green>Outboundplatform已Set。"
+
+stop.return_set: "<green>Stop <gold>{id} <green>Returnplatform已Set。"
+
+stop.no_forward_point: "<red>尚未SetOutboundplatform。"
+
+stop.no_return_point: "<red>尚未SetReturnplatform。"
+
+stop.platform_unset: "<red>此rail尚未綁定Outbound或Returnplatform，請至 GUI Set。"
+
+stop.platform_forward: "Outbound"
+
+stop.platform_return: "Return"
+
+stop.platform_conflict: "<red>Outbound與Return朝向過近，可能對撞，請分開rail或調整面向。"
+
+stop.platform_same_rail_warn: "<yellow>去回在同一rail上，Recommend改用兩條parallelrail（一來一回）。"
+
+ride.spawning_dir: "<gray>Preparing <gold>{line} <gray>@ <white>{stop} <gray>（<white>{dir}<gray>）"
+
+ride.direction_forward: "Outbound"
+
+ride.direction_reverse: "Return"
+
+ride.no_direction: "<red>此站無法朝 <white>{dir} <red>direction發車（可能已是terminus）。"
+
+gui.stop_detail.set_forward: "§a§lSetOutboundplatform"
+
+gui.stop_detail.set_forward_lore: "- "§7站在Outbound動力軌上"
+
+gui.stop_detail.set_return: "§c§lSetReturnplatform"
+
+gui.stop_detail.set_return_lore: "- "§7站在Return動力軌上"
+
+gui.stop_detail.tp_forward: "§b§lTeleport至Outboundplatform"
+
+gui.stop_detail.tp_return: "§b§lTeleport至Returnplatform"
+
+gui.stop_detail.platform_status: "§e§lplatform狀態"
+
+gui.stop_detail.platform_status_ok: "§a兩側platform已分開，可正常營運"
+
+gui.stop_detail.platform_status_same_rail_warn: "§e去回在同一rail但direction相反\n§7可運作，Recommend改用兩條parallelrail"
+
+gui.stop_detail.platform_status_same_direction_block: "§c去回direction過近，可能對撞\n§7請調整朝向或分開rail"
+
+gui.line_detail.platforms: "§e§l去Returnplatform"
+
+gui.line_detail.platforms_lore: "§7Check各LineStop的Outbound/ReturnSet"
+
+gui.line_platforms.title: "§8去ReturnCheck - {line}"
+
+gui.line_platforms.forward: "§7Outbound: {status}"
+
+gui.line_platforms.return: "§7Return: {status}"
+
+gui.line_platforms.click_edit: "§eClickEditStopplatform"

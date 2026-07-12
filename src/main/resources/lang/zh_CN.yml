@@ -1,0 +1,338 @@
+lang-version: 1
+
+plugin.reload: "<green>atrain 配置已重新加载。"
+
+error.no_permission: "<red>你没有权限执行此操作。"
+error.players_only: "<red>此指令仅限玩家使用。"
+
+selection.corner1: "<green>已设定停靠区 §e角落 1<green>，请用金斧点击 §e角落 2<green>。"
+selection.corner2: "<green>已设定停靠区 §e角落 2<green>，可至 GUI 建立站点。"
+
+command.help_header: "<green>===== atrain 指令帮助 ====="
+command.help_gui: "<gold>/train gui <white>- 打开图形管理界面"
+command.help_lines: "<gold>/train lines <white>- 打开路线列表"
+command.help_stops: "<gold>/train stops <white>- 打开站点列表"
+command.help_line_create: "<gold>/train line create <white>- 快速创建新路线"
+command.help_record: "<gold>/train record <路线ID> <white>- 开始录制轨道"
+command.help_lang: "<gold>/lang <语言> <white>- 切换语言"
+command.help_reload: "<gold>/train reload <white>- 重新加载配置"
+command.unknown: "<red>未知指令，输入 /train help 查看帮助。"
+command.record_usage: "<red>用法: /train record <路线ID>"
+
+lang.usage: "<yellow>用法: /lang <语言代码>"
+lang.available: "<gray>可用语言: <white>{langs}"
+lang.not_found: "<red>找不到语言: {lang}"
+lang.changed: "<green>语言已切换为 <gold>{lang}"
+
+line.created: "<green>已创建路线 <gold>{id}"
+line.deleted: "<green>已删除路线 <gold>{id}"
+line.not_found: "<red>找不到路线: {id}"
+
+stop.created: "<green>已创建站点 <gold>{id}"
+stop.deleted: "<green>已删除站点 <gold>{id}"
+stop.need_selection: "<red>请先用金斧选取两个角落"
+stop.point_set: "<green>站点停靠点已设定。"
+stop.yaw_set: "<green>发车方向已设为 <gold>{yaw}°"
+
+route.recording_start: "<green>开始录制路线 <gold>{line}"
+route.recording_stop: "<green>轨道录制已结束。"
+
+ride.spawning: "<gray>正在准备 <gold>{line} <gray>列车..."
+ride.departing: "<green>{line} 发车中，下一站：<white>{stop}"
+ride.approaching: "<yellow>即将抵达 <white>{stop}"
+ride.arrived: "<green>已抵达 <white>{stop}"
+
+gui.back: "§7← 返回"
+gui.close: "§c关闭"
+gui.click_to_manage: "§e点击管理"
+gui.record_hint: "<yellow>请先选择路线，在路线详情中点击「录制轨道」。"
+
+gui.main.title: "§8atrain §7- 主菜单"
+gui.main.tutorial: "§a§l教学指南"
+gui.main.tutorial_lore:
+  - "§7完整分类教学"
+  - "§e点击开启"
+gui.main.lines: "§b§l路线管理"
+gui.main.lines_lore:
+  - "§7建立、编辑路线"
+  - "§e点击开启"
+gui.main.stops: "§6§l站点管理"
+gui.main.stops_lore:
+  - "§7建立停靠区"
+  - "§e点击开启"
+gui.main.record: "§d§l轨道录制"
+gui.main.record_lore:
+  - "§7选择路线并录制轨迹"
+  - "§7用于路径导引纠偏"
+  - ""
+  - "§e点击选择路线"
+gui.main.language: "§f§l语言设置"
+gui.main.language_lore: "§7目前: §f{lang}"
+gui.main.reload: "§c§l重新加载"
+gui.main.reload_lore: "§7重新加载配置"
+gui.main.create_stop: "§6§l快速创建站点"
+gui.main.create_stop_lore:
+  - "§7需先用金斧选取两角"
+  - "§7框出停靠区域后点击"
+  - ""
+  - "§e点击创建"
+gui.main.create_line: "§a§l快速创建路线"
+gui.main.create_line_lore:
+  - "§7自动创建新路线"
+  - "§7并进入路线编辑页"
+  - ""
+  - "§e点击创建"
+gui.main.quick_setup: "§e§l新手引导"
+gui.main.quick_setup_lore:
+  - "§7四步骤完整建置流程"
+  - "§7选区 → 站点 → 路线 → 录制"
+  - ""
+  - "§e点击开启"
+
+gui.record_select.title: "§8选择录制路线"
+gui.record_select.start: "§a点击开始录制"
+gui.record_select.stop: "§c点击停止录制"
+gui.record_select.no_lines: "§c尚无路线"
+gui.record_select.no_lines_lore: "§7请先建立路线并加入站点"
+
+gui.quick_setup.title: "§8新手引导"
+gui.quick_setup.step1: "§6§l步骤 1：选取区域"
+gui.quick_setup.step1_hint: "<yellow>手持金斧右键点击两个角落，框出停靠区域"
+gui.quick_setup.selection_ready: "§a✔ 已选取两角"
+gui.quick_setup.selection_missing: "§c✘ 尚未选取（需两角）"
+gui.quick_setup.step2: "§a§l步骤 2：创建站点"
+gui.quick_setup.step2_hint: "§7点击创建站点并设定月台"
+gui.quick_setup.step3: "§b§l步骤 3：创建路线"
+gui.quick_setup.step3_hint: "§7创建路线并加入站点"
+gui.quick_setup.step4: "§d§l步骤 4：录制轨道"
+gui.quick_setup.step4_hint: "§7坐上矿车后选路线录制"
+
+gui.tutorial.title: "§8教学指南"
+gui.line_list.title: "§8路线列表"
+gui.line_list.stops_count: "§7站点数: §f{count}"
+gui.line_list.route_count: "§7轨迹点: §f{count}"
+gui.line_list.create: "§a§l+ 创建新路线"
+gui.line_list.create_lore: "§7自动创建并进入编辑"
+
+gui.line_detail.title: "§8路线: {name}"
+gui.line_detail.rename: "§e重命名"
+gui.line_detail.speed: "§b速度: §f{speed}"
+gui.line_detail.record: "§d§l录制轨道"
+gui.line_detail.record_lore:
+  - "§7点击开始录制"
+  - "§7搭乘矿车行驶"
+gui.line_detail.manage_stops: "§6管理站点"
+gui.line_detail.add_stop_hint: "<yellow>将站点加入路线"
+gui.line_detail.delete: "§c§l删除路线"
+gui.line_detail.delete_lore: "§7无法复原"
+
+gui.stop_list.title: "§8站点列表"
+gui.stop_list.world: "§7世界: §f{world}"
+gui.stop_list.lines: "§7所属路线: §f{count}"
+gui.stop_list.create: "§a§l+ 创建新站点"
+gui.stop_list.create_lore:
+  - "§7需先用金斧选取两角"
+
+gui.stop_detail.title: "§8站点: {name}"
+gui.stop_detail.set_point: "§a§l设定停靠点"
+gui.stop_detail.set_point_lore: "§7将目前位置设为停靠点"
+gui.stop_detail.set_yaw: "§e§l设定发车方向"
+gui.stop_detail.set_yaw_lore: "§7使用目前朝向 (§f{yaw}°§7)"
+gui.stop_detail.teleport: "§b§l传送至站点"
+gui.stop_detail.delete: "§c§l删除站点"
+
+gui.line_choice.title: "§8选择路线 - {stop}"
+gui.line_choice.click: "§e点击搭乘"
+
+gui.language.title: "§8语言设置"
+gui.language.current: "§a✔ 目前使用"
+gui.language.click: "§e点击切换"
+
+gui.confirm.title: "§8确认操作"
+gui.confirm.yes: "§a§l确认"
+gui.confirm.no: "§c§l取消"
+gui.confirm.delete_line: "§7确定删除路线 §f{id}§7？"
+gui.confirm.delete_stop: "§7确定删除站点 §f{id}§7？"
+
+tutorial.quickstart.title: "§a§l快速开始"
+tutorial.quickstart.summary:
+  - "§75 分钟上手"
+tutorial.quickstart.steps:
+  - "§f用金斧选取两角\n§7框出停靠区域"
+  - "§f建立站点\n§7/train gui → 站点管理"
+  - "§f设定停靠点\n§7站在动力轨上设定"
+  - "§f建立路线并录制轨道"
+  - "§f玩家右键动力轨搭车"
+
+tutorial.stop.title: "§6§l建立站点"
+tutorial.stop.summary:
+  - "§7停靠区设定"
+tutorial.stop.steps:
+  - "§f金斧选取两角"
+  - "§f设定停靠点（动力轨）"
+  - "§f设定发车方向"
+
+tutorial.line.title: "§b§l建立路线"
+tutorial.line.summary:
+  - "§7连接多个站点"
+tutorial.line.steps:
+  - "§f创建路线"
+  - "§f按顺序加入站点"
+  - "§f调整速度"
+
+tutorial.route.title: "§d§l录制轨道"
+tutorial.route.summary:
+  - "§7路径导引核心"
+tutorial.route.steps:
+  - "§f开始录制 /train record <ID>"
+  - "§f搭乘矿车行驶"
+  - "§f/train stoprecord 结束"
+
+tutorial.ride.title: "§e§l乘车体验"
+tutorial.ride.summary:
+  - "§7玩家搭车方式"
+tutorial.ride.steps:
+  - "§f右键动力轨搭车"
+  - "§f自动导引行驶"
+  - "§f到站自动停靠"
+
+command.help_addstop: "<gold>/train line addstop <路线ID> <站点ID> <white>- 将站点加入路线"
+error.world_not_loaded: "<red>世界尚未加载，无法生成矿车。"
+gui.add_stop.click: "§e点击加入此路线"
+gui.add_stop.title: "§8加入站点 → {line}"
+gui.line_detail.add_stop: "§a§l+ 加入站点"
+gui.line_detail.add_stop_lore: "§7从现有站点中选择加入"
+gui.line_detail.circular_off: "§7环线模式 [关闭]"
+gui.line_detail.circular_on: "§a§l环线模式 [开启]"
+gui.line_detail.no_stops: "§8(尚无站点)"
+gui.line_detail.stop_record: "§c§l停止录制"
+line.circular_off: "<yellow>已关闭环线模式"
+line.circular_on: "<green>已开启环线模式"
+line.create_failed: "<red>建立路线失败，ID 可能重复。"
+line.default_name: "新路线 {id}"
+line.speed_set: "<green>路线速度已设为 <gold>{speed}"
+line.stop_added: "<green>已将站点 <gold>{stop} <green>加入路线 <gold>{line}"
+ride.already_spawning: "<yellow>列车准备中，请稍候..."
+ride.derailed: "<red>列车脱轨，行程已结束。"
+ride.line_missing: "<red>路线资料遗失，行程已取消。"
+ride.no_lines_at_stop: "<red>站点 <white>{stop} <red>尚未加入任何路线，请至 GUI 加入。"
+ride.no_next_stop: "<yellow>此站无下一站，列车将停靠。"
+ride.terminus: "<green>§l已抵达终点站，欢迎下车。"
+route.confirm_overwrite: "<yellow>此路线已有 <gold>{count} <yellow>个轨迹点，开始录制将在移动后覆写，确定？"
+route.not_recording: "<yellow>你目前没有在录制轨道。"
+route.recording_toggle: "§d§l录制轨道 / 停止录制"
+selection.corner1_reset: "<green>已重新开始选取，设定 §e角落 1<green>。"
+stop.create_failed: "<red>建立站点失败。"
+stop.default_name: "新站点 {id}"
+stop.need_powered_rail: "<red>请站在动力轨或悬浮轨上再设定停靠点。"
+stop.no_point: "<red>尚未设定停靠点。"
+
+route.need_cart: "<red>请先坐上矿车再开始录制。"
+route.use_gui_confirm: "<yellow>请至 /train gui → 路线详情 → 录制轨道，使用确认对话框覆写既有轨迹。"
+route.confirm_overwrite_cmd: "<yellow>路线已有 {count} 个轨迹点，请先 /train line clearroute <路线> 或改用 GUI。"
+route.cleared: "<green>已清除路线 <gold>{line} <green>的 <gold>{count} <green>个轨迹点。"
+route.recording_stop_reload: "<yellow>管理员重新加载，录制已中止。"
+selection.different_world: "<red>角落 2 必须与角落 1 在同一世界。"
+ride.no_route: "<red>此路线尚未录制轨道，请先至路线详情录制轨迹。"
+ride.no_stops: "<red>此路线尚未加入站点，请至 GUI 加入站点。"
+line.stop_removed: "<green>已将站点 <gold>{stop} <green>从路线 <gold>{line} <green>移除"
+stop.not_found: "<red>找不到站点: {id}"
+command.help_clearroute: "<gold>/train line clearroute <路线ID> <white>- 清除路线轨迹点"
+command.line_usage: "<yellow>用法: /train line create|addstop|clearroute ..."
+gui.line_detail.speed_down: "§c§l减速"
+gui.line_detail.clear_route: "§e§l清除轨迹点"
+gui.line_detail.clear_route_lore: "§7目前有 §f{count} §7个轨迹点"
+gui.add_stop.create_stop: "§a§l+ 创建新站点"
+gui.add_stop.create_stop_lore: "§7创建后可再加入此路线"
+gui.add_stop.empty: "§c没有可加入的站点"
+gui.add_stop.empty_lore: "§7请先创建站点，或点击下方创建"
+gui.stop_list.empty: "§c尚无站点"
+gui.stop_list.empty_lore: "§7点击下方 §a+ 创建新站点"
+gui.manage_stops.title: "§8管理站点 - {line}"
+gui.manage_stops.remove_hint: "§c点击从路线移除"
+gui.confirm.remove_stop_from_line: "§7确定将站点 §f{stop} §7从路线 §f{line} §7移除？"
+gui.confirm.clear_route: "§7确定清除路线 §f{id} §7的 §f{count} §7个轨迹点？"
+
+route.recording_other_line: "<yellow>正在录制路线 <gold>{line}<yellow>，请至该路线页面停止。"
+command.addstop_usage: "<red>用法: /train line addstop <路线ID> <站点ID>"
+command.clearroute_usage: "<red>用法: /train line clearroute <路线ID>"
+gui.confirm.reload: "§7确定重新加载？§c进行中的列车与录制将被中止。"
+hangrail.enabled: "<green>悬浮轨道已开启"
+hangrail.disabled: "<yellow>悬浮轨道已关闭"
+gui.main.hangrail_on: "§a§l悬浮轨道 §2[开启]"
+gui.main.hangrail_off: "§c§l悬浮轨道 §4[关闭]"
+gui.main.hangrail_lore:
+  - "§7矿车可悬挂于铁栏杆行驶"
+  - "§e点击切换"
+tutorial.hangrail.title: "§f§l悬浮轨道"
+tutorial.hangrail.summary:
+  - "§7空中轨道"
+tutorial.hangrail.steps:
+  - "§f水平放置铁栏杆"
+  - "§f下方2格用普通轨道导入"
+  - "§fGUI或config可开关"
+tutorial.advanced.title: "§5§l进阶设置"
+tutorial.advanced.summary:
+  - "§7config.yml 调校"
+tutorial.advanced.steps:
+  - "§fpath_guidance 路径导引"
+  - "§fstall_recovery 失速恢复"
+  - "§fobstruction_check 防回弹"
+
+stop.forward_set: "<green>站點 <gold>{id} <green>去程月台已設定。"
+
+stop.return_set: "<green>站點 <gold>{id} <green>回程月台已設定。"
+
+stop.no_forward_point: "<red>尚未設定去程月台。"
+
+stop.no_return_point: "<red>尚未設定回程月台。"
+
+stop.platform_unset: "<red>此軌道尚未綁定去程或回程月台，請至 GUI 設定。"
+
+stop.platform_forward: "去程"
+
+stop.platform_return: "回程"
+
+stop.platform_conflict: "<red>去程與回程朝向過近，可能對撞，請分開軌道或調整面向。"
+
+stop.platform_same_rail_warn: "<yellow>去回在同一軌道上，建議改用兩條平行軌道（一來一回）。"
+
+ride.spawning_dir: "<gray>準備 <gold>{line} <gray>@ <white>{stop} <gray>（<white>{dir}<gray>）"
+
+ride.direction_forward: "去程"
+
+ride.direction_reverse: "回程"
+
+ride.no_direction: "<red>此站無法朝 <white>{dir} <red>方向發車（可能已是終點）。"
+
+gui.stop_detail.set_forward: "§a§l設定去程月台"
+
+gui.stop_detail.set_forward_lore: "- "§7站在去程動力軌上"
+
+gui.stop_detail.set_return: "§c§l設定回程月台"
+
+gui.stop_detail.set_return_lore: "- "§7站在回程動力軌上"
+
+gui.stop_detail.tp_forward: "§b§l傳送至去程月台"
+
+gui.stop_detail.tp_return: "§b§l傳送至回程月台"
+
+gui.stop_detail.platform_status: "§e§l月台狀態"
+
+gui.stop_detail.platform_status_ok: "§a兩側月台已分開，可正常營運"
+
+gui.stop_detail.platform_status_same_rail_warn: "§e去回在同一軌道但方向相反\n§7可運作，建議改用兩條平行軌道"
+
+gui.stop_detail.platform_status_same_direction_block: "§c去回方向過近，可能對撞\n§7請調整朝向或分開軌道"
+
+gui.line_detail.platforms: "§e§l去回程月台"
+
+gui.line_detail.platforms_lore: "§7檢查各路線站點的去程/回程設定"
+
+gui.line_platforms.title: "§8去回程檢查 - {line}"
+
+gui.line_platforms.forward: "§7去程: {status}"
+
+gui.line_platforms.return: "§7回程: {status}"
+
+gui.line_platforms.click_edit: "§e點擊編輯站點月台"

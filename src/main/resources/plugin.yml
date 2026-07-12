@@ -1,0 +1,33 @@
+name: atrain
+version: '${version}'
+main: com.avery.atrain.AtrainPlugin
+api-version: '1.21'
+authors: [Avery]
+description: 智慧礦車路線系統 - 路徑導引、圖形介面、多語言教學
+
+commands:
+  train:
+    description: 火車系統主指令
+    aliases: [tr, 火車]
+    usage: /train [gui|reload|...]
+  lang:
+    description: 切換語言
+    usage: /lang <語言代碼>
+
+permissions:
+  atrain.admin:
+    description: 管理員權限
+    default: op
+    children:
+      atrain.gui: true
+      atrain.use: true
+      atrain.create: true
+  atrain.gui:
+    description: 開啟管理介面
+    default: true
+  atrain.use:
+    description: 搭乘礦車
+    default: true
+  atrain.create:
+    description: 建立路線與站點
+    default: op
