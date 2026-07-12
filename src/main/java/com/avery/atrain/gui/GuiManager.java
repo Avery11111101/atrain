@@ -1,6 +1,7 @@
 package com.avery.atrain.gui;
 
 import com.avery.atrain.AtrainPlugin;
+import com.avery.atrain.model.Line;
 import com.avery.atrain.model.Stop;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
@@ -64,6 +65,11 @@ public class GuiManager {
         inv.setItem(13, new ItemBuilder(Material.GOLD_BLOCK)
                 .name(msg(player, "gui.main.stops"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.stops_lore"))
+                .build());
+
+        inv.setItem(16, new ItemBuilder(Material.MINECART)
+                .name(msg(player, "gui.main.lines"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.main.lines_lore"))
                 .build());
 
         inv.setItem(30, new ItemBuilder(Material.NAME_TAG)
@@ -191,13 +197,19 @@ public class GuiManager {
         holder.setInventory(inv);
 
         int dwellSec = stop.getDwellTimeTicks() / 20;
+        var stopMgr = plugin.getStopManager();
+        Line displayLine = stopMgr.resolveDisplayLine(stop);
+        String prev = stopMgr.resolveDisplayPrev(stop);
+        String next = stopMgr.resolveDisplayNext(stop);
+        String lineName = displayLine != null ? displayLine.getDisplayName() : "-";
+
         inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
                 .name(msg(player, "gui.station_edit.rename"))
                 .lore(msg(player, "gui.station_edit.rename_lore", safePh(Map.of("name", stop.getDisplayName()))))
                 .build());
         inv.setItem(10, new ItemBuilder(Material.ARROW)
                 .name(msg(player, "gui.station_edit.info_prev"))
-                .lore(msg(player, "gui.station_edit.info_prev_lore", safePh(Map.of("name", stop.getInfoPrev()))))
+                .lore(buildPrevNextLore(player, prev, displayLine != null, lineName))
                 .build());
         inv.setItem(12, new ItemBuilder(Material.OAK_SIGN)
                 .name(msg(player, "gui.station_edit.info_current"))
@@ -205,7 +217,11 @@ public class GuiManager {
                 .build());
         inv.setItem(14, new ItemBuilder(Material.ARROW)
                 .name(msg(player, "gui.station_edit.info_next"))
-                .lore(msg(player, "gui.station_edit.info_next_lore", safePh(Map.of("name", stop.getInfoNext()))))
+                .lore(buildPrevNextLore(player, next, displayLine != null, lineName))
+                .build());
+        inv.setItem(15, new ItemBuilder(Material.RAIL)
+                .name(msg(player, "gui.station_edit.manage_lines"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.station_edit.manage_lines_lore"))
                 .build());
         inv.setItem(16, new ItemBuilder(Material.NETHER_STAR)
                 .name(msg(player, "gui.station_edit.key_station"))
@@ -244,6 +260,21 @@ public class GuiManager {
                 .name(msg(player, "gui.station_edit.rescan_display"))
                 .build());
 
+        int returnGoldCount = stop.getReturnGoldBlocks().size();
+        inv.setItem(28, new ItemBuilder(Material.IRON_BLOCK)
+                .name(msg(player, "gui.station_edit.bind_return"))
+                .lore(buildBindReturnLore(player, returnGoldCount))
+                .build());
+
+        Line returnLine = stop.getReturnLineId() != null
+                ? plugin.getLineManager().getLine(stop.getReturnLineId()) : null;
+        String returnLineName = returnLine != null ? returnLine.getDisplayName() : "-";
+        inv.setItem(34, new ItemBuilder(Material.POWERED_RAIL)
+                .name(msg(player, "gui.station_edit.return_line"))
+                .lore(msg(player, "gui.station_edit.return_line_lore",
+                        safePh(Map.of("line", returnLineName))))
+                .build());
+
         if (player.hasPermission("atrain.admin")) {
             inv.setItem(38, new ItemBuilder(Material.WRITABLE_BOOK)
                     .name(msg(player, "gui.station_edit.admin_info"))
@@ -271,6 +302,10 @@ public class GuiManager {
             lore.add(msg(player, "gui.stop_list.key_info", Map.of(
                     "station", stop.getKeyStation(),
                     "direction", stop.getKeyDirection())));
+        }
+        int lineCount = stop.getLineIds().size();
+        if (lineCount > 0) {
+            lore.add(msg(player, "gui.stop_list.lines", Map.of("count", String.valueOf(lineCount))));
         }
         lore.add("");
         lore.add(msg(player, "gui.click_to_manage"));
@@ -318,5 +353,184 @@ public class GuiManager {
 
         fillBorder(inv);
         player.openInventory(inv);
+    }
+
+    public void openLineList(Player player, int page) {
+        openLineList(player, page, null, null);
+    }
+
+    public void openLineList(Player player, int page, String returnStopId) {
+        openLineList(player, page, returnStopId, null);
+    }
+
+    public void openLineList(Player player, int page, String returnStopId, String pickReturnLineForStop) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_LIST);
+        holder.set("page", String.valueOf(page));
+        if (returnStopId != null) holder.set("return_stop_id", returnStopId);
+        if (pickReturnLineForStop != null) holder.set("pick_return_line", pickReturnLineForStop);
+        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.line_list.title"));
+        holder.setInventory(inv);
+
+        List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+
+        for (int i = start; i < Math.min(start + perPage, lines.size()); i++) {
+            Line line = lines.get(i);
+            if (slot % 9 == 8) slot += 2;
+            inv.setItem(slot, new ItemBuilder(Material.MINECART)
+                    .name("§b" + line.getDisplayName() + " §7(" + line.getId() + ")")
+                    .lore(List.of(
+                            msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))),
+                            line.isCircular() ? "§a環線" : "§7單向",
+                            "",
+                            msg(player, "gui.click_to_manage")))
+                    .build());
+            holder.set("line_" + slot, line.getId());
+            slot++;
+        }
+
+        inv.setItem(GuiSlots.CREATE, new ItemBuilder(Material.LIME_DYE)
+                .name(msg(player, "gui.line_list.create"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.line_list.create_lore"))
+                .build());
+
+        if (lines.isEmpty()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name(msg(player, "gui.line_list.empty"))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.line_list.empty_lore"))
+                    .build());
+        }
+
+        if (page > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
+        if (start + perPage < lines.size()) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openLineDetail(Player player, String lineId, int stopPage) {
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_DETAIL);
+        holder.set("line_id", lineId);
+        holder.set("stop_page", String.valueOf(stopPage));
+        Inventory inv = Bukkit.createInventory(holder, 54,
+                msg(player, "gui.line_detail.title", safePh(Map.of("name", line.getDisplayName()))));
+        holder.setInventory(inv);
+
+        inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
+                .name(msg(player, "gui.line_detail.rename"))
+                .lore(msg(player, "gui.line_detail.rename_lore", safePh(Map.of("name", line.getDisplayName()))))
+                .build());
+
+        inv.setItem(6, new ItemBuilder(line.isCircular() ? Material.LIME_DYE : Material.GRAY_DYE)
+                .name(msg(player, line.isCircular() ? "gui.line_detail.circular_on" : "gui.line_detail.circular_off"))
+                .lore(msg(player, "gui.line_detail.circular_lore"))
+                .build());
+
+        inv.setItem(8, new ItemBuilder(Material.TNT)
+                .name(msg(player, "gui.line_detail.delete"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.delete_lore"))
+                .build());
+
+        List<String> stopIds = line.getStopIds();
+        int perPage = 7, start = stopPage * perPage;
+        int[] stopSlots = {19, 20, 21, 22, 23, 24, 25};
+
+        if (stopIds.isEmpty()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name(msg(player, "gui.line_detail.no_stops"))
+                    .build());
+        } else {
+            for (int i = 0; i < perPage && start + i < stopIds.size(); i++) {
+                String stopId = stopIds.get(start + i);
+                Stop stop = plugin.getStopManager().getStop(stopId);
+                String name = stop != null ? stop.getDisplayName() : stopId;
+                int index = start + i + 1;
+                inv.setItem(stopSlots[i], new ItemBuilder(Material.GOLD_BLOCK)
+                        .name("§e#" + index + " §a" + name)
+                        .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.stop_lore"))
+                        .build());
+                holder.set("stop_" + stopSlots[i], stopId);
+            }
+        }
+
+        inv.setItem(GuiSlots.CREATE, new ItemBuilder(Material.LIME_DYE)
+                .name(msg(player, "gui.line_detail.add_stop"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.add_stop_lore"))
+                .build());
+
+        if (stopPage > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
+        if (start + perPage < stopIds.size()) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openLineAddStop(Player player, String lineId, int page) {
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_ADD_STOP);
+        holder.set("line_id", lineId);
+        holder.set("page", String.valueOf(page));
+        Inventory inv = Bukkit.createInventory(holder, 54,
+                msg(player, "gui.add_stop.title", safePh(Map.of("line", line.getDisplayName()))));
+        holder.setInventory(inv);
+
+        List<Stop> stops = new ArrayList<>(plugin.getStopManager().getAllStops());
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+
+        for (int i = start; i < Math.min(start + perPage, stops.size()); i++) {
+            Stop stop = stops.get(i);
+            if (slot % 9 == 8) slot += 2;
+            boolean inLine = line.getStopIds().contains(stop.getId());
+            inv.setItem(slot, new ItemBuilder(inLine ? Material.BARRIER : Material.GOLD_BLOCK)
+                    .name((inLine ? "§7" : "§a") + stop.getDisplayName())
+                    .lore(inLine
+                            ? List.of("§7已在路線中")
+                            : List.of(msg(player, "gui.add_stop.click")))
+                    .build());
+            if (!inLine) holder.set("stop_" + slot, stop.getId());
+            slot++;
+        }
+
+        if (stops.isEmpty()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name(msg(player, "gui.add_stop.empty"))
+                    .lore(plugin.getLanguageManager().getList(player, "gui.add_stop.empty_lore"))
+                    .build());
+        }
+
+        if (page > 0) inv.setItem(GuiSlots.PREV_PAGE, new ItemBuilder(Material.ARROW).name("§e◀").build());
+        if (start + perPage < stops.size()) inv.setItem(GuiSlots.NEXT_PAGE, new ItemBuilder(Material.ARROW).name("§e▶").build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        player.openInventory(inv);
+    }
+
+    private List<String> buildBindReturnLore(Player player, int returnGoldCount) {
+        List<String> lore = new ArrayList<>(plugin.getLanguageManager().getList(player, "gui.station_edit.bind_return_lore"));
+        lore.add(msg(player, "gui.station_edit.bind_return_count", Map.of("count", String.valueOf(returnGoldCount))));
+        return lore;
+    }
+
+    private List<String> buildPrevNextLore(Player player, String value, boolean fromLine, String lineName) {
+        List<String> lore = new ArrayList<>();
+        lore.add(msg(player, "gui.station_edit.info_value", safePh(Map.of("name", value))));
+        if (fromLine) {
+            lore.add(msg(player, "gui.station_edit.from_line", safePh(Map.of("line", lineName))));
+        } else {
+            lore.add(msg(player, "gui.station_edit.no_line_hint"));
+        }
+        lore.add("");
+        lore.add(msg(player, "gui.station_edit.manage_lines_hint"));
+        return lore;
     }
 }

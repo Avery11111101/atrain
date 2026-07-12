@@ -32,6 +32,12 @@ public class LineManager {
         if (plugin.getDataStore().getLines().remove(id) == null) return false;
         for (var stop : plugin.getStopManager().getAllStops()) {
             stop.getLineIds().remove(id);
+            if (id.equals(stop.getDisplayLineId())) {
+                stop.setDisplayLineId(null);
+            }
+            if (id.equals(stop.getReturnLineId())) {
+                stop.setReturnLineId(null);
+            }
         }
         plugin.getDataStore().save();
         return true;
@@ -58,7 +64,51 @@ public class LineManager {
         if (line == null) return;
         line.getStopIds().remove(stopId);
         var stop = plugin.getStopManager().getStop(stopId);
-        if (stop != null) stop.getLineIds().remove(lineId);
+        if (stop != null) {
+            stop.getLineIds().remove(lineId);
+            if (lineId.equals(stop.getDisplayLineId())) {
+                stop.setDisplayLineId(null);
+            }
+        }
+        plugin.getDataStore().save();
+    }
+
+    public Line createLineAuto(String displayName) {
+        String id;
+        do {
+            id = "line_" + UUID.randomUUID().toString().substring(0, 8);
+        } while (getLine(id) != null);
+        String name = (displayName != null && !displayName.isBlank())
+                ? displayName.trim()
+                : id;
+        createLine(id, name);
+        return getLine(id);
+    }
+
+    public void renameLine(String lineId, String newName) {
+        Line line = getLine(lineId);
+        if (line == null || newName == null || newName.isBlank()) return;
+        line.setDisplayName(newName.trim());
+        plugin.getDataStore().save();
+    }
+
+    public void toggleCircular(String lineId) {
+        Line line = getLine(lineId);
+        if (line == null) return;
+        line.setCircular(!line.isCircular());
+        plugin.getDataStore().save();
+    }
+
+    public void moveStopInLine(String lineId, String stopId, int delta) {
+        Line line = getLine(lineId);
+        if (line == null) return;
+        List<String> ids = line.getStopIds();
+        int idx = ids.indexOf(stopId);
+        if (idx < 0) return;
+        int newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= ids.size()) return;
+        String item = ids.remove(idx);
+        ids.add(newIdx, item);
         plugin.getDataStore().save();
     }
 

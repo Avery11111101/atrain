@@ -29,6 +29,12 @@ public class Stop {
     private String keyDirection = "-";
     /** 管理員專用備註（僅管理員看得到） */
     private String adminInfo = "";
+    /** 用於自動顯示上下站的路線 ID（可選，預設取第一條所屬路線） */
+    private String displayLineId;
+    /** 站在回程月台時用於顯示上下站的路線 ID */
+    private String returnLineId;
+    /** 回程月台金磚座標（其餘金磚視為去程月台） */
+    private final List<String> returnGoldBlocks = new ArrayList<>();
     private List<String> lineIds = new ArrayList<>();
 
     public Stop() {}
@@ -71,6 +77,25 @@ public class Stop {
         return !"-".equals(getKeyStation()) || !"-".equals(getKeyDirection());
     }
     public List<String> getLineIds() { return lineIds; }
+    public String getDisplayLineId() { return displayLineId; }
+    public void setDisplayLineId(String displayLineId) { this.displayLineId = displayLineId; }
+    public String getReturnLineId() { return returnLineId; }
+    public void setReturnLineId(String returnLineId) { this.returnLineId = returnLineId; }
+    public List<String> getReturnGoldBlocks() { return returnGoldBlocks; }
+    public void setReturnGoldBlocks(List<String> keys) {
+        returnGoldBlocks.clear();
+        if (keys != null) returnGoldBlocks.addAll(keys);
+    }
+
+    /** 玩家是否站在回程月台（金磚或鑽石顯示塊） */
+    public boolean isOnReturnPlatform(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        if (returnGoldBlocks.isEmpty()) return false;
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        String k1 = key(x, y, z);
+        String k2 = key(x, y - 1, z);
+        return returnGoldBlocks.contains(k1) || returnGoldBlocks.contains(k2);
+    }
 
     private static String blankToDash(String value) {
         return value != null && !value.isBlank() ? value : "-";

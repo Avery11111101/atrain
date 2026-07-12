@@ -4,10 +4,14 @@ settings:
   cart_speed: 0.35
   cart_spawn_delay: 40
   cart_departure_delay: 80
-  cart_despawn_delay: 20
+  cart_despawn_delay: 20  # 空礦車刪除延遲（tick，20 = 1 秒）
   default_dwell_time: 80
   auto_stop: false
   station_display: true
+  cart_spawn: true
+  cart_spawn_auto_mount: true
+  cart_spawn_radius: 2.5
+  cart_spawn_cooldown: 40
 
 movement:
   # 移動模式：false = 原版軌道物理（只調 maxSpeed，適合動力軌上坡）

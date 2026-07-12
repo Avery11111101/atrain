@@ -14,7 +14,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 import java.util.Map;
 
-/** 蹲下右鍵金磚+鐵軌站點開啟編輯 GUI */
+/** 金磚站點：蹲下右鍵編輯；一般右鍵召喚原版礦車 */
 public class PlayerInteractListener implements Listener {
 
     private final AtrainPlugin plugin;
@@ -26,13 +26,25 @@ public class PlayerInteractListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (!event.getPlayer().isSneaking()) return;
 
         Block block = event.getClickedBlock();
-        if (block == null) return;
-        if (!StationUtil.isGoldStationRail(block)) return;
+        if (block == null || !StationUtil.isGoldStationRail(block)) return;
 
         Player player = event.getPlayer();
+        if (player.isSneaking()) {
+            handleStationEdit(event, player, block);
+        } else {
+            handleCartSpawn(event, player, block);
+        }
+    }
+
+    private void handleCartSpawn(PlayerInteractEvent event, Player player, Block block) {
+        if (plugin.getChatInputManager().hasPending(player)) return;
+        event.setCancelled(true);
+        plugin.getCartSpawnManager().trySpawn(player, block);
+    }
+
+    private void handleStationEdit(PlayerInteractEvent event, Player player, Block block) {
         if (!player.hasPermission("atrain.station.edit")) {
             TextUtil.send(player, plugin.getLanguageManager().get(player, "error.no_permission"));
             event.setCancelled(true);
@@ -40,6 +52,21 @@ public class PlayerInteractListener implements Listener {
         }
 
         event.setCancelled(true);
+
+        var bindMgr = plugin.getBindPlatformManager();
+        if (bindMgr.isBinding(player)) {
+            String targetId = bindMgr.getBindTarget(player);
+            bindMgr.clear(player);
+            if (targetId != null && plugin.getStopManager().bindReturnPlatform(targetId, block)) {
+                TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bound",
+                        Map.of("id", targetId)));
+                plugin.getGuiManager().openStationEdit(player, targetId);
+            } else {
+                TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_failed"));
+            }
+            return;
+        }
+
         Block gold = StationUtil.resolveGoldBlock(block);
         if (gold == null) return;
 

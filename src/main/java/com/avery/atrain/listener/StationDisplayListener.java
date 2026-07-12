@@ -59,9 +59,9 @@ public class StationDisplayListener implements Listener {
     private void sendDisplay(Player player, Stop stop) {
         var lang = plugin.getLanguageManager();
         StringBuilder text = new StringBuilder(lang.get(player, "station.display_info", Map.of(
-                "prev", TextUtil.escapePlain(stop.getInfoPrev()),
+                "prev", TextUtil.escapePlain(plugin.getStopManager().resolveDisplayPrev(stop, player.getLocation())),
                 "current", TextUtil.escapePlain(stop.getDisplayName()),
-                "next", TextUtil.escapePlain(stop.getInfoNext()))));
+                "next", TextUtil.escapePlain(plugin.getStopManager().resolveDisplayNext(stop, player.getLocation())))));
 
         if (stop.hasKeyInfo()) {
             text.append(" §8| ").append(lang.get(player, "station.key_info", Map.of(

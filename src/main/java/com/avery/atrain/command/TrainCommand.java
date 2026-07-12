@@ -41,6 +41,17 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 }
                 plugin.getGuiManager().openStopList(p, 0);
             }
+            case "lines" -> {
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(TextUtil.colorize(lang.getRaw(lang.getDefaultLanguage(), "error.players_only")));
+                    return true;
+                }
+                if (!p.hasPermission("atrain.gui")) {
+                    TextUtil.send(p, lang.get(p, "error.no_permission"));
+                    return true;
+                }
+                plugin.getGuiManager().openLineList(p, 0);
+            }
             case "reload" -> {
                 if (!sender.hasPermission("atrain.admin")) {
                     if (sender instanceof Player p) TextUtil.send(p, lang.get(p, "error.no_permission"));
@@ -76,6 +87,7 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 plugin.getLanguageManager().getRaw(langCode, "command.help_header"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_gui"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_stops"),
+                plugin.getLanguageManager().getRaw(langCode, "command.help_lines"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_lang"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_reload")
         );
@@ -87,7 +99,7 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filter(List.of("gui", "stops", "reload", "help"), args[0]);
+            return filter(List.of("gui", "stops", "lines", "reload", "help"), args[0]);
         }
         return List.of();
     }

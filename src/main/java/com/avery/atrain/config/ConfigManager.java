@@ -66,6 +66,10 @@ public class ConfigManager {
 
     public boolean isAutoStopEnabled() { return config.getBoolean("settings.auto_stop", false); }
     public boolean isStationDisplayEnabled() { return config.getBoolean("settings.station_display", true); }
+    public boolean isCartSpawnEnabled() { return config.getBoolean("settings.cart_spawn", true); }
+    public boolean isCartSpawnAutoMount() { return config.getBoolean("settings.cart_spawn_auto_mount", true); }
+    public double getCartSpawnRadius() { return config.getDouble("settings.cart_spawn_radius", 2.5); }
+    public int getCartSpawnCooldownTicks() { return config.getInt("settings.cart_spawn_cooldown", 40); }
     public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.35); }
     public int getSpawnDelay() { return config.getInt("settings.cart_spawn_delay", 40); }
     public int getDepartureDelay() { return config.getInt("settings.cart_departure_delay", 80); }

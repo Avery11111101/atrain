@@ -22,17 +22,20 @@ public class ChatInputListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
         ChatInputManager.Pending pending = plugin.getChatInputManager().getPending(event.getPlayer());
         if (pending == null) return;
 
         event.setCancelled(true);
+        event.viewers().clear();
+
         String message = PlainTextComponentSerializer.plainText()
                 .serialize(event.message()).trim();
+        Player player = event.getPlayer();
 
         plugin.getServer().getScheduler().runTask(plugin,
-                () -> handleInput(event.getPlayer(), pending, message));
+                () -> handleInput(player, pending, message));
     }
 
     private void handleInput(Player player, ChatInputManager.Pending pending, String message) {
@@ -50,7 +53,38 @@ public class ChatInputListener implements Listener {
             case STOP_KEY_STATION -> applyKeyStation(player, pending, message);
             case STOP_KEY_DIRECTION -> applyKeyDirection(player, pending, message);
             case STOP_ADMIN_INFO -> applyAdminInfo(player, pending, message);
+            case LINE_CREATE -> applyLineCreate(player, message);
+            case LINE_RENAME -> applyLineRename(player, pending, message);
         }
+    }
+
+    private void applyLineCreate(Player player, String message) {
+        if (message.isBlank()) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "line.name_empty"));
+            return;
+        }
+        var line = plugin.getLineManager().createLineAuto(message.trim());
+        plugin.getChatInputManager().clear(player);
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "line.created", Map.of("id", line.getDisplayName())));
+        plugin.getGuiManager().openLineDetail(player, line.getId(), 0);
+    }
+
+    private void applyLineRename(Player player, ChatInputManager.Pending pending, String message) {
+        if (message.isBlank()) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "line.name_empty"));
+            return;
+        }
+        String lineId = pending.contextId();
+        var line = plugin.getLineManager().getLine(lineId);
+        if (line == null) {
+            plugin.getChatInputManager().clear(player);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "line.not_found", Map.of("id", lineId)));
+            return;
+        }
+        plugin.getLineManager().renameLine(lineId, message.trim());
+        plugin.getChatInputManager().clear(player);
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "line.renamed", Map.of("name", message.trim())));
+        plugin.getGuiManager().openLineDetail(player, lineId, 0);
     }
 
     private void applyStopName(Player player, ChatInputManager.Pending pending, String message) {
@@ -122,7 +156,17 @@ public class ChatInputListener implements Listener {
     }
 
     private void reopen(Player player, ChatInputManager.Pending pending) {
-        if (pending.contextId() != null && plugin.getStopManager().getStop(pending.contextId()) != null) {
+        if (pending.contextId() == null) {
+            if (pending.type() == ChatInputManager.Type.LINE_CREATE) {
+                plugin.getGuiManager().openLineList(player, 0);
+            }
+            return;
+        }
+        if (pending.type() == ChatInputManager.Type.LINE_RENAME) {
+            plugin.getGuiManager().openLineDetail(player, pending.contextId(), 0);
+            return;
+        }
+        if (plugin.getStopManager().getStop(pending.contextId()) != null) {
             plugin.getGuiManager().openStationEdit(player, pending.contextId());
         }
     }

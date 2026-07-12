@@ -14,17 +14,38 @@ public final class TextUtil {
 
     private TextUtil() {}
 
+    /** 將混用的 § 色碼轉成 MiniMessage，避免解析失敗後標籤原樣顯示 */
+    public static String preprocessForMiniMessage(String text) {
+        if (text == null || !text.contains("§")) return text;
+        return text
+                .replace("§l", "<bold>").replace("§L", "<bold>")
+                .replace("§o", "<italic>").replace("§O", "<italic>")
+                .replace("§n", "<underlined>").replace("§N", "<underlined>")
+                .replace("§m", "<strikethrough>").replace("§M", "<strikethrough>")
+                .replace("§k", "<obfuscated>").replace("§K", "<obfuscated>")
+                .replace("§r", "<reset>").replace("§R", "<reset>")
+                .replace("§0", "<black>").replace("§1", "<dark_blue>")
+                .replace("§2", "<dark_green>").replace("§3", "<dark_aqua>")
+                .replace("§4", "<dark_red>").replace("§5", "<dark_purple>")
+                .replace("§6", "<gold>").replace("§7", "<gray>")
+                .replace("§8", "<dark_gray>").replace("§9", "<blue>")
+                .replace("§a", "<green>").replace("§b", "<aqua>")
+                .replace("§c", "<red>").replace("§d", "<light_purple>")
+                .replace("§e", "<yellow>").replace("§f", "<white>");
+    }
+
     /** 語系模板著色（可含 MiniMessage） */
     public static String colorize(String text) {
         if (text == null) return "";
-        if (text.contains("<")) {
+        String normalized = preprocessForMiniMessage(text);
+        if (normalized.contains("<")) {
             try {
-                return LEGACY.serialize(MINI.deserialize(text));
+                return LEGACY.serialize(MINI.deserialize(normalized));
             } catch (Exception e) {
                 return escapePlain(text);
             }
         }
-        return text.replace('&', '§');
+        return normalized.replace('&', '§');
     }
 
     /** 玩家輸入的純文字，避免被當成 MiniMessage / 色碼破壞 GUI */
@@ -35,15 +56,16 @@ public final class TextUtil {
 
     public static void send(Player player, String message) {
         if (message == null || message.isEmpty()) return;
-        if (message.contains("<") && message.contains(">")) {
+        String normalized = preprocessForMiniMessage(message);
+        if (normalized.contains("<") && normalized.contains(">")) {
             try {
-                player.sendMessage(MINI.deserialize(message));
+                player.sendMessage(MINI.deserialize(normalized));
                 return;
             } catch (Exception ignored) {
                 // fall through
             }
         }
-        player.sendMessage(colorize(message));
+        player.sendMessage(colorize(normalized));
     }
 
     public static String format(String template, Map<String, String> placeholders) {
@@ -56,13 +78,14 @@ public final class TextUtil {
 
     public static Component component(String message) {
         if (message == null) return Component.empty();
-        if (message.contains("<")) {
+        String normalized = preprocessForMiniMessage(message);
+        if (normalized.contains("<")) {
             try {
-                return MINI.deserialize(message);
+                return MINI.deserialize(normalized);
             } catch (Exception e) {
                 return LEGACY.deserialize(escapePlain(message));
             }
         }
-        return LEGACY.deserialize(colorize(message));
+        return LEGACY.deserialize(colorize(normalized));
     }
 }

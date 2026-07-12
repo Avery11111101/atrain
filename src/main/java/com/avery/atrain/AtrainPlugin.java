@@ -8,12 +8,15 @@ import com.avery.atrain.gui.GuiListener;
 import com.avery.atrain.gui.GuiManager;
 import com.avery.atrain.i18n.LanguageManager;
 import com.avery.atrain.listener.ChatInputListener;
+import com.avery.atrain.listener.EmptyCartListener;
 import com.avery.atrain.listener.PlayerInteractListener;
 import com.avery.atrain.listener.PlayerQuitListener;
 import com.avery.atrain.listener.StationAutoStopListener;
 import com.avery.atrain.listener.StationBlockListener;
 import com.avery.atrain.listener.StationDisplayListener;
 import com.avery.atrain.listener.VehicleListener;
+import com.avery.atrain.manager.BindPlatformManager;
+import com.avery.atrain.manager.CartSpawnManager;
 import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
 import com.avery.atrain.manager.StopManager;
@@ -32,7 +35,9 @@ public final class AtrainPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private LineManager lineManager;
     private StopManager stopManager;
+    private CartSpawnManager cartSpawnManager;
     private ChatInputManager chatInputManager;
+    private BindPlatformManager bindPlatformManager;
     private GuiManager guiManager;
     private StationAutoStopListener stationAutoStopListener;
     private PlayerInteractListener playerInteractListener;
@@ -47,7 +52,9 @@ public final class AtrainPlugin extends JavaPlugin {
         languageManager = new LanguageManager(this);
         lineManager = new LineManager(this);
         stopManager = new StopManager(this);
+        cartSpawnManager = new CartSpawnManager(this);
         chatInputManager = new ChatInputManager();
+        bindPlatformManager = new BindPlatformManager();
         guiManager = new GuiManager(this);
         stationAutoStopListener = new StationAutoStopListener(this);
 
@@ -64,6 +71,7 @@ public final class AtrainPlugin extends JavaPlugin {
         pm.registerEvents(new ChatInputListener(this), this);
         pm.registerEvents(new PlayerQuitListener(this), this);
         pm.registerEvents(new StationDisplayListener(this), this);
+        pm.registerEvents(new EmptyCartListener(this), this);
         pm.registerEvents(new StationBlockListener(this), this);
         pm.registerEvents(new GuiListener(this), this);
 
@@ -74,7 +82,7 @@ public final class AtrainPlugin extends JavaPlugin {
         getCommand("lang").setExecutor(langCmd);
         getCommand("lang").setTabCompleter(langCmd);
 
-        getLogger().info("atrain 已啟用 — 站點資訊顯示（零指令、蹲下右鍵操作）");
+        getLogger().info("atrain 已啟用 — 站點顯示 + 原版礦車召喚");
     }
 
     @Override
@@ -89,6 +97,7 @@ public final class AtrainPlugin extends JavaPlugin {
         stationAutoStopListener.clearAll();
         TrainTaskRegistry.cancelAllTasks();
         chatInputManager.clearAll();
+        bindPlatformManager.clearAll();
         dataStore.save();
         configManager.load();
         languageManager.load();
@@ -105,7 +114,9 @@ public final class AtrainPlugin extends JavaPlugin {
     public LanguageManager getLanguageManager() { return languageManager; }
     public LineManager getLineManager() { return lineManager; }
     public StopManager getStopManager() { return stopManager; }
+    public CartSpawnManager getCartSpawnManager() { return cartSpawnManager; }
     public ChatInputManager getChatInputManager() { return chatInputManager; }
+    public BindPlatformManager getBindPlatformManager() { return bindPlatformManager; }
     public GuiManager getGuiManager() { return guiManager; }
     public StationAutoStopListener getStationAutoStopListener() { return stationAutoStopListener; }
 }

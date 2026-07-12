@@ -180,6 +180,20 @@ public class StopManager {
             }
         }
         primary.setDwellTimeTicks(Math.max(primary.getDwellTimeTicks(), other.getDwellTimeTicks()));
+        for (String lineId : other.getLineIds()) {
+            if (!primary.getLineIds().contains(lineId)) {
+                primary.getLineIds().add(lineId);
+            }
+        }
+        if (primary.getDisplayLineId() == null && other.getDisplayLineId() != null) {
+            primary.setDisplayLineId(other.getDisplayLineId());
+        }
+        if (primary.getReturnLineId() == null && other.getReturnLineId() != null) {
+            primary.setReturnLineId(other.getReturnLineId());
+        }
+        for (String k : other.getReturnGoldBlocks()) {
+            if (!primary.getReturnGoldBlocks().contains(k)) primary.getReturnGoldBlocks().add(k);
+        }
     }
 
     private boolean isUnset(String value) {
@@ -240,5 +254,81 @@ public class StopManager {
     private String nameOf(String stopId) {
         Stop s = getStop(stopId);
         return s != null ? s.getDisplayName() : stopId;
+    }
+
+    /** 解析用於顯示上下站的路線（優先 displayLineId，否則取第一條所屬路線） */
+    public Line resolveDisplayLine(Stop stop) {
+        return resolveDisplayLine(stop, null);
+    }
+
+    public Line resolveDisplayLine(Stop stop, Location at) {
+        if (stop == null) return null;
+        if (at != null && stop.isOnReturnPlatform(at) && stop.getReturnLineId() != null) {
+            Line returnLine = plugin.getLineManager().getLine(stop.getReturnLineId());
+            if (returnLine != null && returnLine.getStopIds().contains(stop.getId())) return returnLine;
+        }
+        String displayId = stop.getDisplayLineId();
+        if (displayId != null) {
+            Line line = plugin.getLineManager().getLine(displayId);
+            if (line != null && line.getStopIds().contains(stop.getId())) return line;
+        }
+        for (String lineId : stop.getLineIds()) {
+            Line line = plugin.getLineManager().getLine(lineId);
+            if (line != null && line.getStopIds().contains(stop.getId())) return line;
+        }
+        return null;
+    }
+
+    public String resolveDisplayPrev(Stop stop) {
+        return resolveDisplayPrev(stop, null);
+    }
+
+    public String resolveDisplayPrev(Stop stop, Location at) {
+        Line line = resolveDisplayLine(stop, at);
+        if (line != null) return getPrevStopName(line, stop.getId());
+        return stop.getInfoPrev();
+    }
+
+    public String resolveDisplayNext(Stop stop) {
+        return resolveDisplayNext(stop, null);
+    }
+
+    public String resolveDisplayNext(Stop stop, Location at) {
+        Line line = resolveDisplayLine(stop, at);
+        if (line != null) return getNextStopName(line, stop.getId());
+        return stop.getInfoNext();
+    }
+
+    /** 將另一組金磚月台綁定為此站點的回程月台 */
+    public boolean bindReturnPlatform(String primaryId, Block clicked) {
+        Stop primary = getStop(primaryId);
+        Block gold = StationUtil.resolveGoldBlock(clicked);
+        if (primary == null || gold == null) return false;
+        if (!gold.getWorld().getName().equals(primary.getWorld())) return false;
+
+        Set<String> scanned = StationUtil.scanConnectedGoldPlatform(gold);
+        if (scanned.isEmpty()) return false;
+
+        Stop other = findStopOwningGold(gold);
+        if (other != null && other.getId().equals(primaryId)) return false;
+
+        if (other != null) {
+            mergeStopsInto(primary, List.of(other), scanned);
+            for (String k : other.getGoldBlocks()) {
+                if (!primary.getReturnGoldBlocks().contains(k)) {
+                    primary.getReturnGoldBlocks().add(k);
+                }
+            }
+        } else {
+            for (String k : scanned) {
+                if (!primary.getGoldBlocks().contains(k)) primary.getGoldBlocks().add(k);
+                if (!primary.getReturnGoldBlocks().contains(k)) primary.getReturnGoldBlocks().add(k);
+            }
+            Set<String> displays = StationUtil.scanAdjacentDisplayBlocks(
+                    new LinkedHashSet<>(primary.getGoldBlocks()), primary.getWorld());
+            primary.setDisplayBlocks(new ArrayList<>(displays));
+        }
+        plugin.getDataStore().save();
+        return true;
     }
 }
