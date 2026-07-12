@@ -1,6 +1,7 @@
 package com.avery.atrain.gui;
 
 import com.avery.atrain.AtrainPlugin;
+import com.avery.atrain.listener.ChatInputListener;
 import com.avery.atrain.model.Line;
 import com.avery.atrain.model.Stop;
 import com.avery.atrain.util.TextUtil;
@@ -63,27 +64,14 @@ public class GuiManager {
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.lines_lore"))
                 .build());
 
-        inv.setItem(14, new ItemBuilder(Material.OAK_SIGN)
+        inv.setItem(14, new ItemBuilder(Material.GOLD_BLOCK)
                 .name(msg(player, "gui.main.stops"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.stops_lore"))
                 .build());
 
-        inv.setItem(16, new ItemBuilder(Material.COMPASS)
-                .name(msg(player, "gui.main.record"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.main.record_lore"))
-                .build());
-
-        inv.setItem(20, new ItemBuilder(Material.GOLDEN_AXE)
-                .name(msg(player, "gui.main.create_stop"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.main.create_stop_lore"))
-                .build());
-        inv.setItem(22, new ItemBuilder(Material.EMERALD)
+        inv.setItem(20, new ItemBuilder(Material.EMERALD)
                 .name(msg(player, "gui.main.create_line"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.create_line_lore"))
-                .build());
-        inv.setItem(24, new ItemBuilder(Material.WRITABLE_BOOK)
-                .name(msg(player, "gui.main.quick_setup"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.main.quick_setup_lore"))
                 .build());
 
         inv.setItem(30, new ItemBuilder(Material.NAME_TAG)
@@ -114,10 +102,10 @@ public class GuiManager {
         Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.tutorial.title"));
         holder.setInventory(inv);
 
-        String[] cats = {"quickstart", "stop", "line", "route", "hangrail", "ride", "advanced"};
-        Material[] icons = {Material.LIME_DYE, Material.OAK_SIGN, Material.RAIL,
-                Material.MINECART, Material.IRON_BARS, Material.DIAMOND, Material.NETHER_STAR};
-        int[] slots = {10, 11, 13, 15, 21, 23, 25};
+        String[] cats = {"quickstart", "stop", "line", "ride", "hangrail", "advanced"};
+        Material[] icons = {Material.LIME_DYE, Material.GOLD_BLOCK, Material.RAIL,
+                Material.MINECART, Material.IRON_BARS, Material.NETHER_STAR};
+        int[] slots = {10, 12, 14, 22, 24, 31};
 
         for (int i = 0; i < cats.length; i++) {
             String cat = cats[i];
@@ -175,7 +163,6 @@ public class GuiManager {
                     .name(line.getFormattedName() + " §7(" + line.getId() + ")")
                     .lore(
                             msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))),
-                            msg(player, "gui.line_list.route_count", Map.of("count", String.valueOf(line.getRoutePoints().size()))),
                             "",
                             msg(player, "gui.click_to_manage")
                     ).build());
@@ -199,72 +186,6 @@ public class GuiManager {
         player.openInventory(inv);
     }
 
-    public void openRecordSelect(Player player) {
-        GuiHolder holder = new GuiHolder(GuiHolder.Type.RECORD_SELECT);
-        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.record_select.title"));
-        holder.setInventory(inv);
-
-        int slot = 10;
-        for (Line line : plugin.getLineManager().getAllLines()) {
-            if (slot % 9 == 8) slot += 2;
-            if (slot > 43) break;
-            boolean recording = plugin.getRouteRecorder().isRecording(player)
-                    && line.getId().equals(plugin.getRouteRecorder().getRecordingLine(player));
-            inv.setItem(slot, new ItemBuilder(recording ? Material.REDSTONE : Material.COMPASS)
-                    .name(line.getFormattedName())
-                    .lore(
-                            msg(player, "gui.line_list.route_count", Map.of("count", String.valueOf(line.getRoutePoints().size()))),
-                            "",
-                            msg(player, recording ? "gui.record_select.stop" : "gui.record_select.start")
-                    ).build());
-            holder.set("line_" + slot, line.getId());
-            slot++;
-        }
-
-        if (plugin.getLineManager().getAllLines().isEmpty()) {
-            inv.setItem(22, new ItemBuilder(Material.BARRIER)
-                    .name(msg(player, "gui.record_select.no_lines"))
-                    .lore(msg(player, "gui.record_select.no_lines_lore"))
-                    .build());
-        }
-
-        fillBorder(inv);
-        addBack(inv, player);
-        player.openInventory(inv);
-    }
-
-    public void openQuickSetup(Player player) {
-        GuiHolder holder = new GuiHolder(GuiHolder.Type.QUICK_SETUP);
-        Inventory inv = Bukkit.createInventory(holder, 45, msg(player, "gui.quick_setup.title"));
-        holder.setInventory(inv);
-
-        var sel = plugin.getSelectionManager();
-        String selStatus = sel.hasBothCorners(player)
-                ? msg(player, "gui.quick_setup.selection_ready")
-                : msg(player, "gui.quick_setup.selection_missing");
-
-        inv.setItem(10, new ItemBuilder(Material.GOLDEN_AXE)
-                .name(msg(player, "gui.quick_setup.step1"))
-                .lore(selStatus, "", msg(player, "gui.quick_setup.step1_hint"))
-                .build());
-        inv.setItem(12, new ItemBuilder(Material.OAK_SIGN)
-                .name(msg(player, "gui.quick_setup.step2"))
-                .lore(msg(player, "gui.quick_setup.step2_hint"))
-                .build());
-        inv.setItem(14, new ItemBuilder(Material.RAIL)
-                .name(msg(player, "gui.quick_setup.step3"))
-                .lore(msg(player, "gui.quick_setup.step3_hint"))
-                .build());
-        inv.setItem(16, new ItemBuilder(Material.COMPASS)
-                .name(msg(player, "gui.quick_setup.step4"))
-                .lore(msg(player, "gui.quick_setup.step4_hint"))
-                .build());
-
-        fillBorder(inv);
-        addBack(inv, player);
-        player.openInventory(inv);
-    }
-
     public void openLineDetail(Player player, String lineId) {
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) { openLineList(player, 0); return; }
@@ -277,14 +198,16 @@ public class GuiManager {
 
         inv.setItem(11, new ItemBuilder(Material.REDSTONE)
                 .name(msg(player, "gui.line_detail.speed_down"))
+                .lore(msg(player, "gui.line_detail.speed_step_lore"))
+                .build());
+        inv.setItem(12, new ItemBuilder(Material.GLOWSTONE_DUST)
+                .name(msg(player, "gui.line_detail.speed_up"))
+                .lore(msg(player, "gui.line_detail.speed_step_lore"))
                 .build());
         inv.setItem(13, new ItemBuilder(Material.SUGAR)
-                .name(msg(player, "gui.line_detail.speed", Map.of("speed", String.valueOf(line.getMaxSpeed()))))
-                .build());
-        inv.setItem(15, new ItemBuilder(Material.COMPASS)
-                .name(msg(player, plugin.getRouteRecorder().isRecording(player)
-                        ? "gui.line_detail.stop_record" : "gui.line_detail.record"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.record_lore"))
+                .name(msg(player, "gui.line_detail.speed",
+                        Map.of("speed", ChatInputListener.formatSpeed(line.getMaxSpeed()))))
+                .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.speed_custom_lore"))
                 .build());
         inv.setItem(20, new ItemBuilder(Material.OAK_SIGN)
                 .name(msg(player, "gui.line_detail.manage_stops"))
@@ -293,15 +216,6 @@ public class GuiManager {
         inv.setItem(22, new ItemBuilder(Material.EMERALD)
                 .name(msg(player, "gui.line_detail.add_stop"))
                 .lore(msg(player, "gui.line_detail.add_stop_lore"))
-                .build());
-        inv.setItem(28, new ItemBuilder(Material.MAP)
-                .name(msg(player, "gui.line_detail.platforms"))
-                .lore(msg(player, "gui.line_detail.platforms_lore"))
-                .build());
-        inv.setItem(33, new ItemBuilder(Material.BUCKET)
-                .name(msg(player, "gui.line_detail.clear_route"))
-                .lore(msg(player, "gui.line_detail.clear_route_lore",
-                        Map.of("count", String.valueOf(line.getRoutePoints().size()))))
                 .build());
         inv.setItem(31, new ItemBuilder(Material.REPEATER)
                 .name(msg(player, line.isCircular() ? "gui.line_detail.circular_on" : "gui.line_detail.circular_off"))
@@ -453,8 +367,8 @@ public class GuiManager {
             holder.set("stop_" + (slot - 1), stop.getId());
         }
 
-        inv.setItem(GuiSlots.CREATE, new ItemBuilder(Material.EMERALD)
-                .name(msg(player, "gui.stop_list.create"))
+        inv.setItem(GuiSlots.CREATE, new ItemBuilder(Material.GOLD_BLOCK)
+                .name(msg(player, "gui.stop_list.hint"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.stop_list.create_lore"))
                 .build());
 
@@ -473,80 +387,48 @@ public class GuiManager {
         player.openInventory(inv);
     }
 
-    public void openStopDetail(Player player, String stopId) {
+    // ── 站點編輯（蹲下右鍵金磚站） ──
+    public void openStationEdit(Player player, String stopId) {
         Stop stop = plugin.getStopManager().getStop(stopId);
-        if (stop == null) { openStopList(player, 0); return; }
+        if (stop == null) return;
 
-        GuiHolder holder = new GuiHolder(GuiHolder.Type.STOP_DETAIL);
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.STATION_EDIT);
         holder.set("stop_id", stopId);
-        Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.stop_detail.title", Map.of("name", stop.getDisplayName())));
+        Inventory inv = Bukkit.createInventory(holder, 45,
+                msg(player, "gui.station_edit.title", Map.of("name", stop.getDisplayName())));
         holder.setInventory(inv);
 
-        inv.setItem(11, new ItemBuilder(Material.LIME_STAINED_GLASS_PANE)
-                .name(msg(player, "gui.stop_detail.set_forward"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.stop_detail.set_forward_lore"))
+        int dwellSec = stop.getDwellTimeTicks() / 20;
+        inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
+                .name(msg(player, "gui.station_edit.rename"))
+                .lore(msg(player, "gui.station_edit.rename_lore", Map.of("name", stop.getDisplayName())))
                 .build());
-        inv.setItem(13, new ItemBuilder(Material.RED_STAINED_GLASS_PANE)
-                .name(msg(player, "gui.stop_detail.set_return"))
-                .lore(plugin.getLanguageManager().getList(player, "gui.stop_detail.set_return_lore"))
+        inv.setItem(11, new ItemBuilder(Material.REDSTONE)
+                .name(msg(player, "gui.station_edit.dwell_down"))
                 .build());
-        inv.setItem(15, new ItemBuilder(Material.ENDER_PEARL)
-                .name(msg(player, "gui.stop_detail.tp_forward"))
+        inv.setItem(13, new ItemBuilder(Material.CLOCK)
+                .name(msg(player, "gui.station_edit.dwell", Map.of("sec", String.valueOf(dwellSec))))
+                .lore(msg(player, "gui.station_edit.dwell_lore"))
                 .build());
-        inv.setItem(17, new ItemBuilder(Material.ENDER_PEARL)
-                .name(msg(player, "gui.stop_detail.tp_return"))
+        inv.setItem(15, new ItemBuilder(Material.GLOWSTONE_DUST)
+                .name(msg(player, "gui.station_edit.dwell_up"))
                 .build());
-
-        var conflict = com.avery.atrain.util.StopPlatformUtil.checkConflict(stop);
-        Material statusMat = conflict == com.avery.atrain.util.StopPlatformUtil.ConflictLevel.OK
-                ? Material.LIME_DYE
-                : conflict == com.avery.atrain.util.StopPlatformUtil.ConflictLevel.SAME_RAIL_WARN
-                ? Material.YELLOW_DYE : Material.RED_DYE;
-        inv.setItem(22, new ItemBuilder(statusMat)
-                .name(msg(player, "gui.stop_detail.platform_status"))
-                .lore(msg(player, "gui.stop_detail.platform_status_" + conflict.name().toLowerCase()))
+        inv.setItem(20, new ItemBuilder(Material.GOLD_BLOCK)
+                .name(msg(player, "gui.station_edit.gold_count",
+                        Map.of("count", String.valueOf(stop.getGoldBlocks().size()))))
+                .lore(msg(player, "gui.station_edit.gold_hint"))
                 .build());
-
-        inv.setItem(40, new ItemBuilder(Material.TNT)
-                .name(msg(player, "gui.stop_detail.delete"))
+        inv.setItem(22, new ItemBuilder(Material.DIAMOND_BLOCK)
+                .name(msg(player, "gui.station_edit.display_count",
+                        Map.of("count", String.valueOf(stop.getDisplayBlocks().size()))))
+                .lore(msg(player, "gui.station_edit.display_hint"))
                 .build());
-
-        fillBorder(inv);
-        addBack(inv, player);
-        player.openInventory(inv);
-    }
-
-    public void openLinePlatforms(Player player, String lineId) {
-        Line line = plugin.getLineManager().getLine(lineId);
-        if (line == null) { openLineList(player, 0); return; }
-
-        GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_PLATFORMS);
-        holder.set("line_id", lineId);
-        Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.line_platforms.title", Map.of("line", line.getDisplayName())));
-        holder.setInventory(inv);
-
-        int slot = 10;
-        int order = 1;
-        for (String sid : line.getStopIds()) {
-            Stop stop = plugin.getStopManager().getStop(sid);
-            if (stop == null) continue;
-            if (slot % 9 == 8) slot += 2;
-            String f = stop.hasForwardPoint() ? "§a✔" : "§c✘";
-            String r = stop.hasReturnPoint() ? "§a✔" : "§c✘";
-            inv.setItem(slot, new ItemBuilder(Material.OAK_SIGN)
-                    .name("§7" + order++ + ". §f" + stop.getDisplayName())
-                    .lore(
-                            msg(player, "gui.line_platforms.forward", Map.of("status", f)),
-                            msg(player, "gui.line_platforms.return", Map.of("status", r)),
-                            "",
-                            msg(player, "gui.line_platforms.click_edit")
-                    ).build());
-            holder.set("stop_" + slot, sid);
-            slot++;
-            if (slot > 43) break;
-        }
+        inv.setItem(24, new ItemBuilder(Material.EMERALD)
+                .name(msg(player, "gui.station_edit.rescan_display"))
+                .build());
+        inv.setItem(31, new ItemBuilder(Material.TNT)
+                .name(msg(player, "gui.station_edit.delete"))
+                .build());
 
         fillBorder(inv);
         addBack(inv, player);
@@ -554,15 +436,9 @@ public class GuiManager {
     }
 
     // ── 換乘選線 ──
-    public void openLineChoice(Player player, Stop stop, List<Line> lines) {
-        openLineChoice(player, stop, lines, com.avery.atrain.model.PlatformSide.FORWARD, null);
-    }
-
-    public void openLineChoice(Player player, Stop stop, List<Line> lines,
-                               com.avery.atrain.model.PlatformSide platform, Location railLoc) {
+    public void openLineChoice(Player player, Stop stop, List<Line> lines, Location railLoc) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.LINE_CHOICE);
         holder.set("stop_id", stop.getId());
-        holder.set("platform", platform.toDataString());
         if (railLoc != null && railLoc.getWorld() != null) {
             holder.set("rail_x", String.valueOf(railLoc.getBlockX()));
             holder.set("rail_y", String.valueOf(railLoc.getBlockY()));
@@ -572,14 +448,11 @@ public class GuiManager {
                 msg(player, "gui.line_choice.title", Map.of("stop", stop.getDisplayName())));
         holder.setInventory(inv);
 
-        String dirHint = msg(player, platform == com.avery.atrain.model.PlatformSide.FORWARD
-                ? "ride.direction_forward" : "ride.direction_reverse");
         int slot = 10;
         for (Line line : lines) {
             inv.setItem(slot, new ItemBuilder(Material.MINECART)
                     .name(line.getFormattedName())
-                    .lore(msg(player, "gui.line_choice.dir", Map.of("dir", dirHint)),
-                            msg(player, "gui.line_choice.click"))
+                    .lore(msg(player, "gui.line_choice.click"))
                     .build());
             holder.set("choice_" + slot, line.getId());
             slot++;
@@ -588,6 +461,10 @@ public class GuiManager {
         fillBorder(inv);
         addClose(inv, player);
         player.openInventory(inv);
+    }
+
+    public void openLineChoice(Player player, Stop stop, List<Line> lines) {
+        openLineChoice(player, stop, lines, null);
     }
 
     // ── 語言選擇 ──

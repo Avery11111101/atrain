@@ -67,12 +67,14 @@ public class ConfigManager {
     public double getCartSpeed() { return config.getDouble("settings.cart_speed", 0.35); }
     public int getSpawnDelay() { return config.getInt("settings.cart_spawn_delay", 40); }
     public int getDepartureDelay() { return config.getInt("settings.cart_departure_delay", 80); }
+    public int getDefaultDwellTime() { return config.getInt("settings.default_dwell_time", 80); }
     public int getDespawnDelay() { return config.getInt("settings.cart_despawn_delay", 20); }
 
-    public boolean isPathGuidance() { return config.getBoolean("movement.path_guidance", true); }
+    public boolean isPathGuidance() { return config.getBoolean("movement.path_guidance", false); }
+    public boolean isVanillaMovement() { return !isPathGuidance(); }
     public double getGuidanceStrength() { return config.getDouble("movement.guidance_strength", 0.65); }
     public int getGuidanceInterval() { return config.getInt("movement.guidance_interval_ticks", 2); }
-    public boolean isStallRecovery() { return config.getBoolean("movement.stall_recovery", true); }
+    public boolean isStallRecovery() { return config.getBoolean("movement.stall_recovery", false); }
     public int getStallRecoveryTicks() { return config.getInt("movement.stall_recovery_ticks", 10); }
     public double getMinCruiseSpeed() { return config.getDouble("movement.min_cruise_speed", 0.06); }
     public boolean isObstructionCheck() { return config.getBoolean("movement.obstruction_check", true); }

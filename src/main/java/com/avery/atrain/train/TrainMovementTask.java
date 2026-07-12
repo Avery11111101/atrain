@@ -23,6 +23,7 @@ public class TrainMovementTask implements Listener {
     private final PathGuideController pathGuide;
     private BukkitTask guidanceTask;
     private BukkitTask stallTask;
+    private BukkitTask speedTask;
     private BukkitTask departureTask;
 
     public TrainMovementTask(AtrainPlugin plugin, Minecart minecart, Player passenger,
@@ -43,11 +44,15 @@ public class TrainMovementTask implements Listener {
     public TrainSession getSession() { return session; }
 
     private void scheduleDeparture() {
-        int delay = session.getPlugin().getConfigManager().getDepartureDelay();
+        scheduleDeparture(session.getPlugin().getConfigManager().getDepartureDelay());
+    }
+
+    private void scheduleDeparture(int delayTicks) {
+        if (departureTask != null) departureTask.cancel();
         departureTask = Bukkit.getScheduler().runTaskLater(session.getPlugin(), () -> {
             departureTask = null;
             handleDeparture();
-        }, delay);
+        }, delayTicks);
     }
 
     private void handleDeparture() {
@@ -80,6 +85,21 @@ public class TrainMovementTask implements Listener {
     private void startGuidanceTasks() {
         stopGuidanceTasks();
         var cfg = session.getPlugin().getConfigManager();
+
+        if (cfg.isVanillaMovement()) {
+            speedTask = Bukkit.getScheduler().runTaskTimer(session.getPlugin(), () -> {
+                if (!session.isPassengerRiding()
+                        || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
+                var line = session.getLine();
+                Minecart cart = session.getMinecart();
+                if (line == null || cart == null) return;
+                cart.setMaxSpeed(line.getMaxSpeed());
+            }, 5L, 10L);
+            return;
+        }
+
+        if (!cfg.isPathGuidance()) return;
+
         int guideInterval = cfg.getGuidanceInterval();
         int stallInterval = cfg.getStallRecoveryTicks();
 
@@ -93,17 +113,20 @@ public class TrainMovementTask implements Listener {
             pathGuide.applyGuidance(session.getMinecart(), line.getRoutePoints(), idx);
         }, guideInterval, guideInterval);
 
-        stallTask = Bukkit.getScheduler().runTaskTimer(session.getPlugin(), () -> {
-            if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
-            var line = session.getLine();
-            if (line == null) return;
-            pathGuide.recoverStall(session.getMinecart(), line.getRoutePoints(), session.getRouteIndex());
-        }, stallInterval, stallInterval);
+        if (cfg.isStallRecovery()) {
+            stallTask = Bukkit.getScheduler().runTaskTimer(session.getPlugin(), () -> {
+                if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
+                var line = session.getLine();
+                if (line == null) return;
+                pathGuide.recoverStall(session.getMinecart(), line.getRoutePoints(), session.getRouteIndex());
+            }, stallInterval, stallInterval);
+        }
     }
 
     private void stopGuidanceTasks() {
         if (guidanceTask != null) { guidanceTask.cancel(); guidanceTask = null; }
         if (stallTask != null) { stallTask.cancel(); stallTask = null; }
+        if (speedTask != null) { speedTask.cancel(); speedTask = null; }
     }
 
     @EventHandler
@@ -113,7 +136,7 @@ public class TrainMovementTask implements Listener {
         session.addDistance(from.distance(to));
 
         var stopMgr = session.getPlugin().getStopManager();
-        Stop entered = stopMgr.getStopContaining(to);
+        Stop entered = stopMgr.getStopAtRail(to);
         Stop target = session.getTargetStop();
 
         if (session.getState() == TrainSession.State.MOVING_BETWEEN_STATIONS) {
@@ -137,11 +160,7 @@ public class TrainMovementTask implements Listener {
     }
 
     private boolean isNearStop(Location loc, Stop stop) {
-        Location sp = stop.getArrivalPoint(session.getDirection());
-        if (sp == null) sp = stop.getStopPoint();
-        return sp != null && loc.getWorld() != null
-                && loc.getWorld().equals(sp.getWorld())
-                && loc.distance(sp) < 2.0;
+        return stop.containsRail(loc);
     }
 
     private void arriveAtStation(Stop stop) {
@@ -158,7 +177,7 @@ public class TrainMovementTask implements Listener {
             return;
         }
         session.setTargetStopId(nextId);
-        scheduleDeparture();
+        scheduleDeparture(stop.getDwellTimeTicks());
     }
 
     private void notifyPlayer(String key) {

@@ -7,12 +7,13 @@ import com.avery.atrain.config.DataStore;
 import com.avery.atrain.gui.GuiListener;
 import com.avery.atrain.gui.GuiManager;
 import com.avery.atrain.i18n.LanguageManager;
+import com.avery.atrain.listener.ChatInputListener;
 import com.avery.atrain.listener.PlayerInteractListener;
 import com.avery.atrain.listener.PlayerQuitListener;
+import com.avery.atrain.listener.StationDisplayListener;
 import com.avery.atrain.listener.VehicleListener;
+import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
-import com.avery.atrain.manager.RouteRecorder;
-import com.avery.atrain.manager.SelectionManager;
 import com.avery.atrain.manager.StopManager;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.TextUtil;
@@ -33,8 +34,7 @@ public final class AtrainPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private LineManager lineManager;
     private StopManager stopManager;
-    private SelectionManager selectionManager;
-    private RouteRecorder routeRecorder;
+    private ChatInputManager chatInputManager;
     private GuiManager guiManager;
     private TrainTaskRegistry trainTaskRegistry;
     private PlayerInteractListener playerInteractListener;
@@ -52,8 +52,7 @@ public final class AtrainPlugin extends JavaPlugin {
         languageManager = new LanguageManager(this);
         lineManager = new LineManager(this);
         stopManager = new StopManager(this);
-        selectionManager = new SelectionManager();
-        routeRecorder = new RouteRecorder(this);
+        chatInputManager = new ChatInputManager();
         trainTaskRegistry = new TrainTaskRegistry();
         guiManager = new GuiManager(this);
 
@@ -66,7 +65,9 @@ public final class AtrainPlugin extends JavaPlugin {
         playerInteractListener = new PlayerInteractListener(this);
         pm.registerEvents(vehicleListener, this);
         pm.registerEvents(playerInteractListener, this);
+        pm.registerEvents(new ChatInputListener(this), this);
         pm.registerEvents(new PlayerQuitListener(this), this);
+        pm.registerEvents(new StationDisplayListener(this), this);
         pm.registerEvents(new GuiListener(this, playerInteractListener), this);
 
         var trainCmd = new TrainCommand(this);
@@ -89,7 +90,7 @@ public final class AtrainPlugin extends JavaPlugin {
     public void reloadAll() {
         trainTaskRegistry.shutdownAll();
         playerInteractListener.clearAllPendingSpawn();
-        routeRecorder.stopAllRecording(true);
+        chatInputManager.clearAll();
         dataStore.save();
         configManager.load();
         languageManager.load();
@@ -109,8 +110,7 @@ public final class AtrainPlugin extends JavaPlugin {
     public LanguageManager getLanguageManager() { return languageManager; }
     public LineManager getLineManager() { return lineManager; }
     public StopManager getStopManager() { return stopManager; }
-    public SelectionManager getSelectionManager() { return selectionManager; }
-    public RouteRecorder getRouteRecorder() { return routeRecorder; }
+    public ChatInputManager getChatInputManager() { return chatInputManager; }
     public GuiManager getGuiManager() { return guiManager; }
     public TrainTaskRegistry getTrainTaskRegistry() { return trainTaskRegistry; }
     public PlayerInteractListener getPlayerInteractListener() { return playerInteractListener; }

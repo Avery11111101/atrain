@@ -1,14 +1,9 @@
 package com.avery.atrain.train;
 
 import com.avery.atrain.AtrainPlugin;
-import com.avery.atrain.hangrail.HangRailInfo;
-import com.avery.atrain.hangrail.HangRailUtil;
 import com.avery.atrain.model.Line;
-import com.avery.atrain.model.PlatformSide;
 import com.avery.atrain.model.Stop;
 import com.avery.atrain.model.TravelDirection;
-import com.avery.atrain.util.RailUtil;
-import com.avery.atrain.util.TrackUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
@@ -54,10 +49,6 @@ public class TrainSession {
     public String getLineId() { return lineId; }
     public TravelDirection getDirection() { return direction; }
 
-    public PlatformSide getDepartureSide() {
-        return direction == TravelDirection.REVERSE ? PlatformSide.RETURN : PlatformSide.FORWARD;
-    }
-
     public Line getLine() {
         return lineId != null ? plugin.getLineManager().getLine(lineId) : null;
     }
@@ -91,41 +82,28 @@ public class TrainSession {
 
     public void initDepartureVelocity() {
         if (minecart == null) return;
-        Stop stop = getCurrentStop();
-        Vector dir = stop != null ? stop.getLaunchDirection(getDepartureSide()) : null;
-        if (dir == null || dir.lengthSquared() < 0.001) {
-            dir = RailUtil.pickContinuationDirection(minecart.getLocation(), null);
-        }
-        if (dir == null && plugin.getConfigManager().isHangRailEnabled()) {
-            HangRailInfo hang = HangRailUtil.findHangRail(
-                    minecart.getLocation(), plugin.getConfigManager().getHangRailTypes());
-            if (hang != null) dir = HangRailUtil.pickContinuation(minecart.getLocation(), hang, null);
-        }
-        if (dir == null) return;
-        minecart.setVelocity(dir.normalize().multiply(0.4));
+        Line line = getLine();
+        double speed = line != null ? line.getMaxSpeed() : plugin.getConfigManager().getCartSpeed();
+        minecart.setMaxSpeed(speed);
     }
 
     public boolean applyBraking(Stop stop) {
         if (minecart == null || stop == null) return false;
         Location cartLoc = minecart.getLocation();
-        Location stopLoc = stop.getArrivalPoint(direction);
-        if (stopLoc == null) stopLoc = stop.getBoardPoint(getDepartureSide());
+        Location stopLoc = stop.getPrimaryRailLocation();
         if (stopLoc == null) return false;
 
         double dist = cartLoc.distance(stopLoc);
-        if (dist < 0.8) {
+        if (dist < 1.2) {
             minecart.setVelocity(new Vector(0, 0, 0));
             minecart.setMaxSpeed(0);
-            Location snap = stopLoc.clone();
-            snap.setY(cartLoc.getY());
-            minecart.teleport(snap);
             return true;
         }
         double ratio = Math.min(1.0, dist / 12.0);
         double base = getLine() != null ? getLine().getMaxSpeed() : plugin.getConfigManager().getCartSpeed();
         double targetSpeed = 0.08 + (base - 0.08) * Math.pow(ratio, 0.7);
         minecart.setMaxSpeed(Math.min(minecart.getMaxSpeed(), targetSpeed));
-        return minecart.getVelocity().length() < 0.05 && dist < 1.5;
+        return minecart.getVelocity().length() < 0.05 && dist < 2.0;
     }
 
     public boolean isStopped() {

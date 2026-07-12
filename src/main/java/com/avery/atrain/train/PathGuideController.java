@@ -91,7 +91,8 @@ public class PathGuideController {
     }
 
     public void recoverStall(Minecart cart, List<RoutePoint> routePoints, int routeIndex) {
-        if (!plugin.getConfigManager().isStallRecovery()) return;
+        if (!plugin.getConfigManager().isStallRecovery()
+                || plugin.getConfigManager().isVanillaMovement()) return;
 
         Location loc = cart.getLocation();
         if (!isOnTrack(loc)) return;

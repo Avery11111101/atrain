@@ -3,35 +3,30 @@ package com.avery.atrain.model;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+/** 虛擬路線站點：金磚上鋪軌道即月台，鄰近鑽石塊顯示站名資訊 */
 public class Stop {
     private String id;
     private String displayName;
     private String world;
-    private double c1x, c1y, c1z, c2x, c2y, c2z;
-
-    private double forwardX, forwardY, forwardZ;
-    private float forwardYaw;
-    private boolean hasForwardPoint;
-
-    private double returnX, returnY, returnZ;
-    private float returnYaw;
-    private boolean hasReturnPoint;
-
+    /** 金磚座標 "x,y,z" */
+    private final List<String> goldBlocks = new ArrayList<>();
+    /** 鑽石塊座標 "x,y,z"（資訊顯示用） */
+    private final List<String> displayBlocks = new ArrayList<>();
+    private int dwellTimeTicks = 80;
     private List<String> lineIds = new ArrayList<>();
 
     public Stop() {}
 
-    public Stop(String id, String displayName, Location corner1, Location corner2) {
+    public Stop(String id, String displayName, String world) {
         this.id = id;
         this.displayName = displayName;
-        setCorner1(corner1);
-        setCorner2(corner2);
+        this.world = world;
     }
 
     public String getId() { return id; }
@@ -40,147 +35,90 @@ public class Stop {
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public String getWorld() { return world; }
     public void setWorld(String world) { this.world = world; }
+    public List<String> getGoldBlocks() { return goldBlocks; }
+    public void setGoldBlocks(List<String> goldBlocks) {
+        this.goldBlocks.clear();
+        if (goldBlocks != null) this.goldBlocks.addAll(goldBlocks);
+    }
+    public List<String> getDisplayBlocks() { return displayBlocks; }
+    public void setDisplayBlocks(List<String> displayBlocks) {
+        this.displayBlocks.clear();
+        if (displayBlocks != null) this.displayBlocks.addAll(displayBlocks);
+    }
+    public int getDwellTimeTicks() { return dwellTimeTicks; }
+    public void setDwellTimeTicks(int dwellTimeTicks) { this.dwellTimeTicks = Math.max(20, dwellTimeTicks); }
     public List<String> getLineIds() { return lineIds; }
-    public void setLineIds(List<String> lineIds) { this.lineIds = lineIds; }
+    public void setLineIds(List<String> lineIds) { this.lineIds = lineIds != null ? lineIds : new ArrayList<>(); }
 
-    public double getC1x() { return c1x; }
-    public double getC1y() { return c1y; }
-    public double getC1z() { return c1z; }
-    public double getC2x() { return c2x; }
-    public double getC2y() { return c2y; }
-    public double getC2z() { return c2z; }
-
-    public boolean hasForwardPoint() { return hasForwardPoint; }
-    public boolean hasReturnPoint() { return hasReturnPoint; }
-
-    /** 舊版相容：等同去程月台 */
-    public float getLaunchYaw() {
-        return hasForwardPoint ? forwardYaw : 0;
+    public static String key(int x, int y, int z) {
+        return x + "," + y + "," + z;
     }
 
-    /** 舊版相容：寫入去程月台 */
-    public void setLaunchYaw(float launchYaw) {
-        if (hasForwardPoint) forwardYaw = launchYaw;
-    }
-
-    public double getStopX() { return hasForwardPoint ? forwardX : 0; }
-    public double getStopY() { return hasForwardPoint ? forwardY : 0; }
-    public double getStopZ() { return hasForwardPoint ? forwardZ : 0; }
-
-    public void setCorner1(Location loc) {
-        this.world = loc.getWorld().getName();
-        this.c1x = loc.getX(); this.c1y = loc.getY(); this.c1z = loc.getZ();
-    }
-
-    public void setCorner2(Location loc) {
-        this.c2x = loc.getX(); this.c2y = loc.getY(); this.c2z = loc.getZ();
-    }
-
-    public Location getForwardPoint() {
-        return pointAt(forwardX, forwardY, forwardZ, forwardYaw, hasForwardPoint);
-    }
-
-    public Location getReturnPoint() {
-        return pointAt(returnX, returnY, returnZ, returnYaw, hasReturnPoint);
-    }
-
-    public Location getBoardPoint(PlatformSide side) {
-        return side == PlatformSide.RETURN ? getReturnPoint() : getForwardPoint();
-    }
-
-    public Location getBoardPoint(TravelDirection direction) {
-        return direction == TravelDirection.REVERSE ? getReturnPoint() : getForwardPoint();
-    }
-
-    /** 抵達時使用的月台：順向抵達去程側，逆向抵達回程側 */
-    public Location getArrivalPoint(TravelDirection direction) {
-        return getBoardPoint(direction);
-    }
-
-    /** 舊版相容 */
-    public Location getStopPoint() {
-        return getForwardPoint();
-    }
-
-    public void setBoardPoint(PlatformSide side, Location loc) {
-        if (loc == null || loc.getWorld() == null) return;
-        this.world = loc.getWorld().getName();
-        if (side == PlatformSide.RETURN) {
-            returnX = loc.getX();
-            returnY = loc.getY();
-            returnZ = loc.getZ();
-            returnYaw = loc.getYaw();
-            hasReturnPoint = true;
-        } else {
-            forwardX = loc.getX();
-            forwardY = loc.getY();
-            forwardZ = loc.getZ();
-            forwardYaw = loc.getYaw();
-            hasForwardPoint = true;
+    public static int[] parseKey(String key) {
+        String[] p = key.split(",");
+        if (p.length != 3) return null;
+        try {
+            return new int[]{Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])};
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
-    /** 舊版相容：寫入去程月台 */
-    public void setStopPoint(Location loc) {
-        setBoardPoint(PlatformSide.FORWARD, loc);
+    public boolean hasGoldBlock(int x, int y, int z) {
+        return goldBlocks.contains(key(x, y, z));
     }
 
-    public Vector getLaunchDirection(PlatformSide side) {
-        Location p = getBoardPoint(side);
-        if (p == null) return null;
-        return yawToVector(p.getYaw());
+    public boolean hasDisplayBlock(int x, int y, int z) {
+        return displayBlocks.contains(key(x, y, z));
     }
 
-    public Vector getLaunchDirection(TravelDirection direction) {
-        return getLaunchDirection(direction == TravelDirection.REVERSE
-                ? PlatformSide.RETURN : PlatformSide.FORWARD);
+    public boolean containsDisplay(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        return hasDisplayBlock(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
-    /** 舊版相容 */
-    public Vector getLaunchDirection() {
-        return getLaunchDirection(PlatformSide.FORWARD);
+    /** 玩家站立位置是否應顯示站點資訊（鑽石塊或金磚月台） */
+    public boolean containsInfoLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        if (hasDisplayBlock(x, y, z) || hasGoldBlock(x, y, z)) return true;
+        return hasDisplayBlock(x, y - 1, z) || hasGoldBlock(x, y - 1, z);
     }
 
-    public BoundingBox getBoundingBox() {
-        double minX = Math.min(c1x, c2x), maxX = Math.max(c1x, c2x);
-        double minY = Math.min(c1y, c2y), maxY = Math.max(c1y, c2y);
-        double minZ = Math.min(c1z, c2z), maxZ = Math.max(c1z, c2z);
-        return new BoundingBox(minX, minY, minZ, maxX + 1, maxY + 1, maxZ + 1);
+    public boolean containsRail(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        World w = loc.getWorld();
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        if (hasGoldBlock(x, y - 1, z)) return true;
+        if (hasGoldBlock(x, y, z)) return true;
+        return false;
     }
 
-    public boolean contains(Location loc) {
-        if (loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
-        return getBoundingBox().contains(loc.getX(), loc.getY(), loc.getZ());
-    }
-
-    /** 從舊版單一停靠點遷移 */
-    public void migrateLegacyStopPoint(double x, double y, double z, float yaw) {
-        if (!hasForwardPoint) {
-            forwardX = x;
-            forwardY = y;
-            forwardZ = z;
-            forwardYaw = yaw;
-            hasForwardPoint = true;
-        }
-    }
-
-    public void clearBoardPoint(PlatformSide side) {
-        if (side == PlatformSide.RETURN) {
-            hasReturnPoint = false;
-        } else {
-            hasForwardPoint = false;
-        }
-    }
-
-    private Location pointAt(double x, double y, double z, float yaw, boolean set) {
-        if (!set) return null;
+    public Location getPrimaryRailLocation() {
         World w = Bukkit.getWorld(world);
-        if (w == null) return null;
-        return new Location(w, x, y, z, yaw, 0);
+        if (w == null || goldBlocks.isEmpty()) return null;
+        int[] p = parseKey(goldBlocks.get(0));
+        if (p == null) return null;
+        return new Location(w, p[0] + 0.5, p[1] + 1.0, p[2] + 0.5);
     }
 
-    private static Vector yawToVector(float yaw) {
-        double rad = Math.toRadians(yaw);
-        return new Vector(-Math.sin(rad), 0, Math.cos(rad));
+    public void addGoldBlock(int x, int y, int z) {
+        String k = key(x, y, z);
+        if (!goldBlocks.contains(k)) goldBlocks.add(k);
+    }
+
+    public void addDisplayBlock(int x, int y, int z) {
+        String k = key(x, y, z);
+        if (!displayBlocks.contains(k)) displayBlocks.add(k);
+    }
+
+    public Set<Location> getGoldLocations(World w) {
+        Set<Location> out = new HashSet<>();
+        if (w == null) return out;
+        for (String k : goldBlocks) {
+            int[] p = parseKey(k);
+            if (p != null) out.add(new Location(w, p[0], p[1], p[2]));
+        }
+        return out;
     }
 }

@@ -3,7 +3,7 @@ version: '${version}'
 main: com.avery.atrain.AtrainPlugin
 api-version: '1.21'
 authors: [Avery]
-description: 智慧礦車路線系統 - 路徑導引、圖形介面、多語言教學
+description: 虛擬路線礦車系統 - 金磚站點、圖形介面、多語言
 
 commands:
   train:
@@ -29,5 +29,8 @@ permissions:
     description: 搭乘礦車
     default: true
   atrain.create:
-    description: 建立路線與站點
+    description: 建立路線與管理站點
+    default: op
+  atrain.station.edit:
+    description: 蹲下右鍵編輯金磚站點
     default: op

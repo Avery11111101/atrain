@@ -5,14 +5,15 @@ settings:
   cart_spawn_delay: 40
   cart_departure_delay: 80
   cart_despawn_delay: 20
+  default_dwell_time: 80
 
 movement:
-  # 路徑導引：沿錄製軌跡糾偏，防止飄到別的路線
-  path_guidance: true
+  # 移動模式：false = 原版軌道物理（只調 maxSpeed，適合動力軌上坡）
+  # true  = 路徑導引糾偏（複雜路網防飄線，但可能與上坡動力軌衝突）
+  path_guidance: false
   guidance_strength: 0.65
   guidance_interval_ticks: 2
-  # 失速恢復：沿軌道方向補速（非歷史方向），避免轉彎撞牆回彈
-  stall_recovery: true
+  stall_recovery: false
   stall_recovery_ticks: 10
   min_cruise_speed: 0.06
   # 前方有阻擋時停止推力

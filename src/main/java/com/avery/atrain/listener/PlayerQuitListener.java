@@ -1,7 +1,6 @@
 package com.avery.atrain.listener;
 
 import com.avery.atrain.AtrainPlugin;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -17,8 +16,7 @@ public class PlayerQuitListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         var player = event.getPlayer();
-        plugin.getRouteRecorder().stopRecording(player);
-        plugin.getSelectionManager().clear(player);
+        plugin.getChatInputManager().clear(player);
         plugin.getPlayerInteractListener().clearPlayerState(player.getUniqueId());
     }
 }

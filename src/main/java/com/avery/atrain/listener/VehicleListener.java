@@ -6,7 +6,6 @@ import com.avery.atrain.train.TrainMovementTask;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.RailUtil;
 import com.avery.atrain.util.TextUtil;
-import com.avery.atrain.util.TrackUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
@@ -51,6 +50,7 @@ public class VehicleListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL)
     public void onVehicleExit(VehicleExitEvent event) {
         if (!(event.getVehicle() instanceof Minecart cart)) return;
+        if (!(event.getExited() instanceof Player)) return;
         if (!isTrainCart(cart)) return;
 
         cancelTask(cart);
@@ -65,12 +65,6 @@ public class VehicleListener implements Listener {
         }, delay);
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onAnyCartMoveForRecording(VehicleMoveEvent event) {
-        if (!(event.getVehicle() instanceof Minecart cart)) return;
-        plugin.getRouteRecorder().onAnyCartMove(cart, event.getTo());
-    }
-
     @EventHandler(priority = EventPriority.NORMAL)
     public void onVehicleMove(VehicleMoveEvent event) {
         if (!(event.getVehicle() instanceof Minecart cart)) return;
@@ -80,8 +74,15 @@ public class VehicleListener implements Listener {
         Location to = event.getTo();
 
         boolean onHang = hangRailHandler.handleMove(cart, from, to);
+        if (onHang) return;
+
         boolean onRail = RailUtil.isOnRail(to);
         boolean onTrack = onRail || onHang;
+
+        if (plugin.getConfigManager().isVanillaMovement() && onRail) {
+            offTrackTicks.remove(cart.getUniqueId());
+            return;
+        }
 
         if (cart.getMaxSpeed() < 0.01) {
             if (!onHang) {
