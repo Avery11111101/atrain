@@ -78,6 +78,7 @@ public class TrainMovementTask implements Listener {
         session.initDepartureVelocity();
         session.setState(TrainSession.State.MOVING_BETWEEN_STATIONS);
         session.setBrakingTarget(null);
+        session.setRouteIndex(0);
         startGuidanceTasks();
         notifyDeparture();
     }
@@ -106,19 +107,25 @@ public class TrainMovementTask implements Listener {
         guidanceTask = Bukkit.getScheduler().runTaskTimer(session.getPlugin(), () -> {
             if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
             var line = session.getLine();
-            if (line == null || line.getRoutePoints().isEmpty()) return;
+            if (line == null || session.getCurrentStopId() == null || session.getTargetStopId() == null) return;
+            var points = line.getGuidancePoints(
+                    session.getCurrentStopId(), session.getTargetStopId(), session.getDirection());
+            if (points.isEmpty()) return;
             int idx = pathGuide.findForwardRouteIndex(
-                    line.getRoutePoints(), session.getMinecart().getLocation(), session.getRouteIndex());
+                    points, session.getMinecart().getLocation(), session.getRouteIndex());
             session.setRouteIndex(idx);
-            pathGuide.applyGuidance(session.getMinecart(), line.getRoutePoints(), idx);
+            pathGuide.applyGuidance(session.getMinecart(), points, idx);
         }, guideInterval, guideInterval);
 
         if (cfg.isStallRecovery()) {
             stallTask = Bukkit.getScheduler().runTaskTimer(session.getPlugin(), () -> {
                 if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
                 var line = session.getLine();
-                if (line == null) return;
-                pathGuide.recoverStall(session.getMinecart(), line.getRoutePoints(), session.getRouteIndex());
+                if (line == null || session.getCurrentStopId() == null || session.getTargetStopId() == null) return;
+                var points = line.getGuidancePoints(
+                        session.getCurrentStopId(), session.getTargetStopId(), session.getDirection());
+                if (points.isEmpty()) return;
+                pathGuide.recoverStall(session.getMinecart(), points, session.getRouteIndex());
             }, stallInterval, stallInterval);
         }
     }

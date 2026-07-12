@@ -641,7 +641,15 @@ public class GuiManager {
                 && lineId.equals(plugin.getRouteRecordingManager().getRecordingLineId(player));
         boolean awaitingCart = recordingThis && plugin.getRouteRecordingManager().isAwaitingCart(player);
         int segIdx = recordingThis ? plugin.getRouteRecordingManager().getRecordingSegmentIndex(player) : -1;
-        int pointCount = line.getRoutePoints().size();
+        int pointCount = 0;
+        if (recordingThis) {
+            var session = plugin.getRouteRecordingManager().getSession(player);
+            pointCount = session != null ? session.getCurrentPointCount() : 0;
+        } else {
+            pointCount = line.getRecordedSegmentCount(TravelDirection.FORWARD)
+                    + line.getRecordedSegmentCount(TravelDirection.REVERSE);
+        }
+        final int displayPointCount = pointCount;
         inv.setItem(40, new ItemBuilder(recordingThis ? Material.REDSTONE_BLOCK : Material.MAP)
                 .name(msg(player, recordingThis ? "gui.line_detail.manage_record" : "gui.line_detail.record"))
                 .lore(recordingThis
@@ -649,7 +657,7 @@ public class GuiManager {
                             msg(player, awaitingCart ? "gui.line_detail.recording_await_cart"
                                     : "gui.record_segment.status_lore", Map.of(
                                     "index", String.valueOf(segIdx + 1),
-                                    "points", String.valueOf(pointCount))),
+                                    "points", String.valueOf(displayPointCount))),
                             msg(player, "gui.line_detail.record_control_hint"))
                         : plugin.getLanguageManager().getList(player, "gui.line_detail.record_lore"))
                 .build());

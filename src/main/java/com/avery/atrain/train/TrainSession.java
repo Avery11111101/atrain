@@ -90,7 +90,8 @@ public class TrainSession {
     public boolean applyBraking(Stop stop) {
         if (minecart == null || stop == null) return false;
         Location cartLoc = minecart.getLocation();
-        Location stopLoc = stop.getPrimaryRailLocation();
+        Location stopLoc = stop.getRailLocation(direction);
+        if (stopLoc == null) stopLoc = stop.getPrimaryRailLocation();
         if (stopLoc == null) return false;
 
         double dist = cartLoc.distance(stopLoc);

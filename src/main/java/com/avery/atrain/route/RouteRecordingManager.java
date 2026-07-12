@@ -132,7 +132,7 @@ public final class RouteRecordingManager {
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_spawn_hint",
                 Map.of("sec", String.valueOf(plugin.getConfigManager().getRecordingDwellTicks() / 20))));
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_segment_start",
-                RouteRecordingSession.segmentLabel(plugin, line, segmentIndex, dir)));
+                RouteRecordingSession.segmentLabel(plugin, player, line, segmentIndex, dir)));
         return true;
     }
 
@@ -158,7 +158,7 @@ public final class RouteRecordingManager {
         String expectedFrom = line.getSegmentFromStopId(session.getSegmentIndex(), session.getDirection());
         if (expectedFrom == null || !expectedFrom.equals(stop.getId())) {
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_wrong_segment_start",
-                    RouteRecordingSession.segmentLabel(plugin, line, session.getSegmentIndex(), session.getDirection())));
+                    RouteRecordingSession.segmentLabel(plugin, player, line, session.getSegmentIndex(), session.getDirection())));
             return false;
         }
 
@@ -251,7 +251,7 @@ public final class RouteRecordingManager {
             Line line = plugin.getLineManager().getLine(session.getLineId());
             int segsFwd = line != null ? line.getRecordedSegmentCount(TravelDirection.FORWARD) : 0;
             int segsRev = line != null ? line.getRecordedSegmentCount(TravelDirection.REVERSE) : 0;
-            int pts = line != null ? line.getRoutePoints().size() : 0;
+            int pts = line != null ? countAllSegmentPoints(line) : 0;
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_stop",
                     Map.of("count", String.valueOf(pts),
                             "segments", String.valueOf(segsFwd + segsRev),
@@ -288,5 +288,14 @@ public final class RouteRecordingManager {
         if (lineId == null) return "?";
         Line line = plugin.getLineManager().getLine(lineId);
         return line != null ? line.getDisplayName() : lineId;
+    }
+
+    private static int countAllSegmentPoints(Line line) {
+        int total = 0;
+        for (int i = 0; i < line.getSegmentCount(); i++) {
+            total += line.getSegmentPoints(i, TravelDirection.FORWARD).size();
+            total += line.getSegmentPoints(i, TravelDirection.REVERSE).size();
+        }
+        return total;
     }
 }

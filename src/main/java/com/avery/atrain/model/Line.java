@@ -135,6 +135,13 @@ public class Line {
         }
     }
 
+    /** 站點順序變更後清除所有錄製軌跡（分段索引與站序綁定） */
+    public void clearAllSegments() {
+        forwardRouteSegments.clear();
+        reverseRouteSegments.clear();
+        routePoints.clear();
+    }
+
     public int findSegmentIndex(String fromStopId, String toStopId) {
         return findSegmentIndex(fromStopId, toStopId, TravelDirection.FORWARD);
     }
@@ -194,5 +201,22 @@ public class Line {
 
     public String getFormattedName() {
         return (color != null ? color : "§a") + displayName;
+    }
+
+    /**
+     * 兩站之間用於路徑導引的軌跡點（依行駛方向）。
+     * 優先使用分段錄製資料；去程無分段時回退至合併後的舊版 routePoints。
+     */
+    public List<RoutePoint> getGuidancePoints(String fromStopId, String toStopId, TravelDirection direction) {
+        TravelDirection dir = direction != null ? direction : TravelDirection.FORWARD;
+        int segIdx = findSegmentIndex(fromStopId, toStopId, dir);
+        if (segIdx >= 0) {
+            List<RoutePoint> seg = getSegmentPoints(segIdx, dir);
+            if (!seg.isEmpty()) return seg;
+        }
+        if (dir == TravelDirection.FORWARD && !routePoints.isEmpty()) {
+            return routePoints;
+        }
+        return List.of();
     }
 }

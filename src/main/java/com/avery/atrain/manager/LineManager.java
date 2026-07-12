@@ -46,11 +46,18 @@ public class LineManager {
     public void addStopToLine(String lineId, String stopId, int index) {
         Line line = getLine(lineId);
         if (line == null) return;
+        boolean wasInLine = line.getStopIds().contains(stopId);
+        int sizeAfterRemove = line.getStopIds().size();
+        if (wasInLine) sizeAfterRemove--;
         line.getStopIds().remove(stopId);
+        boolean appendOnly = !wasInLine && (index < 0 || index >= sizeAfterRemove);
         if (index < 0 || index >= line.getStopIds().size()) {
             line.getStopIds().add(stopId);
         } else {
             line.getStopIds().add(index, stopId);
+        }
+        if (!appendOnly) {
+            line.clearAllSegments();
         }
         var stop = plugin.getStopManager().getStop(stopId);
         if (stop != null && !stop.getLineIds().contains(lineId)) {
@@ -63,6 +70,7 @@ public class LineManager {
         Line line = getLine(lineId);
         if (line == null) return;
         line.getStopIds().remove(stopId);
+        line.clearAllSegments();
         var stop = plugin.getStopManager().getStop(stopId);
         if (stop != null) {
             stop.getLineIds().remove(lineId);
@@ -109,6 +117,7 @@ public class LineManager {
         if (newIdx < 0 || newIdx >= ids.size()) return;
         String item = ids.remove(idx);
         ids.add(newIdx, item);
+        line.clearAllSegments();
         plugin.getDataStore().save();
     }
 

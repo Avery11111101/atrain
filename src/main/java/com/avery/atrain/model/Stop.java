@@ -235,15 +235,17 @@ public class Stop {
     public boolean containsRail(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        if (hasGoldBlock(x, y - 1, z)) return true;
-        if (hasGoldBlock(x, y, z)) return true;
+        if (hasGoldBlock(x, y - 1, z) || hasReturnGoldBlock(x, y - 1, z)) return true;
+        if (hasGoldBlock(x, y, z) || hasReturnGoldBlock(x, y, z)) return true;
         org.bukkit.block.Block rail = com.avery.atrain.util.RailUtil.findRailBlock(loc);
         if (rail != null) {
             org.bukkit.block.Block below = rail.getRelative(org.bukkit.block.BlockFace.DOWN);
-            if (hasGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
+            if (hasGoldBlock(below.getX(), below.getY(), below.getZ())
+                    || hasReturnGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
             for (int d = 2; d <= 4; d++) {
                 below = below.getRelative(org.bukkit.block.BlockFace.DOWN);
-                if (hasGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
+                if (hasGoldBlock(below.getX(), below.getY(), below.getZ())
+                        || hasReturnGoldBlock(below.getX(), below.getY(), below.getZ())) return true;
             }
         }
         return false;

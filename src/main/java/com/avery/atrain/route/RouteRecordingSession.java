@@ -78,7 +78,7 @@ public final class RouteRecordingSession {
         String expectedFrom = line.getSegmentFromStopId(segmentIndex, direction);
         if (expectedFrom == null || !expectedFrom.equals(spawnStop.getId())) {
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_wrong_segment_start",
-                    segmentLabel(plugin, line, segmentIndex, direction)));
+                    segmentLabel(plugin, player, line, segmentIndex, direction)));
             return;
         }
 
@@ -162,7 +162,7 @@ public final class RouteRecordingSession {
 
         persistCurrentSegment();
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_segment_done",
-                segmentLabel(plugin, line, segmentIndex, direction)));
+                segmentLabel(plugin, player, line, segmentIndex, direction)));
 
         int dwell = plugin.getConfigManager().getRecordingDwellTicks();
         if (dwell <= 0) {
@@ -219,7 +219,7 @@ public final class RouteRecordingSession {
             sampleNow(cart.getLocation());
         }
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_segment_next",
-                segmentLabel(plugin, line, segmentIndex, direction)));
+                segmentLabel(plugin, player, line, segmentIndex, direction)));
     }
 
     private void persistCurrentSegment() {
@@ -232,11 +232,13 @@ public final class RouteRecordingSession {
 
     boolean isAutoFinished() { return autoFinished; }
 
-    static Map<String, String> segmentLabel(AtrainPlugin plugin, Line line,
+    static Map<String, String> segmentLabel(AtrainPlugin plugin, Player player, Line line,
                                             int segmentIndex, TravelDirection direction) {
         String from = "?";
         String to = "?";
-        String dirLabel = direction == TravelDirection.REVERSE ? "回程" : "去程";
+        String dirKey = direction == TravelDirection.REVERSE
+                ? "route.direction_reverse" : "route.direction_forward";
+        String dirLabel = plugin.getLanguageManager().get(player, dirKey);
         if (line != null) {
             String fromId = line.getSegmentFromStopId(segmentIndex, direction);
             String toId = line.getSegmentToStopId(segmentIndex, direction);
