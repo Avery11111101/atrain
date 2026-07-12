@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -23,26 +24,29 @@ public class StationDisplayListener implements Listener {
 
     public StationDisplayListener(AtrainPlugin plugin) {
         this.plugin = plugin;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAll, 40L, 40L);
+        scheduleRefreshTask();
     }
 
-    @EventHandler
+    private void scheduleRefreshTask() {
+        long interval = plugin.getConfigManager().getStationDisplayIntervalTicks();
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAll, interval, interval);
+    }
+
+    /** 僅在跨方塊移動時檢查，避免轉頭/微調視角每秒觸發 20+ 次 */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         if (event.getTo() == null) return;
         if (!plugin.getConfigManager().isStationDisplayEnabled()) return;
 
-        Player player = event.getPlayer();
-        Stop stop = plugin.getStopManager().getStopByDisplay(event.getTo());
-        if (stop == null) {
-            if (lastStopId.remove(player.getUniqueId()) != null) {
-                player.sendActionBar(net.kyori.adventure.text.Component.empty());
-            }
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getBlockX() == to.getBlockX()
+                && from.getBlockY() == to.getBlockY()
+                && from.getBlockZ() == to.getBlockZ()) {
             return;
         }
-        String cacheKey = stop.getId() + "|" + (stop.isOnReturnPlatform(event.getTo()) ? "R" : "F");
-        if (cacheKey.equals(lastStopId.get(player.getUniqueId()))) return;
-        lastStopId.put(player.getUniqueId(), cacheKey);
-        sendDisplay(player, stop);
+
+        updateDisplay(event.getPlayer(), to);
     }
 
     @EventHandler
@@ -53,11 +57,22 @@ public class StationDisplayListener implements Listener {
     private void refreshAll() {
         if (!plugin.getConfigManager().isStationDisplayEnabled()) return;
         for (Player player : Bukkit.getOnlinePlayers()) {
-            Stop stop = plugin.getStopManager().getStopByDisplay(player.getLocation());
-            if (stop != null) {
-                sendDisplay(player, stop);
-            }
+            updateDisplay(player, player.getLocation());
         }
+    }
+
+    private void updateDisplay(Player player, Location at) {
+        Stop stop = plugin.getStopManager().getStopByDisplay(at);
+        if (stop == null) {
+            if (lastStopId.remove(player.getUniqueId()) != null) {
+                player.sendActionBar(net.kyori.adventure.text.Component.empty());
+            }
+            return;
+        }
+        String cacheKey = stop.getId() + "|" + (stop.isReturnPlatformAt(at) ? "R" : "F");
+        if (cacheKey.equals(lastStopId.get(player.getUniqueId()))) return;
+        lastStopId.put(player.getUniqueId(), cacheKey);
+        sendDisplay(player, stop);
     }
 
     private void sendDisplay(Player player, Stop stop) {

@@ -3,18 +3,57 @@ package com.avery.atrain.manager;
 import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.model.Line;
 import com.avery.atrain.model.Stop;
+import com.avery.atrain.util.BlockCoords;
 import com.avery.atrain.util.StationUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
 import java.util.*;
 
 public class StopManager {
     private final AtrainPlugin plugin;
+    /** 世界名 -> 金磚座標 -> 站點（O(1) 查詢，避免每次移動線性掃描） */
+    private final Map<String, Map<Long, Stop>> goldBlockIndex = new HashMap<>();
 
     public StopManager(AtrainPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    public void rebuildSpatialIndex() {
+        goldBlockIndex.clear();
+        for (Stop stop : getAllStops()) {
+            indexStopGoldBlocks(stop);
+        }
+    }
+
+    private void indexStopGoldBlocks(Stop stop) {
+        String world = stop.getWorld();
+        Map<Long, Stop> worldIndex = goldBlockIndex.computeIfAbsent(world, k -> new HashMap<>());
+        for (String key : stop.getGoldBlocks()) {
+            long packed = BlockCoords.fromDataString(key);
+            if (BlockCoords.isValid(packed)) worldIndex.put(packed, stop);
+        }
+        for (String key : stop.getReturnGoldBlocks()) {
+            long packed = BlockCoords.fromDataString(key);
+            if (BlockCoords.isValid(packed)) worldIndex.put(packed, stop);
+        }
+    }
+
+    private Stop lookupGoldBlock(String world, int x, int y, int z) {
+        Map<Long, Stop> worldIndex = goldBlockIndex.get(world);
+        if (worldIndex == null) return null;
+        return worldIndex.get(BlockCoords.pack(x, y, z));
+    }
+
+    private Stop lookupGoldNear(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        String world = loc.getWorld().getName();
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        Stop stop = lookupGoldBlock(world, x, y, z);
+        if (stop != null) return stop;
+        return lookupGoldBlock(world, x, y - 1, z);
     }
 
     public Collection<Stop> getAllStops() {
@@ -26,30 +65,29 @@ public class StopManager {
     }
 
     public Stop getStopAtRail(Location loc) {
-        if (loc == null) return null;
-        for (Stop stop : getAllStops()) {
-            if (stop.containsRail(loc)) return stop;
+        if (loc == null || loc.getWorld() == null) return null;
+        Stop quick = lookupGoldNear(loc);
+        if (quick != null) return quick;
+
+        String world = loc.getWorld().getName();
+        Block rail = com.avery.atrain.util.RailUtil.findRailBlock(loc);
+        if (rail == null) return null;
+        Block below = rail.getRelative(BlockFace.DOWN);
+        for (int d = 0; d < 4; d++) {
+            Stop stop = lookupGoldBlock(world, below.getX(), below.getY(), below.getZ());
+            if (stop != null) return stop;
+            below = below.getRelative(BlockFace.DOWN);
         }
         return null;
     }
 
     public Stop getStopByDisplay(Location loc) {
-        if (loc == null) return null;
-        for (Stop stop : getAllStops()) {
-            if (stop.containsInfoLocation(loc)) return stop;
-        }
-        return null;
+        return lookupGoldNear(loc);
     }
 
     public Stop findStopOwningGold(Block goldBlock) {
-        if (goldBlock == null) return null;
-        String key = Stop.key(goldBlock.getX(), goldBlock.getY(), goldBlock.getZ());
-        for (Stop stop : getAllStops()) {
-            if (stop.getGoldBlocks().contains(key) || stop.getReturnGoldBlocks().contains(key)) {
-                return stop;
-            }
-        }
-        return null;
+        if (goldBlock == null || goldBlock.getWorld() == null) return null;
+        return lookupGoldBlock(goldBlock.getWorld().getName(), goldBlock.getX(), goldBlock.getY(), goldBlock.getZ());
     }
 
     /** 該金磚是否為已註冊站點的一部分（受保護不可被一般玩家破壞） */
@@ -62,12 +100,12 @@ public class StopManager {
         Stop stop = findStopOwningGold(block);
         if (stop == null) return;
         String key = Stop.key(block.getX(), block.getY(), block.getZ());
-        stop.getGoldBlocks().remove(key);
-        stop.getReturnGoldBlocks().remove(key);
-        if (stop.getGoldBlocks().isEmpty()) {
+        stop.removeGoldKey(key);
+        if (!stop.hasAnyGoldBlock()) {
             deleteStop(stop.getId());
         } else {
             plugin.getDataStore().save();
+            rebuildSpatialIndex();
         }
     }
 
@@ -111,6 +149,7 @@ public class StopManager {
 
         plugin.getDataStore().getStops().put(id, stop);
         plugin.getDataStore().save();
+        rebuildSpatialIndex();
         return new RegisterResult(stop, true);
     }
 
@@ -120,7 +159,7 @@ public class StopManager {
         List<Stop> found = new ArrayList<>();
         for (Stop stop : getAllStops()) {
             for (String key : goldKeys) {
-                if (stop.getGoldBlocks().contains(key)) {
+                if (stop.ownsGoldKey(key)) {
                     found.add(stop);
                     break;
                 }
@@ -159,6 +198,7 @@ public class StopManager {
             }
         }
         plugin.getDataStore().save();
+        rebuildSpatialIndex();
         return primary;
     }
 
@@ -198,7 +238,7 @@ public class StopManager {
             primary.setReturnLineId(other.getReturnLineId());
         }
         for (String k : other.getReturnGoldBlocks()) {
-            if (!primary.getReturnGoldBlocks().contains(k)) primary.getReturnGoldBlocks().add(k);
+            primary.addReturnGoldKey(k);
         }
     }
 
@@ -215,6 +255,7 @@ public class StopManager {
         if (stop == null || getStop(stop.getId()) != null) return false;
         plugin.getDataStore().getStops().put(stop.getId(), stop);
         plugin.getDataStore().save();
+        rebuildSpatialIndex();
         return true;
     }
 
@@ -224,6 +265,7 @@ public class StopManager {
             line.getStopIds().remove(id);
         }
         plugin.getDataStore().save();
+        rebuildSpatialIndex();
         return true;
     }
 
@@ -407,7 +449,10 @@ public class StopManager {
         if (scanned.isEmpty()) return false;
 
         for (String k : scanned) {
-            if (primary.getGoldBlocks().contains(k) && !primary.getReturnGoldBlocks().contains(k)) {
+            int[] p = Stop.parseKey(k);
+            if (p != null
+                    && primary.hasGoldBlock(p[0], p[1], p[2])
+                    && !primary.hasReturnGoldBlock(p[0], p[1], p[2])) {
                 return false;
             }
         }
@@ -421,6 +466,7 @@ public class StopManager {
             attachReturnGoldBlocks(primary, scanned);
         }
         plugin.getDataStore().save();
+        rebuildSpatialIndex();
         return true;
     }
 
@@ -428,7 +474,7 @@ public class StopManager {
         for (String k : goldKeys) {
             int[] p = Stop.parseKey(k);
             if (p != null) stop.addGoldBlock(p[0], p[1], p[2]);
-            if (!stop.getReturnGoldBlocks().contains(k)) stop.getReturnGoldBlocks().add(k);
+            stop.addReturnGoldKey(k);
         }
     }
 

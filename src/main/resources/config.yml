@@ -50,6 +50,8 @@ settings:
   auto_stop: true
   # 站點資訊顯示（true = 於動作列/標題顯示目前站點與下一站等資訊）
   station_display: true
+  # 站點資訊定時刷新間隔（tick，20 = 1 秒；僅在跨方塊移動時也會即時更新）
+  station_display_interval_ticks: 20
   # 站點自動生成礦車（true = 玩家靠近設定好的站點時自動生出可乘坐礦車）
   cart_spawn: true
   # 生成礦車後自動讓玩家上車（true = 生車即上車，配合上車自動發車可一坐即走）

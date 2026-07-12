@@ -73,6 +73,7 @@ public final class AtrainPlugin extends JavaPlugin {
         languageManager.load();
         dataStore.load();
         speedBlockManager.load();
+        stopManager.rebuildSpatialIndex();
 
         var pm = getServer().getPluginManager();
         vehicleListener = new VehicleListener(this);
@@ -154,6 +155,7 @@ public final class AtrainPlugin extends JavaPlugin {
         languageManager.load();
         dataStore.load();
         speedBlockManager.load();
+        stopManager.rebuildSpatialIndex();
         for (Player player : Bukkit.getOnlinePlayers()) {
             TextUtil.send(player, languageManager.get(player, "plugin.reload"));
         }

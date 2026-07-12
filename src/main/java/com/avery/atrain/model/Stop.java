@@ -7,9 +7,12 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
+import com.avery.atrain.util.BlockCoords;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,10 +22,10 @@ public class Stop {
     private String id;
     private String displayName;
     private String world;
-    /** 金磚座標 "x,y,z" */
-    private final List<String> goldBlocks = new ArrayList<>();
-    /** 鑽石塊座標 "x,y,z"（資訊顯示用） */
-    private final List<String> displayBlocks = new ArrayList<>();
+    /** 金磚座標（打包 long，避免高頻 contains 時的字串分配） */
+    private final Set<Long> goldBlockKeys = new LinkedHashSet<>();
+    /** 鑽石塊座標（資訊顯示用） */
+    private final Set<Long> displayBlockKeys = new LinkedHashSet<>();
     private int dwellTimeTicks = 80;
     /** 資訊顯示：上一站（純文字，與路線無關） */
     private String infoPrev = "-";
@@ -39,7 +42,7 @@ public class Stop {
     /** 站在回程月台時用於顯示上下站的路線 ID */
     private String returnLineId;
     /** 回程月台金磚座標（其餘金磚視為去程月台） */
-    private final List<String> returnGoldBlocks = new ArrayList<>();
+    private final Set<Long> returnGoldBlockKeys = new LinkedHashSet<>();
     private List<String> lineIds = new ArrayList<>();
     /** 各路線由此站發車到下一站的行駛秒數（lineId -> 秒） */
     private final Map<String, Integer> lineTravelSeconds = new HashMap<>();
@@ -58,15 +61,34 @@ public class Stop {
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public String getWorld() { return world; }
     public void setWorld(String world) { this.world = world; }
-    public List<String> getGoldBlocks() { return goldBlocks; }
-    public void setGoldBlocks(List<String> goldBlocks) {
-        this.goldBlocks.clear();
-        if (goldBlocks != null) this.goldBlocks.addAll(goldBlocks);
+    public List<String> getGoldBlocks() {
+        List<String> out = new ArrayList<>(goldBlockKeys.size());
+        for (long packed : goldBlockKeys) out.add(BlockCoords.toDataString(packed));
+        return out;
     }
-    public List<String> getDisplayBlocks() { return displayBlocks; }
+
+    public void setGoldBlocks(List<String> goldBlocks) {
+        goldBlockKeys.clear();
+        if (goldBlocks == null) return;
+        for (String key : goldBlocks) {
+            long packed = BlockCoords.fromDataString(key);
+            if (BlockCoords.isValid(packed)) goldBlockKeys.add(packed);
+        }
+    }
+
+    public List<String> getDisplayBlocks() {
+        List<String> out = new ArrayList<>(displayBlockKeys.size());
+        for (long packed : displayBlockKeys) out.add(BlockCoords.toDataString(packed));
+        return out;
+    }
+
     public void setDisplayBlocks(List<String> displayBlocks) {
-        this.displayBlocks.clear();
-        if (displayBlocks != null) this.displayBlocks.addAll(displayBlocks);
+        displayBlockKeys.clear();
+        if (displayBlocks == null) return;
+        for (String key : displayBlocks) {
+            long packed = BlockCoords.fromDataString(key);
+            if (BlockCoords.isValid(packed)) displayBlockKeys.add(packed);
+        }
     }
     public int getDwellTimeTicks() { return dwellTimeTicks; }
     public void setDwellTimeTicks(int dwellTimeTicks) { this.dwellTimeTicks = Math.max(0, dwellTimeTicks); }
@@ -88,10 +110,40 @@ public class Stop {
     public void setDisplayLineId(String displayLineId) { this.displayLineId = displayLineId; }
     public String getReturnLineId() { return returnLineId; }
     public void setReturnLineId(String returnLineId) { this.returnLineId = returnLineId; }
-    public List<String> getReturnGoldBlocks() { return returnGoldBlocks; }
+    public List<String> getReturnGoldBlocks() {
+        List<String> out = new ArrayList<>(returnGoldBlockKeys.size());
+        for (long packed : returnGoldBlockKeys) out.add(BlockCoords.toDataString(packed));
+        return out;
+    }
+
     public void setReturnGoldBlocks(List<String> keys) {
-        returnGoldBlocks.clear();
-        if (keys != null) returnGoldBlocks.addAll(keys);
+        returnGoldBlockKeys.clear();
+        if (keys == null) return;
+        for (String key : keys) {
+            long packed = BlockCoords.fromDataString(key);
+            if (BlockCoords.isValid(packed)) returnGoldBlockKeys.add(packed);
+        }
+    }
+
+    public boolean hasAnyGoldBlock() {
+        return !goldBlockKeys.isEmpty();
+    }
+
+    public boolean ownsGoldKey(String key) {
+        long packed = BlockCoords.fromDataString(key);
+        if (!BlockCoords.isValid(packed)) return false;
+        return goldBlockKeys.contains(packed) || returnGoldBlockKeys.contains(packed);
+    }
+
+    public boolean removeGoldKey(String key) {
+        long packed = BlockCoords.fromDataString(key);
+        if (!BlockCoords.isValid(packed)) return false;
+        return goldBlockKeys.remove(packed) | returnGoldBlockKeys.remove(packed);
+    }
+
+    public void addReturnGoldKey(String key) {
+        long packed = BlockCoords.fromDataString(key);
+        if (BlockCoords.isValid(packed)) returnGoldBlockKeys.add(packed);
     }
 
     /** 玩家是否站在去程月台 */
@@ -100,19 +152,25 @@ public class Stop {
         return isOnPlatformGold(loc, forwardGoldKeys());
     }
 
+    /** 玩家是否站在回程月台（僅比對已註冊金磚，不讀取世界方塊） */
+    public boolean isReturnPlatformAt(Location loc) {
+        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
+        if (returnGoldBlockKeys.isEmpty()) return false;
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        return hasReturnGoldBlock(x, y, z) || hasReturnGoldBlock(x, y - 1, z);
+    }
+
     /** 玩家是否站在回程月台 */
     public boolean isOnReturnPlatform(Location loc) {
-        if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
-        if (returnGoldBlocks.isEmpty()) return false;
-        return isOnPlatformGold(loc, returnGoldBlocks);
+        return isReturnPlatformAt(loc);
     }
 
     /** 依行駛方向取得月台鐵軌上的礦車停靠點 */
     public Location getRailLocation(TravelDirection direction) {
         World w = Bukkit.getWorld(world);
         if (w == null) return null;
-        List<String> keys = direction == TravelDirection.REVERSE && !returnGoldBlocks.isEmpty()
-                ? returnGoldBlocks
+        List<String> keys = direction == TravelDirection.REVERSE && !returnGoldBlockKeys.isEmpty()
+                ? getReturnGoldBlocks()
                 : forwardGoldKeys();
         if (keys.isEmpty()) return null;
         for (String k : keys) {
@@ -124,10 +182,10 @@ public class Stop {
 
     private List<String> forwardGoldKeys() {
         List<String> forward = new ArrayList<>();
-        for (String k : goldBlocks) {
-            if (!returnGoldBlocks.contains(k)) forward.add(k);
+        for (long packed : goldBlockKeys) {
+            if (!returnGoldBlockKeys.contains(packed)) forward.add(BlockCoords.toDataString(packed));
         }
-        if (forward.isEmpty()) return new ArrayList<>(goldBlocks);
+        if (forward.isEmpty()) return getGoldBlocks();
         return forward;
     }
 
@@ -208,11 +266,11 @@ public class Stop {
     }
 
     public boolean hasGoldBlock(int x, int y, int z) {
-        return goldBlocks.contains(key(x, y, z));
+        return goldBlockKeys.contains(BlockCoords.pack(x, y, z));
     }
 
     public boolean hasDisplayBlock(int x, int y, int z) {
-        return displayBlocks.contains(key(x, y, z));
+        return displayBlockKeys.contains(BlockCoords.pack(x, y, z));
     }
 
     public boolean containsDisplay(Location loc) {
@@ -229,7 +287,7 @@ public class Stop {
     }
 
     public boolean hasReturnGoldBlock(int x, int y, int z) {
-        return returnGoldBlocks.contains(key(x, y, z));
+        return returnGoldBlockKeys.contains(BlockCoords.pack(x, y, z));
     }
 
     public boolean containsRail(Location loc) {
@@ -257,21 +315,18 @@ public class Stop {
     }
 
     public void addGoldBlock(int x, int y, int z) {
-        String k = key(x, y, z);
-        if (!goldBlocks.contains(k)) goldBlocks.add(k);
+        goldBlockKeys.add(BlockCoords.pack(x, y, z));
     }
 
     public void addDisplayBlock(int x, int y, int z) {
-        String k = key(x, y, z);
-        if (!displayBlocks.contains(k)) displayBlocks.add(k);
+        displayBlockKeys.add(BlockCoords.pack(x, y, z));
     }
 
     public Set<Location> getGoldLocations(World w) {
         Set<Location> out = new HashSet<>();
         if (w == null) return out;
-        for (String k : goldBlocks) {
-            int[] p = parseKey(k);
-            if (p != null) out.add(new Location(w, p[0], p[1], p[2]));
+        for (long packed : goldBlockKeys) {
+            out.add(new Location(w, BlockCoords.unpackX(packed), BlockCoords.unpackY(packed), BlockCoords.unpackZ(packed)));
         }
         return out;
     }
