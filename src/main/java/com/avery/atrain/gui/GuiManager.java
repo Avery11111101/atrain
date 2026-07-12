@@ -360,24 +360,30 @@ public class GuiManager {
         Line displayLine = stopMgr.resolveDisplayLine(stop);
         String prev = stopMgr.resolveDisplayPrev(stop);
         String next = stopMgr.resolveDisplayNext(stop);
+        boolean hasPrev = stopMgr.hasDisplayPrev(stop);
+        boolean hasNext = stopMgr.hasDisplayNext(stop);
         String lineName = displayLine != null ? displayLine.getDisplayName() : "-";
 
         inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
                 .name(msg(player, "gui.station_edit.rename"))
                 .lore(msg(player, "gui.station_edit.rename_lore", safePh(Map.of("name", stop.getDisplayName()))))
                 .build());
-        inv.setItem(10, new ItemBuilder(Material.ARROW)
-                .name(msg(player, "gui.station_edit.info_prev"))
-                .lore(buildPrevNextLore(player, prev, displayLine != null, lineName))
-                .build());
+        if (hasPrev) {
+            inv.setItem(10, new ItemBuilder(Material.ARROW)
+                    .name(msg(player, "gui.station_edit.info_prev"))
+                    .lore(buildPrevNextLore(player, prev, displayLine != null, lineName))
+                    .build());
+        }
         inv.setItem(12, new ItemBuilder(Material.OAK_SIGN)
                 .name(msg(player, "gui.station_edit.info_current"))
                 .lore(msg(player, "gui.station_edit.info_current_lore", safePh(Map.of("name", stop.getDisplayName()))))
                 .build());
-        inv.setItem(14, new ItemBuilder(Material.ARROW)
-                .name(msg(player, "gui.station_edit.info_next"))
-                .lore(buildPrevNextLore(player, next, displayLine != null, lineName))
-                .build());
+        if (hasNext) {
+            inv.setItem(14, new ItemBuilder(Material.ARROW)
+                    .name(msg(player, "gui.station_edit.info_next"))
+                    .lore(buildPrevNextLore(player, next, displayLine != null, lineName))
+                    .build());
+        }
         inv.setItem(15, new ItemBuilder(Material.RAIL)
                 .name(msg(player, "gui.station_edit.manage_lines"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.station_edit.manage_lines_lore"))
@@ -405,7 +411,7 @@ public class GuiManager {
                     .name(msg(player, "gui.station_edit.dwell_up"))
                     .build());
         }
-        if (plugin.getConfigManager().isCinematicTransitEnabled() && displayLine != null) {
+        if (plugin.getConfigManager().isCinematicTransitEnabled() && displayLine != null && hasNext) {
             int travelSec = stop.getTravelSecondsToNext(displayLine.getId(),
                     plugin.getConfigManager().getDefaultSegmentSeconds());
             inv.setItem(30, new ItemBuilder(Material.REDSTONE_BLOCK)

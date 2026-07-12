@@ -159,7 +159,13 @@ public class GuiListener implements Listener {
         switch (slot) {
             case 4 -> prompt(player, ChatInputManager.Type.STOP_NAME, stopId, "stop.name_prompt",
                     Map.of("name", stop.getDisplayName()));
-            case 10, 14, 15 -> openLineManageForStop(player, stop, gui);
+            case 10 -> {
+                if (plugin.getStopManager().hasDisplayPrev(stop)) openLineManageForStop(player, stop, gui);
+            }
+            case 14 -> {
+                if (plugin.getStopManager().hasDisplayNext(stop)) openLineManageForStop(player, stop, gui);
+            }
+            case 15 -> openLineManageForStop(player, stop, gui);
             case 12 -> prompt(player, ChatInputManager.Type.STOP_NAME, stopId, "stop.name_prompt",
                     Map.of("name", stop.getDisplayName()));
             case 16 -> prompt(player, ChatInputManager.Type.STOP_KEY_STATION, stopId, "stop.key_station_prompt",

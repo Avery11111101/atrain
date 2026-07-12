@@ -75,6 +75,9 @@ gui.speed_block.ramp_down: "§c§l減少 1 格"
 gui.speed_block.ramp_up: "§a§l增加 1 格"
 
 station.display_info: "§7上一站: §f{prev} §8| §a本站: §f{current} §8| §7下一站: §f{next}"
+station.display_info_no_prev: "§a本站: §f{current} §8| §7下一站: §f{next}"
+station.display_info_no_next: "§7上一站: §f{prev} §8| §a本站: §f{current}"
+station.display_info_current_only: "§a本站: §f{current}"
 
 train.dwelling: "§e列車停靠中… §f{sec} §e秒後發車"
 train.departing: "§a列車發車！"

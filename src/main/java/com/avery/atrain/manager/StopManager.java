@@ -270,26 +270,25 @@ public class StopManager {
     }
 
     public String getPrevStopName(Line line, String stopId) {
-        if (line == null) return "-";
+        if (line == null) return null;
         int idx = line.getStopIds().indexOf(stopId);
-        if (idx < 0) return "-";
+        if (idx < 0) return null;
         if (idx == 0) {
-            if (line.isCircular() && !line.getStopIds().isEmpty()) {
+            if (line.isCircular() && line.getStopIds().size() > 1) {
                 return nameOf(line.getStopIds().get(line.getStopIds().size() - 1));
             }
-            return "-";
+            return null;
         }
         return nameOf(line.getStopIds().get(idx - 1));
     }
 
     public String getNextStopName(Line line, String stopId) {
-        if (line == null) return "-";
+        if (line == null) return null;
         int idx = line.getStopIds().indexOf(stopId);
-        if (idx < 0) return "-";
+        if (idx < 0) return null;
         if (idx + 1 < line.getStopIds().size()) return nameOf(line.getStopIds().get(idx + 1));
-        if (line.isCircular() && !line.getStopIds().isEmpty()) return nameOf(line.getStopIds().get(0));
-        return plugin.getLanguageManager().getRaw(
-                plugin.getLanguageManager().getDefaultLanguage(), "station.terminus");
+        if (line.isCircular() && line.getStopIds().size() > 1) return nameOf(line.getStopIds().get(0));
+        return null;
     }
 
     private String nameOf(String stopId) {
@@ -326,7 +325,10 @@ public class StopManager {
 
     public String resolveDisplayPrev(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
-        if (line == null) return stop.getInfoPrev();
+        if (line == null) {
+            String manual = stop.getInfoPrev();
+            return isUnset(manual) ? null : manual;
+        }
         return isReturnReversed(stop, at)
                 ? getNextStopName(line, stop.getId())
                 : getPrevStopName(line, stop.getId());
@@ -338,10 +340,31 @@ public class StopManager {
 
     public String resolveDisplayNext(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
-        if (line == null) return stop.getInfoNext();
+        if (line == null) {
+            String manual = stop.getInfoNext();
+            return isUnset(manual) ? null : manual;
+        }
         return isReturnReversed(stop, at)
                 ? getPrevStopName(line, stop.getId())
                 : getNextStopName(line, stop.getId());
+    }
+
+    public boolean hasDisplayPrev(Stop stop, Location at) {
+        String value = resolveDisplayPrev(stop, at);
+        return value != null && !value.isBlank();
+    }
+
+    public boolean hasDisplayNext(Stop stop, Location at) {
+        String value = resolveDisplayNext(stop, at);
+        return value != null && !value.isBlank();
+    }
+
+    public boolean hasDisplayPrev(Stop stop) {
+        return hasDisplayPrev(stop, null);
+    }
+
+    public boolean hasDisplayNext(Stop stop) {
+        return hasDisplayNext(stop, null);
     }
 
     /**

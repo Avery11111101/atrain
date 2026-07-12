@@ -72,6 +72,9 @@ gui.speed_block.ramp_lore: "§7進入前に滑らかに加減速するブロッ�
 gui.speed_block.ramp_down: "§c§l-1 ブロック"
 gui.speed_block.ramp_up: "§a§l+1 ブロック"
 station.display_info: "§7前: §f{prev} §8| §a現: §f{current} §8| §7次: §f{next}"
+station.display_info_no_prev: "§a現: §f{current} §8| §7次: §f{next}"
+station.display_info_no_next: "§7前: §f{prev} §8| §a現: §f{current}"
+station.display_info_current_only: "§a現: §f{current}"
 
 train.dwelling: "§e停車中… §f{sec} §e秒後に発車"
 train.departing: "§a発車！"

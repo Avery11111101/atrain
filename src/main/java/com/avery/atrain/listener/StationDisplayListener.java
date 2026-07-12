@@ -4,6 +4,7 @@ import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.model.Stop;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -62,10 +63,37 @@ public class StationDisplayListener implements Listener {
     private void sendDisplay(Player player, Stop stop) {
         if (!plugin.getConfigManager().isActionbarEnabled()) return;
         var lang = plugin.getLanguageManager();
-        StringBuilder text = new StringBuilder(lang.get(player, "station.display_info", Map.of(
-                "prev", TextUtil.escapePlain(plugin.getStopManager().resolveDisplayPrev(stop, player.getLocation())),
-                "current", TextUtil.escapePlain(stop.getDisplayName()),
-                "next", TextUtil.escapePlain(plugin.getStopManager().resolveDisplayNext(stop, player.getLocation())))));
+        var stopMgr = plugin.getStopManager();
+        Location at = player.getLocation();
+        String prev = stopMgr.resolveDisplayPrev(stop, at);
+        String next = stopMgr.resolveDisplayNext(stop, at);
+        boolean hasPrev = stopMgr.hasDisplayPrev(stop, at);
+        boolean hasNext = stopMgr.hasDisplayNext(stop, at);
+
+        String displayKey;
+        Map<String, String> placeholders;
+        if (hasPrev && hasNext) {
+            displayKey = "station.display_info";
+            placeholders = Map.of(
+                    "prev", TextUtil.escapePlain(prev),
+                    "current", TextUtil.escapePlain(stop.getDisplayName()),
+                    "next", TextUtil.escapePlain(next));
+        } else if (hasPrev) {
+            displayKey = "station.display_info_no_next";
+            placeholders = Map.of(
+                    "prev", TextUtil.escapePlain(prev),
+                    "current", TextUtil.escapePlain(stop.getDisplayName()));
+        } else if (hasNext) {
+            displayKey = "station.display_info_no_prev";
+            placeholders = Map.of(
+                    "current", TextUtil.escapePlain(stop.getDisplayName()),
+                    "next", TextUtil.escapePlain(next));
+        } else {
+            displayKey = "station.display_info_current_only";
+            placeholders = Map.of("current", TextUtil.escapePlain(stop.getDisplayName()));
+        }
+
+        StringBuilder text = new StringBuilder(lang.get(player, displayKey, placeholders));
 
         if (stop.hasKeyInfo()) {
             text.append(" §8| ").append(lang.get(player, "station.key_info", Map.of(
