@@ -90,7 +90,14 @@ public class DataStore {
             stop.setDwellTimeTicks(ss.getInt("dwell_time", plugin.getConfigManager().getDefaultDwellTime()));
             stop.setInfoPrev(ss.getString("info_prev", "-"));
             stop.setInfoNext(ss.getString("info_next", "-"));
-            stop.setKeyStation(ss.getString("key_station", "-"));
+            if (ss.isList("key_stations")) {
+                stop.setKeyStations(ss.getStringList("key_stations"));
+            } else {
+                String oldKey = ss.getString("key_station", "-");
+                if (!"-".equals(oldKey) && !oldKey.isBlank()) {
+                    stop.setKeyStations(List.of(oldKey));
+                }
+            }
             stop.setKeyDirection(ss.getString("key_direction", "-"));
             stop.setAdminInfo(ss.getString("admin_info", ""));
             stop.setGoldBlocks(ss.getStringList("gold_blocks"));
@@ -150,7 +157,7 @@ public class DataStore {
             yaml.set(path + ".dwell_time", stop.getDwellTimeTicks());
             yaml.set(path + ".info_prev", stop.getInfoPrev());
             yaml.set(path + ".info_next", stop.getInfoNext());
-            yaml.set(path + ".key_station", stop.getKeyStation());
+            yaml.set(path + ".key_stations", new ArrayList<>(stop.getKeyStations()));
             yaml.set(path + ".key_direction", stop.getKeyDirection());
             yaml.set(path + ".admin_info", stop.getAdminInfo());
             yaml.set(path + ".gold_blocks", stop.getGoldBlocks());

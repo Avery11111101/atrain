@@ -111,8 +111,14 @@ public class StationDisplayListener implements Listener {
         StringBuilder text = new StringBuilder(lang.get(player, displayKey, placeholders));
 
         if (stop.hasKeyInfo()) {
+            java.util.List<String> ksNames = new java.util.ArrayList<>();
+            for (String kid : stop.getKeyStations()) {
+                Stop ks = plugin.getStopManager().getStop(kid);
+                ksNames.add(ks != null ? ks.getDisplayName() : kid);
+            }
+            String ksLore = ksNames.isEmpty() ? "-" : String.join(", ", ksNames);
             text.append(" §8| ").append(lang.get(player, "station.key_info", Map.of(
-                    "station", TextUtil.escapePlain(stop.getKeyStation()),
+                    "station", TextUtil.escapePlain(ksLore),
                     "direction", TextUtil.escapePlain(stop.getKeyDirection()))));
         }
 

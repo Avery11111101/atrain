@@ -141,6 +141,75 @@ public final class RouteRecordingManager {
         return true;
     }
 
+    public void autoRecordSegment(Player player, String lineId, int segmentIndex, TravelDirection direction) {
+        if (player == null || lineId == null) return;
+        if (byPlayer.containsKey(player.getUniqueId())) {
+            RouteRecordingSession active = getSession(player);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_other_line",
+                    Map.of("line", formatLineName(active != null ? active.getLineId() : null))));
+            return;
+        }
+
+        TravelDirection dir = direction != null ? direction : TravelDirection.FORWARD;
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) return;
+        if (line.getStopIds().size() < 2) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.need_two_stops"));
+            return;
+        }
+        if (segmentIndex < 0 || segmentIndex >= line.getSegmentCount()) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.segment_invalid"));
+            return;
+        }
+
+        String fromStopId, toStopId;
+        if (dir == TravelDirection.FORWARD) {
+            fromStopId = line.getStopIds().get(segmentIndex);
+            toStopId = line.getStopIds().get(segmentIndex + 1);
+        } else {
+            int maxIdx = line.getStopIds().size() - 1;
+            fromStopId = line.getStopIds().get(maxIdx - segmentIndex);
+            toStopId = line.getStopIds().get(maxIdx - segmentIndex - 1);
+        }
+
+        Stop fromStop = plugin.getStopManager().getStop(fromStopId);
+        Stop toStop = plugin.getStopManager().getStop(toStopId);
+        if (fromStop == null || toStop == null) return;
+
+        Location fromRailLoc = fromStop.getRailLocation(dir);
+        Location toRailLoc = toStop.getRailLocation(dir);
+        if (fromRailLoc == null || toRailLoc == null) {
+            TextUtil.send(player, "§c起點或終點站沒有設定鐵軌，無法自動取徑。");
+            return;
+        }
+
+        Block fromRail = StationUtil.resolveRailBlock(fromRailLoc.getBlock());
+        Block toRail = StationUtil.resolveRailBlock(toRailLoc.getBlock());
+
+        if (fromRail == null || toRail == null) {
+            TextUtil.send(player, "§c起點或終點站找不到軌道，無法自動取徑。");
+            return;
+        }
+
+        player.sendMessage("§a開始自動計算路線...");
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            var path = com.avery.atrain.util.RailPathSampler.betweenStops(fromStop, toStop, null, dir);
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                if (path != null && path.size() >= 2) {
+                    java.util.List<com.avery.atrain.model.RoutePoint> points = new java.util.ArrayList<>();
+                    for (Location loc : path) {
+                        points.add(new com.avery.atrain.model.RoutePoint(loc));
+                    }
+                    line.setSegmentPoints(segmentIndex, dir, points);
+                    plugin.getDataStore().save();
+                    TextUtil.send(player, "§a自動取徑成功！儲存了 " + points.size() + " 個軌跡點。");
+                } else {
+                    TextUtil.send(player, "§c自動取徑失敗，可能兩站之間沒有相連的鐵軌。");
+                }
+            });
+        });
+    }
+
     public boolean spawnRecordingCart(Player player, Block clicked) {
         RouteRecordingSession session = getSession(player);
         if (session == null) return false;

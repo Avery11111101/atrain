@@ -145,10 +145,7 @@ public class ChatInputListener implements Listener {
     }
 
     private void applyKeyStation(Player player, ChatInputManager.Pending pending, String message) {
-        Stop stop = requireStop(player, pending);
-        if (stop == null) return;
-        stop.setKeyStation(message.trim().isEmpty() ? "-" : message.trim());
-        saveAndFinish(player, pending, "stop.key_station_set", Map.of("name", stop.getKeyStation()));
+        plugin.getChatInputManager().clear(player);
     }
 
     private void applyKeyDirection(Player player, ChatInputManager.Pending pending, String message) {

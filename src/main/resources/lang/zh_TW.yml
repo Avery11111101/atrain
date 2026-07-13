@@ -303,7 +303,6 @@ gui.line_detail.circular_lore: "§7環線時首尾相連"
 gui.line_detail.stop_lore:
   - "§a左鍵 §7傳送至站點"
   - "§e右鍵 §7管理設定"
-  - "§7Shift+左鍵 §7上移 / Shift+右鍵 §7下移"
   - "§4Q §7從路線移除"
 route.recording_line_locked: "<yellow>此路線錄製中，請先停止錄製再調整站點順序。"
 gui.record_segment.recording_dir: "§7錄製方向：§f{dir}"
@@ -654,3 +653,27 @@ tutorial.hangrail.steps:
   - "§f轉彎與斜坡\n§7支援直線、彎道、斜坡邏輯"
   - "§f開關設定\n§7GUI 主選單可切換，或 config.yml hang_rail.enabled"
   - "§f自訂方塊\n§7可在 config 新增其他方塊類型與偏移量"
+
+gui.line_reorder.title: "§8調整順序: {name}"
+gui.line_reorder.stop_lore:
+  - "§a左鍵 §7上移一站"
+  - "§e右鍵 §7下移一站"
+
+gui.key_station_select.title: "§8選擇重點站: {name}"
+gui.key_station_select.click_select: "§e點擊設為重點站"
+gui.key_station_select.selected: "§a✔ 已選為重點站 (點擊取消)"
+
+gui.record_mode_select.title: "§8選擇錄製模式"
+gui.record_mode_select.manual: "§e手動錄製"
+gui.record_mode_select.manual_lore:
+  - "§7傳統模式"
+  - "§7需召喚礦車行駛"
+gui.record_mode_select.auto: "§a自動直線取徑"
+gui.record_mode_select.auto_lore:
+  - "§7系統自動沿鐵軌尋路"
+  - "§7瞬間完成，免跑礦車"
+
+gui.line_detail.reorder: "§6調整站點順序"
+gui.line_detail.reorder_lore:
+  - "§7進入專屬介面"
+  - "§7使用左右鍵移動站點"

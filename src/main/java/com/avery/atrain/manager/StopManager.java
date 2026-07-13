@@ -216,8 +216,8 @@ public class StopManager {
         if (isUnset(primary.getInfoNext()) && !isUnset(other.getInfoNext())) {
             primary.setInfoNext(other.getInfoNext());
         }
-        if (isUnset(primary.getKeyStation()) && !isUnset(other.getKeyStation())) {
-            primary.setKeyStation(other.getKeyStation());
+        if (primary.getKeyStations().isEmpty() && !other.getKeyStations().isEmpty()) {
+            primary.getKeyStations().addAll(other.getKeyStations());
         }
         if (isUnset(primary.getKeyDirection()) && !isUnset(other.getKeyDirection())) {
             primary.setKeyDirection(other.getKeyDirection());

@@ -54,6 +54,9 @@ public class GuiListener implements Listener {
             case LANGUAGE -> handleLanguage(player, slot, holder, gui);
             case SPEED_BLOCK_EDIT -> handleSpeedBlockEdit(player, slot, holder, gui);
             case CONFIRM -> handleConfirm(player, slot, holder, gui);
+            case KEY_STATION_SELECT -> handleKeyStationSelect(player, slot, holder, gui);
+            case LINE_REORDER -> handleLineReorder(player, slot, holder, gui, event);
+            case RECORD_MODE_SELECT -> handleRecordModeSelect(player, slot, holder, gui);
         }
     }
 
@@ -168,8 +171,7 @@ public class GuiListener implements Listener {
             case 15 -> openLineManageForStop(player, stop, gui);
             case 12 -> prompt(player, ChatInputManager.Type.STOP_NAME, stopId, "stop.name_prompt",
                     Map.of("name", stop.getDisplayName()));
-            case 16 -> prompt(player, ChatInputManager.Type.STOP_KEY_STATION, stopId, "stop.key_station_prompt",
-                    Map.of("name", stop.getKeyStation()));
+            case 16 -> gui.openKeyStationSelect(player, stopId, 0);
             case 18 -> prompt(player, ChatInputManager.Type.STOP_KEY_DIRECTION, stopId, "stop.key_direction_prompt",
                     Map.of("name", stop.getKeyDirection()));
             case 20 -> {
@@ -214,8 +216,14 @@ public class GuiListener implements Listener {
                     TextUtil.send(player, lang(player, "error.no_permission"));
                     return;
                 }
-                prompt(player, ChatInputManager.Type.STOP_ADMIN_INFO, stopId, "stop.admin_info_prompt",
-                        Map.of("info", stop.getAdminInfo().isBlank() ? "-" : stop.getAdminInfo()));
+                if (isPlainRightClick(event) || isShiftRightClick(event)) {
+                    stop.setAdminInfo("");
+                    plugin.getDataStore().save();
+                    gui.openStationEdit(player, stopId);
+                } else {
+                    prompt(player, ChatInputManager.Type.STOP_ADMIN_INFO, stopId, "stop.admin_info_prompt",
+                            Map.of("info", stop.getAdminInfo().isBlank() ? "-" : stop.getAdminInfo()));
+                }
             }
             case 40 -> {
                 if (!player.hasPermission("atrain.admin")) {
@@ -360,39 +368,18 @@ public class GuiListener implements Listener {
                         "line_detail", lineId);
             }
             case 40 -> gui.openRecordSegmentSelect(player, lineId);
+            case 50 -> gui.openLineReorder(player, lineId, 0);
             default -> {
                 String stopId = holder.get("stop_" + slot);
                 if (stopId == null) return;
                 Stop stop = plugin.getStopManager().getStop(stopId);
                 if (stop == null) return;
-                if (isPlainLeftClick(event)) {
+                if (isPlainLeftClick(event) || isShiftLeftClick(event)) {
                     teleportToStop(player, stop);
                     return;
                 }
-                if (isPlainRightClick(event)) {
+                if (isPlainRightClick(event) || isShiftRightClick(event)) {
                     gui.openStationEdit(player, stopId);
-                    return;
-                }
-                if (isShiftLeftClick(event)) {
-                    if (blockLineEditDuringRecording(player, lineId)) return;
-                    if (plugin.getLineManager().moveStopInLine(lineId, stopId, -1)) {
-                        TextUtil.send(player, lang(player, "line.stop_moved_up",
-                                Map.of("stop", stop.getDisplayName())));
-                    } else {
-                        TextUtil.send(player, lang(player, "line.stop_move_failed"));
-                    }
-                    gui.openLineDetail(player, lineId, stopPage);
-                    return;
-                }
-                if (isShiftRightClick(event)) {
-                    if (blockLineEditDuringRecording(player, lineId)) return;
-                    if (plugin.getLineManager().moveStopInLine(lineId, stopId, 1)) {
-                        TextUtil.send(player, lang(player, "line.stop_moved_down",
-                                Map.of("stop", stop.getDisplayName())));
-                    } else {
-                        TextUtil.send(player, lang(player, "line.stop_move_failed"));
-                    }
-                    gui.openLineDetail(player, lineId, stopPage);
                     return;
                 }
                 if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
@@ -522,10 +509,7 @@ public class GuiListener implements Listener {
             return;
         }
 
-        player.closeInventory();
-        if (rm != null && rm.start(player, lineId, segmentIndex, direction, true)) {
-            gui.openRecordSegmentSelect(player, lineId, direction, segPage);
-        }
+        gui.openRecordModeSelect(player, lineId, segmentIndex, direction);
     }
 
     private boolean blockLineEditDuringRecording(Player player, String lineId) {
@@ -737,17 +721,7 @@ public class GuiListener implements Listener {
             TravelDirection direction = parts.length >= 3
                     ? TravelDirection.fromString(parts[2]) : TravelDirection.FORWARD;
             String returnId = holder.get("return_id");
-            player.closeInventory();
-            var rm = plugin.getRouteRecordingManager();
-            if (rm != null && rm.start(player, lineId, segmentIndex, direction, true)) {
-                if (returnId != null) {
-                    String[] ret = returnId.split("\\|", 2);
-                    String retLine = ret[0];
-                    TravelDirection retDir = ret.length >= 2
-                            ? TravelDirection.fromString(ret[1]) : direction;
-                    gui.openRecordSegmentSelect(player, retLine, retDir);
-                }
-            }
+            gui.openRecordModeSelect(player, lineId, segmentIndex, direction);
         }
     }
 
@@ -781,6 +755,113 @@ public class GuiListener implements Listener {
 
     private boolean isShiftRightClick(InventoryClickEvent event) {
         return event.isShiftClick() && event.getClick().isRightClick();
+    }
+
+    private void handleKeyStationSelect(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        if (!player.hasPermission("atrain.station.edit")) return;
+        Inventory inv = holder.getInventory();
+        String targetStopId = holder.get("stop_id");
+        if (targetStopId == null) return;
+
+        if (isBackSlot(inv, slot)) {
+            gui.openStationEdit(player, targetStopId);
+            return;
+        }
+        if (slot == GuiSlots.PREV_PAGE) {
+            int page = parsePage(holder);
+            if (page > 0) gui.openKeyStationSelect(player, targetStopId, page - 1);
+            return;
+        }
+        if (slot == GuiSlots.NEXT_PAGE) {
+            int page = parsePage(holder);
+            gui.openKeyStationSelect(player, targetStopId, page + 1);
+            return;
+        }
+
+        String clickedStopId = holder.get("stop_" + slot);
+        if (clickedStopId != null) {
+            Stop targetStop = plugin.getStopManager().getStop(targetStopId);
+            Stop clickedStop = plugin.getStopManager().getStop(clickedStopId);
+            if (targetStop != null && clickedStop != null) {
+                if (targetStop.hasKeyStation(clickedStopId)) {
+                    targetStop.removeKeyStation(clickedStopId);
+                    clickedStop.removeKeyStation(targetStopId);
+                } else {
+                    targetStop.addKeyStation(clickedStopId);
+                    clickedStop.addKeyStation(targetStopId);
+                }
+                plugin.getDataStore().save();
+                gui.openKeyStationSelect(player, targetStopId, parsePage(holder));
+            }
+        }
+    }
+
+    private void handleLineReorder(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        if (!player.hasPermission("atrain.station.edit")) return;
+        Inventory inv = holder.getInventory();
+        String lineId = holder.get("line_id");
+        if (lineId == null) return;
+
+        if (isBackSlot(inv, slot)) {
+            gui.openLineDetail(player, lineId, 0);
+            return;
+        }
+        int page = parsePage(holder);
+        if (slot == GuiSlots.PREV_PAGE) {
+            if (page > 0) gui.openLineReorder(player, lineId, page - 1);
+            return;
+        }
+        if (slot == GuiSlots.NEXT_PAGE) {
+            gui.openLineReorder(player, lineId, page + 1);
+            return;
+        }
+
+        String stopId = holder.get("stop_" + slot);
+        if (stopId != null) {
+            if (blockLineEditDuringRecording(player, lineId)) return;
+            Stop stop = plugin.getStopManager().getStop(stopId);
+            if (stop == null) return;
+
+            if (isPlainLeftClick(event)) {
+                if (plugin.getLineManager().moveStopInLine(lineId, stopId, -1)) {
+                    TextUtil.send(player, lang(player, "line.stop_moved_up", Map.of("stop", stop.getDisplayName())));
+                } else {
+                    TextUtil.send(player, lang(player, "line.stop_move_failed"));
+                }
+                gui.openLineReorder(player, lineId, page);
+            } else if (isPlainRightClick(event)) {
+                if (plugin.getLineManager().moveStopInLine(lineId, stopId, 1)) {
+                    TextUtil.send(player, lang(player, "line.stop_moved_down", Map.of("stop", stop.getDisplayName())));
+                } else {
+                    TextUtil.send(player, lang(player, "line.stop_move_failed"));
+                }
+                gui.openLineReorder(player, lineId, page);
+            }
+        }
+    }
+
+    private void handleRecordModeSelect(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        if (!player.hasPermission("atrain.station.edit")) return;
+        Inventory inv = holder.getInventory();
+        String lineId = holder.get("line_id");
+        if (lineId == null) return;
+
+        if (isBackSlot(inv, slot)) {
+            gui.openRecordSegmentSelect(player, lineId);
+            return;
+        }
+
+        int segIdx = parseInt(holder.get("segment_index"), 0);
+        com.avery.atrain.model.TravelDirection dir = com.avery.atrain.model.TravelDirection.valueOf(holder.get("direction"));
+
+        if (slot == 11) {
+            player.closeInventory();
+            plugin.getRouteRecordingManager().start(player, lineId, segIdx, dir, true);
+        } else if (slot == 15) {
+            player.closeInventory();
+            plugin.getRouteRecordingManager().autoRecordSegment(player, lineId, segIdx, dir);
+            gui.openRecordSegmentSelect(player, lineId, dir, 0);
+        }
     }
 
     private int parsePage(GuiHolder holder) {

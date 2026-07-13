@@ -31,8 +31,8 @@ public class Stop {
     private String infoPrev = "-";
     /** 資訊顯示：下一站（純文字，與路線無關） */
     private String infoNext = "-";
-    /** 重點站名稱（轉乘/主要目的地提示） */
-    private String keyStation = "-";
+    /** 重點站ID集合（轉乘/主要目的地提示，雙向連通） */
+    private final Set<String> keyStations = new LinkedHashSet<>();
     /** 行駛方向（如：北上、南下、東向） */
     private String keyDirection = "-";
     /** 管理員專用備註（僅管理員看得到） */
@@ -96,14 +96,26 @@ public class Stop {
     public void setInfoPrev(String infoPrev) { this.infoPrev = infoPrev; }
     public String getInfoNext() { return infoNext != null && !infoNext.isBlank() ? infoNext : "-"; }
     public void setInfoNext(String infoNext) { this.infoNext = infoNext; }
-    public String getKeyStation() { return blankToDash(keyStation); }
-    public void setKeyStation(String keyStation) { this.keyStation = keyStation; }
+    public Set<String> getKeyStations() { return keyStations; }
+    public void setKeyStations(List<String> stations) {
+        keyStations.clear();
+        if (stations != null) keyStations.addAll(stations);
+    }
+    public void addKeyStation(String stopId) {
+        if (stopId != null) keyStations.add(stopId);
+    }
+    public void removeKeyStation(String stopId) {
+        if (stopId != null) keyStations.remove(stopId);
+    }
+    public boolean hasKeyStation(String stopId) {
+        return stopId != null && keyStations.contains(stopId);
+    }
     public String getKeyDirection() { return blankToDash(keyDirection); }
     public void setKeyDirection(String keyDirection) { this.keyDirection = keyDirection; }
     public String getAdminInfo() { return adminInfo != null ? adminInfo : ""; }
     public void setAdminInfo(String adminInfo) { this.adminInfo = adminInfo; }
     public boolean hasKeyInfo() {
-        return !"-".equals(getKeyStation()) || !"-".equals(getKeyDirection());
+        return !keyStations.isEmpty() || !"-".equals(getKeyDirection());
     }
     public List<String> getLineIds() { return lineIds; }
     public String getDisplayLineId() { return displayLineId; }
