@@ -65,6 +65,11 @@ public class PlayerInteractListener implements Listener {
             }
             handleStationEdit(event, player, block);
         } else {
+            // 若玩家手持礦車，則不攔截，讓原版行為發生（放置普通礦車）
+            org.bukkit.inventory.ItemStack item = event.getItem();
+            if (item != null && item.getType().name().contains("MINECART")) {
+                return;
+            }
             handleCartSpawn(event, player, block);
         }
     }

@@ -98,3 +98,5 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 1. **建立專屬標籤**：在 `AtrainPlugin` 中新增 `NamespacedKey` (`managed_cart`) 作為 PDC 標籤，並加入 `markAsManagedCart` 與 `isManagedCart` 方法。
 2. **生成時打標**：在 `CartSpawnManager` 與 `RouteRecordingManager` 生成礦車時，一律打上 `managed_cart` 標籤。
 3. **過濾非專屬礦車**：在 `HangRailTask`、`StationAutoStopListener`、`EmptyCartListener` 與 `VehicleListener` 中新增安全檢查 `if (!plugin.isManagedCart(cart)) return;`，將未打標的礦車排除在插件影響之外，保留原版機制。
+4. **修復玩家右鍵攔截**：修改 `PlayerInteractListener`，若玩家手持礦車對站點鐵軌右鍵時，不再攔截並替換為插件礦車，而是讓原版遊戲正常放置普通礦車。
+5. **修復全域列車接管**：修改 `TrainController.tick()`，原本它會無差別掃描全世界所有在鐵軌上的礦車並強迫套用巡航速度，現已補上 `!plugin.isManagedCart(cart)` 過濾，徹底解除對原版礦車的物理引擎干涉。

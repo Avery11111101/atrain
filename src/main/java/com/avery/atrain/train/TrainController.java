@@ -144,6 +144,7 @@ public class TrainController {
         List<RideableMinecart> onRail = new ArrayList<>();
         for (RideableMinecart c : seed.getWorld().getEntitiesByClass(RideableMinecart.class)) {
             if (!c.isValid() || c.isDead()) continue;
+            if (!plugin.isManagedCart(c)) continue;
             if (TrainTaskRegistry.get(c) != null) continue;
             if (RailUtil.isOnRail(c.getLocation())) onRail.add(c);
         }
@@ -176,6 +177,7 @@ public class TrainController {
         for (World world : Bukkit.getWorlds()) {
             for (RideableMinecart cart : world.getEntitiesByClass(RideableMinecart.class)) {
                 if (!cart.isValid() || cart.isDead()) continue;
+                if (!plugin.isManagedCart(cart)) continue;
                 alive.add(cart.getUniqueId());
                 // 路線導引系統管理中的礦車不由本控制器接管，避免搶控
                 if (com.avery.atrain.train.TrainTaskRegistry.get(cart) != null) continue;
