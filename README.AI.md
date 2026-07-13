@@ -79,3 +79,12 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 1. **Inventory 介面標題**：將所有 `Bukkit.createInventory(holder, size, String)` 替換為 `Bukkit.createInventory(holder, size, TextUtil.component(String))`。
 2. **ItemMeta 物品名稱與 Lore**：將 `ItemBuilder` 內的 `setDisplayName` 和 `setLore` 替換為 `displayName(Component)` 與 `lore(List<Component>)`。
 3. **Plugin Meta**：將過時的 `getDescription().getVersion()` 替換為 26.2 建議的 `getPluginMeta().getVersion()`。
+
+### 2026-07-13 — 修復終點站依然可以自由發車的漏洞
+
+**修改原因：**
+- Avery 回報在終點站上車時依然可以開動列車。
+- 經查，原有的 `CinematicTransitManager.onBoard` 在判定為終點站時，會回傳 `false` 給事件監聽器。這導致系統誤判導引模式「沒有接管」此次上車行為，進而觸發後續的自由控速模式 (`TrainController`)，使玩家能以物理方式把礦車開走。
+
+**修復摘要：**
+- 修改 `CinematicTransitManager`：在終點站判定成立時，除了傳送提示訊息，還會透過 Scheduler 排程 `cart.removePassenger(player)` 將玩家踢下車，同時改為回傳 `true`，成功攔截該次事件並阻止進入自由控速模式。

@@ -77,7 +77,8 @@ public final class CinematicTransitManager {
         TravelDirection direction = resolveTravelDirection(stop, cart.getLocation(), line);
         if (line.getNextStopId(stop.getId(), direction) == null) {
             TextUtil.send(player, plugin.getLanguageManager().get(player, "ride.terminus"));
-            return false;
+            plugin.getServer().getScheduler().runTask(plugin, () -> cart.removePassenger(player));
+            return true;
         }
 
         CinematicTransitTask task = new CinematicTransitTask(plugin, cart, player, stop, line, direction);
