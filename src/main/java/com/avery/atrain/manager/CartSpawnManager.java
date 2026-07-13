@@ -82,8 +82,10 @@ public class CartSpawnManager {
             return false;
         }
 
-        RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity ->
-                entity.setMaxSpeed((float) cfg.getCartSpeed()));
+        RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> {
+            entity.setMaxSpeed((float) cfg.getCartSpeed());
+            plugin.markAsManagedCart(entity);
+        });
 
         lastSpawnTick.put(player.getUniqueId(), now);
         scheduleEmptyDespawn(cart);

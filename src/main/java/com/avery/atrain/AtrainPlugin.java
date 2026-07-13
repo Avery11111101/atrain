@@ -28,7 +28,10 @@ import com.avery.atrain.train.TrainController;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AtrainPlugin extends JavaPlugin {
@@ -53,9 +56,12 @@ public final class AtrainPlugin extends JavaPlugin {
     private RouteRecordingManager routeRecordingManager;
     private HangRailTask hangRailTask;
 
+    private NamespacedKey managedCartKey;
+
     @Override
     public void onEnable() {
         instance = this;
+        managedCartKey = new NamespacedKey(this, "managed_cart");
 
         configManager = new ConfigManager(this);
         dataStore = new DataStore(this);
@@ -177,4 +183,16 @@ public final class AtrainPlugin extends JavaPlugin {
     public TrainController getTrainController() { return trainController; }
     public CinematicTransitManager getCinematicTransitManager() { return cinematicTransitManager; }
     public RouteRecordingManager getRouteRecordingManager() { return routeRecordingManager; }
+
+    public NamespacedKey getManagedCartKey() { return managedCartKey; }
+
+    public void markAsManagedCart(Minecart cart) {
+        if (cart == null) return;
+        cart.getPersistentDataContainer().set(managedCartKey, PersistentDataType.BYTE, (byte) 1);
+    }
+
+    public boolean isManagedCart(Minecart cart) {
+        if (cart == null) return false;
+        return cart.getPersistentDataContainer().has(managedCartKey, PersistentDataType.BYTE);
+    }
 }

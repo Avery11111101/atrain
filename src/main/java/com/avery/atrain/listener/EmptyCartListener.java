@@ -21,6 +21,7 @@ public class EmptyCartListener implements Listener {
     @EventHandler
     public void onEnter(VehicleEnterEvent event) {
         if (!(event.getVehicle() instanceof RideableMinecart rideable)) return;
+        if (!plugin.isManagedCart(rideable)) return;
         plugin.getCartSpawnManager().cancelDespawn(rideable.getUniqueId());
 
         if (!(event.getEntered() instanceof Player player)) return;
@@ -43,6 +44,7 @@ public class EmptyCartListener implements Listener {
     @EventHandler
     public void onExit(VehicleExitEvent event) {
         if (!(event.getVehicle() instanceof RideableMinecart cart)) return;
+        if (!plugin.isManagedCart(cart)) return;
         if (!(event.getExited() instanceof Player)) return;
 
         if (plugin.getRouteRecordingManager() != null

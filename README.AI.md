@@ -86,5 +86,15 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 - Avery 回報在終點站上車時依然可以開動列車。
 - 經查，原有的 `CinematicTransitManager.onBoard` 在判定為終點站時，會回傳 `false` 給事件監聽器。這導致系統誤判導引模式「沒有接管」此次上車行為，進而觸發後續的自由控速模式 (`TrainController`)，使玩家能以物理方式把礦車開走。
 
-**修復摘要：**
 - 修改 `CinematicTransitManager`：在終點站判定成立時，除了傳送提示訊息，還會透過 Scheduler 排程 `cart.removePassenger(player)` 將玩家踢下車，同時改為回傳 `true`，成功攔截該次事件並阻止進入自由控速模式。
+
+### 2026-07-13 — 修復玩家手動放置礦車會吃到插件特性的問題
+
+**修改原因：**
+- Avery 回報自己放置的普通礦車（非透過插件指令或站點召喚），也會出現插件的特性，例如懸浮軌道、進站自動煞車、以及空車自動清除等問題。
+- 經查，原有的 `HangRailTask`、`StationAutoStopListener` 與 `EmptyCartListener` 等監聽器，單純只判斷了實體是否為 `Minecart`，沒有進一步區分該礦車是「系統召喚」還是「玩家手動放的」。
+
+**修復摘要：**
+1. **建立專屬標籤**：在 `AtrainPlugin` 中新增 `NamespacedKey` (`managed_cart`) 作為 PDC 標籤，並加入 `markAsManagedCart` 與 `isManagedCart` 方法。
+2. **生成時打標**：在 `CartSpawnManager` 與 `RouteRecordingManager` 生成礦車時，一律打上 `managed_cart` 標籤。
+3. **過濾非專屬礦車**：在 `HangRailTask`、`StationAutoStopListener`、`EmptyCartListener` 與 `VehicleListener` 中新增安全檢查 `if (!plugin.isManagedCart(cart)) return;`，將未打標的礦車排除在插件影響之外，保留原版機制。

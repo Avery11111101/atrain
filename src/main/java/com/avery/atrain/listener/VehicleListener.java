@@ -23,6 +23,7 @@ public class VehicleListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDestroy(VehicleDestroyEvent event) {
         if (!(event.getVehicle() instanceof Minecart cart)) return;
+        if (!plugin.isManagedCart(cart)) return;
         TrainMovementTask task = TrainTaskRegistry.get(cart);
         if (task != null) task.cancel();
         if (plugin.getCinematicTransitManager() != null) {

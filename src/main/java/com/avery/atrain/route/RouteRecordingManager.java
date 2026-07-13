@@ -203,6 +203,7 @@ public final class RouteRecordingManager {
         RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> {
             entity.setGravity(true);
             entity.setMaxSpeed((float) plugin.getConfigManager().getCartSpeed());
+            plugin.markAsManagedCart(entity);
             pendingRecordingCarts.add(entity.getUniqueId());
         });
         try {
