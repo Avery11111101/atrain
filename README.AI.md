@@ -68,3 +68,14 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 **修復摘要：**
 1. `BlockCoords.unpackX`：移除不必要的 `& 0x3FFFFFFL`，直接回傳 `(int) (packed >> 38)`。由於 `long` 在 `>> 38` 時會自動進行算術位移（Arithmetic Shift）保留負號，轉成 `int` 時即可正確還原負數 X 座標。
 2. `BlockCoords.unpackZ`：修改為 `((int) packed << 6) >> 6`。先擷取後段 32 bits，左移 6 bits 將資料推至頂端對齊 sign bit，再透過算術右移 `>> 6`，正確還原 Z 的負數值並過濾掉上方的 Y 座標資料。
+
+### 2026-07-13 — 升級過時 API 以相容 Paper 26.2 (1.26.2)
+
+**修改原因：**
+- 為了確保插件能在 Paper 26.2 上順利運作，排除了所有的「棄用 API 警告 (Deprecated API)」。
+- Paper 1.21+ 全面推行 Adventure API (`Component`)，舊版的字串介面標題與物品名稱已被標註為過時。
+
+**修復摘要：**
+1. **Inventory 介面標題**：將所有 `Bukkit.createInventory(holder, size, String)` 替換為 `Bukkit.createInventory(holder, size, TextUtil.component(String))`。
+2. **ItemMeta 物品名稱與 Lore**：將 `ItemBuilder` 內的 `setDisplayName` 和 `setLore` 替換為 `displayName(Component)` 與 `lore(List<Component>)`。
+3. **Plugin Meta**：將過時的 `getDescription().getVersion()` 替換為 26.2 建議的 `getPluginMeta().getVersion()`。

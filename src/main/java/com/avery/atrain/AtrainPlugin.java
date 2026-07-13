@@ -111,7 +111,7 @@ public final class AtrainPlugin extends JavaPlugin {
         hangRailTask = new HangRailTask(this, vehicleListener.getHangRailHandler());
         hangRailTask.start();
 
-        getLogger().info("atrain v" + getDescription().getVersion()
+        getLogger().info("atrain v" + getPluginMeta().getVersion()
                 + " 已啟用 — 站點導引:" + configManager.isCinematicTransitEnabled()
                 + " 列車控速:" + configManager.isTrainControlEnabled());
     }

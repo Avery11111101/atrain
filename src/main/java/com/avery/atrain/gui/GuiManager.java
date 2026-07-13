@@ -55,7 +55,7 @@ public class GuiManager {
 
     public void openMain(Player player) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.MAIN);
-        Inventory inv = Bukkit.createInventory(holder, 45, msg(player, "gui.main.title"));
+        Inventory inv = Bukkit.createInventory(holder, 45, TextUtil.component(msg(player, "gui.main.title")));
         holder.setInventory(inv);
 
         inv.setItem(10, new ItemBuilder(Material.BOOK)
@@ -109,7 +109,7 @@ public class GuiManager {
     public void openRecordSelect(Player player, int page) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.RECORD_SELECT);
         holder.set("page", String.valueOf(page));
-        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.record_select.title"));
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(msg(player, "gui.record_select.title")));
         holder.setInventory(inv);
 
         List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
@@ -175,7 +175,7 @@ public class GuiManager {
         holder.set("direction", dir.name());
         holder.set("seg_page", String.valueOf(Math.max(0, segPage)));
         Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.record_segment.title", safePh(Map.of("name", line.getDisplayName()))));
+                TextUtil.component(msg(player, "gui.record_segment.title", safePh(Map.of("name", line.getDisplayName())))));
         holder.setInventory(inv);
 
         var rm = plugin.getRouteRecordingManager();
@@ -277,7 +277,7 @@ public class GuiManager {
 
     public void openTutorial(Player player) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.TUTORIAL);
-        Inventory inv = Bukkit.createInventory(holder, 45, msg(player, "gui.tutorial.title"));
+        Inventory inv = Bukkit.createInventory(holder, 45, TextUtil.component(msg(player, "gui.tutorial.title")));
         holder.setInventory(inv);
 
         String[] cats = {"quickstart", "stop", "ride", "autostop", "speedblock", "hangrail"};
@@ -302,7 +302,7 @@ public class GuiManager {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.TUTORIAL_CATEGORY);
         holder.set("category", category);
         Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "tutorial." + category + ".title"));
+                TextUtil.component(msg(player, "tutorial." + category + ".title")));
         holder.setInventory(inv);
 
         List<String> steps = plugin.getLanguageManager().getList(player, "tutorial." + category + ".steps");
@@ -325,7 +325,7 @@ public class GuiManager {
     public void openStopList(Player player, int page) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.STOP_LIST);
         holder.set("page", String.valueOf(page));
-        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.stop_list.title"));
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(msg(player, "gui.stop_list.title")));
         holder.setInventory(inv);
 
         List<Stop> stops = new ArrayList<>(plugin.getStopManager().getAllStops());
@@ -369,7 +369,7 @@ public class GuiManager {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.STATION_EDIT);
         holder.set("stop_id", stopId);
         Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.station_edit.title", safePh(Map.of("name", stop.getDisplayName()))));
+                TextUtil.component(msg(player, "gui.station_edit.title", safePh(Map.of("name", stop.getDisplayName())))));
         holder.setInventory(inv);
 
         int dwellSec = stop.getDwellTimeTicks() / 20;
@@ -503,7 +503,7 @@ public class GuiManager {
 
     public void openLanguage(Player player) {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.LANGUAGE);
-        Inventory inv = Bukkit.createInventory(holder, 27, msg(player, "gui.language.title"));
+        Inventory inv = Bukkit.createInventory(holder, 27, TextUtil.component(msg(player, "gui.language.title")));
         holder.setInventory(inv);
 
         int slot = 10;
@@ -529,7 +529,7 @@ public class GuiManager {
         holder.set("target_id", targetId);
         holder.set("return_type", returnType);
         holder.set("return_id", returnId);
-        Inventory inv = Bukkit.createInventory(holder, 27, msg(player, "gui.confirm.title"));
+        Inventory inv = Bukkit.createInventory(holder, 27, TextUtil.component(msg(player, "gui.confirm.title")));
         holder.setInventory(inv);
 
         inv.setItem(11, new ItemBuilder(Material.LIME_WOOL)
@@ -557,7 +557,7 @@ public class GuiManager {
         holder.set("page", String.valueOf(page));
         if (returnStopId != null) holder.set("return_stop_id", returnStopId);
         if (pickReturnLineForStop != null) holder.set("pick_return_line", pickReturnLineForStop);
-        Inventory inv = Bukkit.createInventory(holder, 54, msg(player, "gui.line_list.title"));
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(msg(player, "gui.line_list.title")));
         holder.setInventory(inv);
 
         List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
@@ -612,7 +612,7 @@ public class GuiManager {
         holder.set("stop_page", String.valueOf(stopPage));
         if (returnStopId != null) holder.set("return_stop_id", returnStopId);
         Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.line_detail.title", safePh(Map.of("name", line.getDisplayName()))));
+                TextUtil.component(msg(player, "gui.line_detail.title", safePh(Map.of("name", line.getDisplayName())))));
         holder.setInventory(inv);
 
         inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
@@ -698,7 +698,7 @@ public class GuiManager {
         holder.set("line_id", lineId);
         holder.set("page", String.valueOf(page));
         Inventory inv = Bukkit.createInventory(holder, 54,
-                msg(player, "gui.add_stop.title", safePh(Map.of("line", line.getDisplayName()))));
+                TextUtil.component(msg(player, "gui.add_stop.title", safePh(Map.of("line", line.getDisplayName())))));
         holder.setInventory(inv);
 
         List<Stop> stops = new ArrayList<>(plugin.getStopManager().getAllStops());
@@ -765,12 +765,7 @@ public class GuiManager {
         GuiHolder holder = new GuiHolder(GuiHolder.Type.SPEED_BLOCK_EDIT);
         holder.set("block_key", blockKey);
         String title = msg(player, "gui.speed_block.title");
-        Inventory inv;
-        try {
-            inv = Bukkit.createInventory(holder, 45, TextUtil.component(title));
-        } catch (Exception e) {
-            inv = Bukkit.createInventory(holder, 45, title);
-        }
+        Inventory inv = Bukkit.createInventory(holder, 45, TextUtil.component(title));
         holder.setInventory(inv);
 
         String speedStr = String.format("%.2f", sb.getSpeed());

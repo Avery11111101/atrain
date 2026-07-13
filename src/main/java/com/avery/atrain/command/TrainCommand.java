@@ -99,7 +99,7 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendVersion(CommandSender sender, com.avery.atrain.i18n.LanguageManager lang) {
-        String ver = plugin.getDescription().getVersion();
+        String ver = plugin.getPluginMeta().getVersion();
         String msg = lang.getRaw(
                 sender instanceof Player p ? lang.getPlayerLanguage(p) : lang.getDefaultLanguage(),
                 "command.version");

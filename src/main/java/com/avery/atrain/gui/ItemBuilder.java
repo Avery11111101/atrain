@@ -43,8 +43,14 @@ public class ItemBuilder {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            if (name != null) meta.setDisplayName(name);
-            if (!lore.isEmpty()) meta.setLore(lore);
+            if (name != null) meta.displayName(com.avery.atrain.util.TextUtil.component(name));
+            if (!lore.isEmpty()) {
+                List<net.kyori.adventure.text.Component> cLore = new ArrayList<>();
+                for (String l : lore) {
+                    cLore.add(com.avery.atrain.util.TextUtil.component(l));
+                }
+                meta.lore(cLore);
+            }
             if (customModelData >= 0) meta.setCustomModelData(customModelData);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             item.setItemMeta(meta);
