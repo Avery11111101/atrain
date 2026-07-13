@@ -115,9 +115,16 @@ public class LineManager {
         if (idx < 0) return false;
         int newIdx = idx + delta;
         if (newIdx < 0 || newIdx >= ids.size()) return false;
+        
+        boolean hasSegments = line.getForwardRouteSegments().size() > 0;
+        if (hasSegments) {
+            plugin.getServer().broadcast("§e⚠️ 站點順序已變更，該路線的錄製軌跡已被清空，請重新錄製！", "atrain.admin");
+        }
+        
         String item = ids.remove(idx);
         ids.add(newIdx, item);
         line.clearAllSegments();
+        
         plugin.getDataStore().save();
         return true;
     }

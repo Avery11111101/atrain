@@ -142,9 +142,9 @@ public class TrainController {
     /** 找出包含指定礦車的連結群組（重用 groupCarts，供上車發車時整列標記） */
     private List<RideableMinecart> groupContaining(RideableMinecart seed) {
         List<RideableMinecart> onRail = new ArrayList<>();
-        for (RideableMinecart c : seed.getWorld().getEntitiesByClass(RideableMinecart.class)) {
+        for (RideableMinecart c : plugin.activeManagedCarts) {
             if (!c.isValid() || c.isDead()) continue;
-            if (!plugin.isManagedCart(c)) continue;
+            if (!c.getWorld().equals(seed.getWorld())) continue;
             if (TrainTaskRegistry.get(c) != null) continue;
             if (RailUtil.isOnRail(c.getLocation())) onRail.add(c);
         }
@@ -174,19 +174,16 @@ public class TrainController {
 
         List<RideableMinecart> onRail = new ArrayList<>();
         Set<UUID> alive = new HashSet<>();
-        for (World world : Bukkit.getWorlds()) {
-            for (RideableMinecart cart : world.getEntitiesByClass(RideableMinecart.class)) {
-                if (!cart.isValid() || cart.isDead()) continue;
-                if (!plugin.isManagedCart(cart)) continue;
-                alive.add(cart.getUniqueId());
-                // 路線導引系統管理中的礦車不由本控制器接管，避免搶控
-                if (com.avery.atrain.train.TrainTaskRegistry.get(cart) != null) continue;
-                if (plugin.getCinematicTransitManager() != null
-                        && plugin.getCinematicTransitManager().isManaged(cart)) continue;
-                if (plugin.getRouteRecordingManager() != null
-                        && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) continue;
-                if (RailUtil.isOnRail(cart.getLocation())) onRail.add(cart);
-            }
+        for (RideableMinecart cart : plugin.activeManagedCarts) {
+            if (!cart.isValid() || cart.isDead()) continue;
+            alive.add(cart.getUniqueId());
+            // 路線導引系統管理中的礦車不由本控制器接管，避免搶控
+            if (com.avery.atrain.train.TrainTaskRegistry.get(cart) != null) continue;
+            if (plugin.getCinematicTransitManager() != null
+                    && plugin.getCinematicTransitManager().isManaged(cart)) continue;
+            if (plugin.getRouteRecordingManager() != null
+                    && plugin.getRouteRecordingManager().isRecordingCart(cart.getUniqueId())) continue;
+            if (RailUtil.isOnRail(cart.getLocation())) onRail.add(cart);
         }
 
         dwellUntil.keySet().retainAll(alive);

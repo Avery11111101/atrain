@@ -184,16 +184,23 @@ public class StopManager {
             String otherId = other.getId();
             plugin.getDataStore().getStops().remove(otherId);
             for (Line line : plugin.getLineManager().getAllLines()) {
+                boolean lineModified = false;
                 List<String> ids = line.getStopIds();
                 for (int j = 0; j < ids.size(); j++) {
                     if (otherId.equals(ids.get(j))) {
                         ids.set(j, primary.getId());
+                        lineModified = true;
                     }
                 }
                 for (int j = ids.size() - 1; j > 0; j--) {
                     if (ids.get(j).equals(ids.get(j - 1))) {
                         ids.remove(j);
+                        lineModified = true;
                     }
+                }
+                if (lineModified) {
+                    line.clearAllSegments();
+                    org.bukkit.Bukkit.broadcast("§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 的軌段索引變更，所有錄製軌段已清空！", "atrain.admin");
                 }
             }
         }
@@ -490,16 +497,23 @@ public class StopManager {
         String otherId = other.getId();
         plugin.getDataStore().getStops().remove(otherId);
         for (Line line : plugin.getLineManager().getAllLines()) {
+            boolean lineModified = false;
             List<String> ids = line.getStopIds();
             for (int j = 0; j < ids.size(); j++) {
                 if (otherId.equals(ids.get(j))) {
                     ids.set(j, primary.getId());
+                    lineModified = true;
                 }
             }
             for (int j = ids.size() - 1; j > 0; j--) {
                 if (ids.get(j).equals(ids.get(j - 1))) {
                     ids.remove(j);
+                    lineModified = true;
                 }
+            }
+            if (lineModified) {
+                line.clearAllSegments();
+                org.bukkit.Bukkit.broadcast("§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 的軌段索引變更，所有錄製軌段已清空！", "atrain.admin");
             }
         }
     }

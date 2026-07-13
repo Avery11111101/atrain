@@ -34,6 +34,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.HashSet;
+import java.util.Set;
+import org.bukkit.entity.minecart.RideableMinecart;
+
 public final class AtrainPlugin extends JavaPlugin {
 
     private static AtrainPlugin instance;
@@ -57,6 +61,8 @@ public final class AtrainPlugin extends JavaPlugin {
     private HangRailTask hangRailTask;
 
     private NamespacedKey managedCartKey;
+
+    public final Set<RideableMinecart> activeManagedCarts = new HashSet<>();
 
     @Override
     public void onEnable() {
@@ -120,6 +126,12 @@ public final class AtrainPlugin extends JavaPlugin {
         getLogger().info("atrain v" + getPluginMeta().getVersion()
                 + " 已啟用 — 站點導引:" + configManager.isCinematicTransitEnabled()
                 + " 列車控速:" + configManager.isTrainControlEnabled());
+
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (RideableMinecart cart : world.getEntitiesByClass(RideableMinecart.class)) {
+                if (isManagedCart(cart)) activeManagedCarts.add(cart);
+            }
+        }
     }
 
     @Override
@@ -163,8 +175,11 @@ public final class AtrainPlugin extends JavaPlugin {
         speedBlockManager.load();
         stopManager.rebuildSpatialIndex();
         for (Player player : Bukkit.getOnlinePlayers()) {
-            TextUtil.send(player, languageManager.get(player, "plugin.reload"));
+            if (player.hasPermission("atrain.admin")) {
+                TextUtil.send(player, languageManager.get(player, "plugin.reload"));
+            }
         }
+        Bukkit.getConsoleSender().sendMessage(TextUtil.colorize(languageManager.getRaw(languageManager.getDefaultLanguage(), "plugin.reload")));
     }
 
     public static AtrainPlugin getInstance() { return instance; }
@@ -189,6 +204,9 @@ public final class AtrainPlugin extends JavaPlugin {
     public void markAsManagedCart(Minecart cart) {
         if (cart == null) return;
         cart.getPersistentDataContainer().set(managedCartKey, PersistentDataType.BYTE, (byte) 1);
+        if (cart instanceof RideableMinecart rc) {
+            activeManagedCarts.add(rc);
+        }
     }
 
     public boolean isManagedCart(Minecart cart) {

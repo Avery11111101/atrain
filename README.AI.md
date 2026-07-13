@@ -100,3 +100,19 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 3. **過濾非專屬礦車**：在 `HangRailTask`、`StationAutoStopListener`、`EmptyCartListener` 與 `VehicleListener` 中新增安全檢查 `if (!plugin.isManagedCart(cart)) return;`，將未打標的礦車排除在插件影響之外，保留原版機制。
 4. **修復玩家右鍵攔截**：修改 `PlayerInteractListener`，若玩家手持礦車對站點鐵軌右鍵時，不再攔截並替換為插件礦車，而是讓原版遊戲正常放置普通礦車。
 5. **修復全域列車接管**：修改 `TrainController.tick()`，原本它會無差別掃描全世界所有在鐵軌上的礦車並強迫套用巡航速度，現已補上 `!plugin.isManagedCart(cart)` 過濾，徹底解除對原版礦車的物理引擎干涉。
+
+### 2026-07-14 — 多代理自動修復與 UX 優化 (Finder/Fixer/Verifier)
+
+**修改原因：**
+- 啟動全域掃描尋找潛在的邏輯與使用者體驗 (UX) 問題。
+- 發現包含軌段無預警清空、合併站點崩潰、全域掃描效能低落、GUI 同步存檔卡頓，以及重載廣播過度擾民等五大問題。
+
+**修復摘要：**
+1. **LineManager 站點排序**：在變更站點順序時，加回 `clearAllSegments()` 確保邏輯安全，並新增管理員警告廣播，避免使用者不知情下軌跡被清空。
+2. **StopManager 站點合併**：若站點合併導致路線陣列改變，同步清空該路線的錄製軌跡並廣播，防止舊軌跡對應到錯誤索引造成崩潰。
+3. **TrainController 效能最佳化**：建立 `AtrainPlugin.activeManagedCarts` 快取清單並由 `VehicleListener` 事件維護。取代了每 Tick 的全域實體掃描，大幅降低 TPS 負載。
+4. **GUI 存檔線程安全**：將站點/路線設定的 `plugin.getDataStore().save()` 還原為主執行緒同步執行，解決了封裝在非同步執行時可能引發的 `ConcurrentModificationException` 與存檔損壞風險。
+5. **重載廣播優化**：`/train reload` 的成功訊息改為只發送給擁有 `atrain.admin` 權限的在線玩家以及後台 Console，減少對一般玩家的打擾。
+
+**驗證：**
+經過兩輪獨立子代理 (Verifier 1 & Verifier 2) 雙重覆核，已確認所有修改邏輯正確、無 NPE 或 CME 風險。版本升級為 1.5.5。

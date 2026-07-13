@@ -29,6 +29,43 @@ public class VehicleListener implements Listener {
         if (plugin.getCinematicTransitManager() != null) {
             plugin.getCinematicTransitManager().cancelCart(cart.getUniqueId());
         }
+        if (cart instanceof org.bukkit.entity.minecart.RideableMinecart rc) {
+            plugin.activeManagedCarts.remove(rc);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntitySpawn(org.bukkit.event.entity.EntitySpawnEvent event) {
+        if (event.getEntity() instanceof org.bukkit.entity.minecart.RideableMinecart cart) {
+            if (plugin.isManagedCart(cart)) {
+                plugin.activeManagedCarts.add(cart);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityDeath(org.bukkit.event.entity.EntityDeathEvent event) {
+        if (event.getEntity() instanceof org.bukkit.entity.minecart.RideableMinecart cart) {
+            plugin.activeManagedCarts.remove(cart);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof org.bukkit.entity.minecart.RideableMinecart cart && plugin.isManagedCart(cart)) {
+                plugin.activeManagedCarts.add(cart);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChunkUnload(org.bukkit.event.world.ChunkUnloadEvent event) {
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof org.bukkit.entity.minecart.RideableMinecart cart) {
+                plugin.activeManagedCarts.remove(cart);
+            }
+        }
     }
 
     // 懸浮軌道改由 HangRailTask 每 tick 主動吊住（見 HangRailTask），
