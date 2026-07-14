@@ -49,15 +49,21 @@ public class LineManager {
         boolean wasInLine = line.getStopIds().contains(stopId);
         int sizeAfterRemove = line.getStopIds().size();
         if (wasInLine) sizeAfterRemove--;
-        line.getStopIds().remove(stopId);
+        
+        List<String> newStopIds = new ArrayList<>(line.getStopIds());
+        newStopIds.remove(stopId);
+        
         boolean appendOnly = !wasInLine && (index < 0 || index >= sizeAfterRemove);
-        if (index < 0 || index >= line.getStopIds().size()) {
-            line.getStopIds().add(stopId);
+        if (index < 0 || index >= newStopIds.size()) {
+            newStopIds.add(stopId);
         } else {
-            line.getStopIds().add(index, stopId);
+            newStopIds.add(index, stopId);
         }
-        if (!appendOnly) {
-            line.clearAllSegments();
+        
+        if (appendOnly) {
+            line.setStopIds(newStopIds);
+        } else {
+            line.updateStopsAndPreserveSegments(newStopIds);
         }
         var stop = plugin.getStopManager().getStop(stopId);
         if (stop != null && !stop.getLineIds().contains(lineId)) {
@@ -69,8 +75,9 @@ public class LineManager {
     public void removeStopFromLine(String lineId, String stopId) {
         Line line = getLine(lineId);
         if (line == null) return;
-        line.getStopIds().remove(stopId);
-        line.clearAllSegments();
+        List<String> newStopIds = new ArrayList<>(line.getStopIds());
+        newStopIds.remove(stopId);
+        line.updateStopsAndPreserveSegments(newStopIds);
         var stop = plugin.getStopManager().getStop(stopId);
         if (stop != null) {
             stop.getLineIds().remove(lineId);
@@ -110,20 +117,26 @@ public class LineManager {
     public boolean moveStopInLine(String lineId, String stopId, int delta) {
         Line line = getLine(lineId);
         if (line == null) return false;
-        List<String> ids = line.getStopIds();
+        List<String> ids = new ArrayList<>(line.getStopIds());
         int idx = ids.indexOf(stopId);
         if (idx < 0) return false;
         int newIdx = idx + delta;
         if (newIdx < 0 || newIdx >= ids.size()) return false;
         
-        boolean hasSegments = line.getForwardRouteSegments().size() > 0;
-        if (hasSegments) {
-            plugin.getServer().broadcast("§e⚠️ 站點順序已變更，該路線的錄製軌跡已被清空，請重新錄製！", "atrain.admin");
-        }
-        
         String item = ids.remove(idx);
         ids.add(newIdx, item);
-        line.clearAllSegments();
+        
+        boolean hadSegments = line.getForwardRouteSegments().size() > 0;
+        line.updateStopsAndPreserveSegments(ids);
+        boolean hasSegmentsAfter = line.getForwardRouteSegments().size() > 0;
+        
+        if (hadSegments) {
+            if (hasSegmentsAfter) {
+                plugin.getServer().broadcast("§a✔ 站點順序已變更，相鄰未變的軌跡段落已自動保留！", "atrain.admin");
+            } else {
+                plugin.getServer().broadcast("§e⚠️ 站點順序已變更，受影響的相鄰軌跡已被清空，請重新錄製！", "atrain.admin");
+            }
+        }
         
         plugin.getDataStore().save();
         return true;

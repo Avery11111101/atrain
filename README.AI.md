@@ -151,3 +151,20 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 3. **資料變更即時更新**：
    - 為了確保使用者修改站點與路線時，地圖能無縫同步，在 `DataStore.save()` 方法中加入了 `plugin.getBlueMapManager().updateMap()`。
    - 因為 GUI 存檔與錄製完畢存檔時都會呼叫 `DataStore.save()`，所以自動能涵蓋所有觸發情境。
+
+### 2026-07-14 — 路線軌跡智能保留功能 (Smart Segment Preservation)
+
+**修改原因：**
+- Avery 回報在路線管理介面中，只要一編輯站點順序（例如上移、下移或新增移除站點），該路線所有辛辛苦苦錄製好的軌跡就會全部不見。
+- 原先的設計是為了防止順序變動後，原本綁定數字索引 (e.g. 第 0 段、第 1 段) 的軌跡，會對應到錯誤的新站點組合上（可能導致火車飛天遁地或出軌），所以使用了 `clearAllSegments()` 暴力清空整條路線的軌跡。
+
+**修復摘要：**
+1. **智能軌跡對比與保留 (`Line.java`)**：
+   - 新增 `updateStopsAndPreserveSegments(newStopIds)` 方法。
+   - 在真正套用新的站點陣列前，先以字串對射的方式 `(fromStopId -> toStopId)` 緩存所有舊有的去程與回程軌跡。
+   - 套用新站點順序後，重新遍歷新相鄰的站點對，如果發現新相鄰的兩個站在舊資料中也有一模一樣相連的軌跡，就把那段軌跡保留下來並轉移到新的索引位子。
+   - 只有因為順序調換而「不再相鄰」的斷鏈軌跡兩端才會被清除。
+2. **替換全域的清空呼叫 (`LineManager.java` & `StopManager.java`)**：
+   - 在 `LineManager` 裡的 `addStopToLine`, `removeStopFromLine`, `moveStopInLine` 全面廢除 `clearAllSegments()`。
+   - 新增動態廣播機制，如果有段落被成功保留，則廣播 `§a✔ 站點順序已變更，相鄰未變的軌跡段落已自動保留！`；如果整條斷光光才會廣播黃字警告。
+   - 同步修正 `StopManager` 在進行站點合併 (`mergeStopsInto`, `absorbStopAsReturnPlatform`) 時，一併套用智能保留邏輯，最小化資料遺失。

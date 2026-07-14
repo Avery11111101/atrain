@@ -1,6 +1,7 @@
 package com.avery.atrain.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -142,6 +143,58 @@ public class Line {
         forwardRouteSegments.clear();
         reverseRouteSegments.clear();
         routePoints.clear();
+    }
+
+    /** 站點順序變更時，只清除不再相連的軌跡，並保留仍然相連的軌跡 */
+    public void updateStopsAndPreserveSegments(List<String> newStopIds) {
+        Map<String, List<RoutePoint>> oldForward = new HashMap<>();
+        Map<String, List<RoutePoint>> oldReverse = new HashMap<>();
+
+        for (int i = 0; i < getSegmentCount(); i++) {
+            String from = getSegmentFromStopId(i, TravelDirection.FORWARD);
+            String to = getSegmentToStopId(i, TravelDirection.FORWARD);
+            if (from != null && to != null && forwardRouteSegments.containsKey(i)) {
+                oldForward.put(from + "->" + to, forwardRouteSegments.get(i));
+            }
+        }
+
+        for (int i = 0; i < getSegmentCount(); i++) {
+            String from = getSegmentFromStopId(i, TravelDirection.REVERSE);
+            String to = getSegmentToStopId(i, TravelDirection.REVERSE);
+            if (from != null && to != null && reverseRouteSegments.containsKey(i)) {
+                oldReverse.put(from + "->" + to, reverseRouteSegments.get(i));
+            }
+        }
+
+        this.stopIds = new ArrayList<>(newStopIds);
+
+        Map<Integer, List<RoutePoint>> newForward = new LinkedHashMap<>();
+        for (int i = 0; i < getSegmentCount(); i++) {
+            String from = getSegmentFromStopId(i, TravelDirection.FORWARD);
+            String to = getSegmentToStopId(i, TravelDirection.FORWARD);
+            if (from != null && to != null) {
+                String key = from + "->" + to;
+                if (oldForward.containsKey(key)) {
+                    newForward.put(i, oldForward.get(key));
+                }
+            }
+        }
+
+        Map<Integer, List<RoutePoint>> newReverse = new LinkedHashMap<>();
+        for (int i = 0; i < getSegmentCount(); i++) {
+            String from = getSegmentFromStopId(i, TravelDirection.REVERSE);
+            String to = getSegmentToStopId(i, TravelDirection.REVERSE);
+            if (from != null && to != null) {
+                String key = from + "->" + to;
+                if (oldReverse.containsKey(key)) {
+                    newReverse.put(i, oldReverse.get(key));
+                }
+            }
+        }
+
+        this.forwardRouteSegments = newForward;
+        this.reverseRouteSegments = newReverse;
+        rebuildRoutePoints();
     }
 
     public int findSegmentIndex(String fromStopId, String toStopId) {
