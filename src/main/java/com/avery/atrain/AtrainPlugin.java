@@ -24,6 +24,7 @@ import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
 import com.avery.atrain.manager.SpeedBlockManager;
 import com.avery.atrain.manager.StopManager;
+import com.avery.atrain.map.BlueMapManager;
 import com.avery.atrain.train.TrainController;
 import com.avery.atrain.train.TrainTaskRegistry;
 import com.avery.atrain.util.TextUtil;
@@ -59,6 +60,7 @@ public final class AtrainPlugin extends JavaPlugin {
     private CinematicTransitManager cinematicTransitManager;
     private RouteRecordingManager routeRecordingManager;
     private HangRailTask hangRailTask;
+    private BlueMapManager blueMapManager;
 
     private NamespacedKey managedCartKey;
 
@@ -132,6 +134,8 @@ public final class AtrainPlugin extends JavaPlugin {
                 if (isManagedCart(cart)) activeManagedCarts.add(cart);
             }
         }
+        
+        blueMapManager = new BlueMapManager(this);
     }
 
     @Override
@@ -153,6 +157,7 @@ public final class AtrainPlugin extends JavaPlugin {
         TrainTaskRegistry.cancelAllTasks();
         dataStore.save();
         if (speedBlockManager != null) speedBlockManager.save();
+        if (blueMapManager != null) blueMapManager.disable();
         getLogger().info("atrain 已停用");
     }
 
@@ -179,6 +184,7 @@ public final class AtrainPlugin extends JavaPlugin {
                 TextUtil.send(player, languageManager.get(player, "plugin.reload"));
             }
         }
+        if (blueMapManager != null) blueMapManager.updateMap();
         Bukkit.getConsoleSender().sendMessage(TextUtil.colorize(languageManager.getRaw(languageManager.getDefaultLanguage(), "plugin.reload")));
     }
 
@@ -198,6 +204,7 @@ public final class AtrainPlugin extends JavaPlugin {
     public TrainController getTrainController() { return trainController; }
     public CinematicTransitManager getCinematicTransitManager() { return cinematicTransitManager; }
     public RouteRecordingManager getRouteRecordingManager() { return routeRecordingManager; }
+    public BlueMapManager getBlueMapManager() { return blueMapManager; }
 
     public NamespacedKey getManagedCartKey() { return managedCartKey; }
 

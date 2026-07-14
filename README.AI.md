@@ -135,4 +135,19 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
    - `RouteRecordingManager.java`：新增 `autoRecordSegment`，自動呼叫 `RailPathSampler.betweenStops` 循著實際鐵軌方塊執行 BFS 取徑，並直接寫入記憶體與存檔，達到瞬間完成免跑礦車。
 4. **管理員訊息刪除**：在 `StationEdit` 介面中，右鍵點擊管理員訊息的圖示 (Slot 38) 即可快速清空該站的管理員訊息。
 5. **動態重點站去回程顯示 (移至聊天欄)**：將原本擠在 ActionBar 的重點站轉乘資訊移除，改為在玩家「即將進站 (Approaching)」時，發送至聊天欄。顯示格式為 `本站可轉乘 {路線名稱}線`，下一行動態顯示 `➔ {重點站名} (去) => {下一站} / (回) => {上一站}`，若是終點站則只會顯示單向。
-6. **編譯錯誤與語系修復**：修正相關類別呼叫舊版 `getKeyStation()` 產生的編譯錯誤，並在 `zh_TW.yml` 補齊所有新增的 GUI 顯示文字與 lore 說明。維持外掛版本號不變。
+
+### 2026-07-14 — 整合 BlueMap 地圖顯示與版本升級 1.6.0
+
+**修改原因：**
+- Avery 要求將錄製好的軌跡路線及站點都在線上地圖中標記並畫出路線。
+- 由於使用的是 BlueMap，因此需要導入 BlueMap API。
+
+**修復摘要：**
+1. **依賴與版本更新**：修改 `build.gradle.kts`，加入 `de.bluecolored:bluemap-api:2.7.3` 依賴並更新插件版本號至 `1.6.0`。修改 `plugin.yml` 加上 `softdepend: [BlueMap]`。
+2. **新增 `BlueMapManager`**：
+   - 使用 BlueMap API 繪製地圖標記，並在各世界的 `BlueMapMap` 中建立 `atrain` MarkerSet。
+   - 遍歷所有 `Stop`，使用 `POIMarker` 在月台金磚位置建立站點標記。
+   - 遍歷所有 `Line`，抓取 `RoutePoint` 軌跡列表，以 `LineMarker` 繪製 3D 軌跡線條，並根據路線的聊天顏色 (`§a`, `§c` 等) 解析出對應的 RGB 顏色畫線。
+3. **資料變更即時更新**：
+   - 為了確保使用者修改站點與路線時，地圖能無縫同步，在 `DataStore.save()` 方法中加入了 `plugin.getBlueMapManager().updateMap()`。
+   - 因為 GUI 存檔與錄製完畢存檔時都會呼叫 `DataStore.save()`，所以自動能涵蓋所有觸發情境。

@@ -117,6 +117,9 @@ public class DataStore {
     public void save() {
         saveLines();
         saveStops();
+        if (plugin.getBlueMapManager() != null) {
+            plugin.getBlueMapManager().updateMap();
+        }
     }
 
     private void saveLines() {

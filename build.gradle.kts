@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "1.5.5"
+version = "1.6.0"
 
 java {
     toolchain {
@@ -15,10 +15,12 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.bluecolored.de/releases")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("de.bluecolored:bluemap-api:2.7.3")
 }
 
 tasks.processResources {

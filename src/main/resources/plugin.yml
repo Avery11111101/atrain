@@ -2,6 +2,7 @@ name: atrain
 version: '${version}'
 main: com.avery.atrain.AtrainPlugin
 api-version: '1.21'
+softdepend: [BlueMap]
 authors: [Avery]
 description: 金磚站點資訊顯示（零指令、蹲下右鍵操作）
 
