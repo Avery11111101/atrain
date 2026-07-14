@@ -111,11 +111,7 @@ public class StationDisplayListener implements Listener {
         StringBuilder text = new StringBuilder(lang.get(player, displayKey, placeholders));
 
         if (stop.hasKeyInfo()) {
-            java.util.List<String> ksNames = new java.util.ArrayList<>();
-            for (String kid : stop.getKeyStations()) {
-                Stop ks = plugin.getStopManager().getStop(kid);
-                ksNames.add(ks != null ? ks.getDisplayName() : kid);
-            }
+            java.util.List<String> ksNames = plugin.getStopManager().getKeyStationDisplayNames(stop);
             String ksLore = ksNames.isEmpty() ? "-" : String.join(", ", ksNames);
             text.append(" §8| ").append(lang.get(player, "station.key_info", Map.of(
                     "station", TextUtil.escapePlain(ksLore),

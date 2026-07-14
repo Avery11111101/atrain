@@ -416,6 +416,32 @@ public class StopManager {
         return hasDisplayNext(stop, null);
     }
 
+    public List<String> getKeyStationDisplayNames(Stop stop) {
+        List<String> ksNames = new ArrayList<>();
+        for (String kid : stop.getKeyStations()) {
+            Stop ks = getStop(kid);
+            if (ks == null) {
+                ksNames.add(kid);
+                continue;
+            }
+            String ksNext = resolveDisplayNext(ks);
+            String ksPrev = resolveDisplayPrev(ks);
+            boolean hasNext = ksNext != null && !ksNext.isBlank() && !"-".equals(ksNext);
+            boolean hasPrev = ksPrev != null && !ksPrev.isBlank() && !"-".equals(ksPrev);
+
+            if (hasNext && hasPrev) {
+                ksNames.add(ks.getDisplayName() + " ➔ " + ksNext + "(去) / " + ksPrev + "(回)");
+            } else if (hasNext) {
+                ksNames.add(ks.getDisplayName() + " ➔ " + ksNext + "(去)");
+            } else if (hasPrev) {
+                ksNames.add(ks.getDisplayName() + " ➔ " + ksPrev + "(回)");
+            } else {
+                ksNames.add(ks.getDisplayName());
+            }
+        }
+        return ksNames;
+    }
+
     /**
      * 判斷是否需要在回程月台反向顯示上下站。
      * 同線反向（含 returnLineId 指向去程同一條路線）需對調；僅獨立回程路線（不同 lineId）時沿用該線站序。

@@ -211,6 +211,7 @@ public class TrainMovementTask implements Listener {
         if (p != null) {
             TextUtil.send(p, session.getPlugin().getLanguageManager().get(p, "ride.approaching",
                     Map.of("stop", stop.getDisplayName())));
+            sendTransferInfo(p, stop);
         }
     }
 
@@ -219,6 +220,37 @@ public class TrainMovementTask implements Listener {
         if (p != null) {
             TextUtil.send(p, session.getPlugin().getLanguageManager().get(p, "ride.arrived",
                     Map.of("stop", stop.getDisplayName())));
+            // sendTransferInfo is already sent in notifyApproaching, so we don't repeat it here,
+            // or we can send it here. The user said "顯示給該玩家", doing it once is enough.
+            // Let's just keep it in approaching to give them time to read before they get off.
+        }
+    }
+
+    private void sendTransferInfo(Player p, Stop stop) {
+        if (stop.getKeyStations().isEmpty()) return;
+        for (String kid : stop.getKeyStations()) {
+            Stop ks = session.getPlugin().getStopManager().getStop(kid);
+            if (ks != null) {
+                com.avery.atrain.model.Line ksLine = session.getPlugin().getStopManager().resolveDisplayLine(ks, null);
+                String lineName = ksLine != null ? ksLine.getDisplayName() : "未知";
+                String ksNext = session.getPlugin().getStopManager().resolveDisplayNext(ks);
+                String ksPrev = session.getPlugin().getStopManager().resolveDisplayPrev(ks);
+                boolean hasNext = ksNext != null && !ksNext.isBlank() && !"-".equals(ksNext);
+                boolean hasPrev = ksPrev != null && !ksPrev.isBlank() && !"-".equals(ksPrev);
+
+                TextUtil.send(p, "§6本站可轉乘 §e" + lineName + " §6線");
+                StringBuilder sb = new StringBuilder("§7 ➔ §b" + ks.getDisplayName() + " §f");
+                if (hasNext && hasPrev) {
+                    sb.append("§a(去) => ").append(ksNext).append(" §f/ §c(回) => ").append(ksPrev);
+                } else if (hasNext) {
+                    sb.append("§a(去) => ").append(ksNext);
+                } else if (hasPrev) {
+                    sb.append("§c(回) => ").append(ksPrev);
+                } else {
+                    sb.append("§8(終點站)");
+                }
+                TextUtil.send(p, sb.toString());
+            }
         }
     }
 

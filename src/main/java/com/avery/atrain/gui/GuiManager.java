@@ -494,11 +494,7 @@ public class GuiManager {
             lore.add(msg(player, "gui.stop_list.dwell", Map.of("sec", String.valueOf(stop.getDwellTimeTicks() / 20))));
         }
         if (stop.hasKeyInfo()) {
-            List<String> ksNames = new ArrayList<>();
-            for (String kid : stop.getKeyStations()) {
-                Stop ks = plugin.getStopManager().getStop(kid);
-                ksNames.add(ks != null ? ks.getDisplayName() : kid);
-            }
+            List<String> ksNames = plugin.getStopManager().getKeyStationDisplayNames(stop);
             lore.add(msg(player, "gui.stop_list.key_info", Map.of(
                     "station", ksNames.isEmpty() ? "-" : String.join(", ", ksNames),
                     "direction", stop.getKeyDirection())));
