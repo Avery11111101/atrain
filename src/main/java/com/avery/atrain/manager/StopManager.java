@@ -495,27 +495,36 @@ public class StopManager {
         return null;
     }
 
+    public enum BindResult {
+        SUCCESS,
+        GOLD_NOT_FOUND,
+        DIFFERENT_WORLD,
+        NO_CONNECTED_GOLD,
+        OVERLAP_FORWARD,
+        SAME_STOP
+    }
+
     /** 將另一組金磚月台綁定為此站點的回程月台 */
-    public boolean bindReturnPlatform(String primaryId, Block clicked) {
+    public BindResult bindReturnPlatform(String primaryId, Block clicked) {
         Stop primary = getStop(primaryId);
         Block gold = StationUtil.resolveGoldBlock(clicked);
-        if (primary == null || gold == null) return false;
-        if (!gold.getWorld().getName().equals(primary.getWorld())) return false;
+        if (primary == null || gold == null) return BindResult.GOLD_NOT_FOUND;
+        if (!gold.getWorld().getName().equals(primary.getWorld())) return BindResult.DIFFERENT_WORLD;
 
         Set<String> scanned = StationUtil.scanConnectedGoldPlatform(gold);
-        if (scanned.isEmpty()) return false;
+        if (scanned.isEmpty()) return BindResult.NO_CONNECTED_GOLD;
 
         for (String k : scanned) {
             int[] p = Stop.parseKey(k);
             if (p != null
                     && primary.hasGoldBlock(p[0], p[1], p[2])
                     && !primary.hasReturnGoldBlock(p[0], p[1], p[2])) {
-                return false;
+                return BindResult.OVERLAP_FORWARD;
             }
         }
 
         Stop other = findStopOwningGold(gold);
-        if (other != null && other.getId().equals(primaryId)) return false;
+        if (other != null && other.getId().equals(primaryId)) return BindResult.SAME_STOP;
 
         if (other != null) {
             absorbStopAsReturnPlatform(primary, other, scanned);
@@ -524,7 +533,7 @@ public class StopManager {
         }
         plugin.getDataStore().save();
         rebuildSpatialIndex();
-        return true;
+        return BindResult.SUCCESS;
     }
 
     private void attachReturnGoldBlocks(Stop stop, Set<String> goldKeys) {

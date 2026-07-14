@@ -133,8 +133,16 @@ public final class StationUtil {
             String key = com.avery.atrain.model.Stop.key(b.getX(), b.getY(), b.getZ());
             if (!visited.add(key)) continue;
             if (!isGoldBlock(b.getType())) continue;
-            Block rail = b.getRelative(BlockFace.UP);
-            if (!isAnyRail(rail.getType())) continue;
+            boolean hasRail = false;
+            Block above = b;
+            for (int d = 1; d <= 4; d++) {
+                above = above.getRelative(BlockFace.UP);
+                if (isAnyRail(above.getType())) {
+                    hasRail = true;
+                    break;
+                }
+            }
+            if (!hasRail) continue;
             result.add(key);
             for (BlockFace face : new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST}) {
                 queue.add(b.getRelative(face));

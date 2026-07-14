@@ -2,6 +2,7 @@ package com.avery.atrain.listener;
 
 import com.avery.atrain.AtrainPlugin;
 import com.avery.atrain.model.Stop;
+import com.avery.atrain.manager.StopManager.BindResult;
 import com.avery.atrain.util.SpeedBlockInteract;
 import com.avery.atrain.util.StationUtil;
 import com.avery.atrain.util.TextUtil;
@@ -109,12 +110,20 @@ public class PlayerInteractListener implements Listener {
         if (bindMgr.isBinding(player)) {
             String targetId = bindMgr.getBindTarget(player);
             bindMgr.clear(player);
-            if (targetId != null && plugin.getStopManager().bindReturnPlatform(targetId, block)) {
-                TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bound",
-                        Map.of("id", targetId)));
-                plugin.getGuiManager().openStationEdit(player, targetId);
-            } else {
-                TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_failed"));
+            if (targetId != null) {
+                BindResult res = plugin.getStopManager().bindReturnPlatform(targetId, block);
+                switch (res) {
+                    case SUCCESS -> {
+                        TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bound",
+                                Map.of("id", targetId)));
+                        plugin.getGuiManager().openStationEdit(player, targetId);
+                    }
+                    case GOLD_NOT_FOUND -> TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_fail_gold"));
+                    case DIFFERENT_WORLD -> TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_fail_world"));
+                    case NO_CONNECTED_GOLD -> TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_fail_no_gold"));
+                    case OVERLAP_FORWARD -> TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_fail_overlap"));
+                    case SAME_STOP -> TextUtil.send(player, plugin.getLanguageManager().get(player, "stop.return_bind_fail_same"));
+                }
             }
             return;
         }
