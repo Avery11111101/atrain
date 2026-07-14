@@ -132,7 +132,7 @@ public final class RouteRecordingManager {
         String dirKey = dir == TravelDirection.REVERSE ? "route.direction_reverse" : "route.direction_forward";
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_start",
                 Map.of("line", line.getFormattedName(),
-                        "count", String.valueOf(line.getRecordedSegmentCount(dir)),
+                        "count", String.valueOf(plugin.getRouteManager().getRecordedSegmentCount(line, dir)),
                         "dir", plugin.getLanguageManager().get(player, dirKey))));
         TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_spawn_hint",
                 Map.of("sec", String.valueOf(plugin.getConfigManager().getRecordingDwellTicks() / 20))));
@@ -201,8 +201,7 @@ public final class RouteRecordingManager {
                     for (Location loc : path) {
                         points.add(new com.avery.atrain.model.RoutePoint(loc));
                     }
-                    line.setSegmentPoints(segmentIndex, dir, points);
-                    plugin.getDataStore().save();
+                    plugin.getRouteManager().saveRoute(fromStop, toStop, points);
                     TextUtil.send(player, "§a自動取徑成功！儲存了 " + points.size() + " 個軌跡點。");
                 } else {
                     TextUtil.send(player, "§c自動取徑失敗，可能兩站之間沒有相連的鐵軌。");
@@ -350,9 +349,9 @@ public final class RouteRecordingManager {
         plugin.getDataStore().save();
         if (showSummary) {
             Line line = plugin.getLineManager().getLine(session.getLineId());
-            int segsFwd = line != null ? line.getRecordedSegmentCount(TravelDirection.FORWARD) : 0;
-            int segsRev = line != null ? line.getRecordedSegmentCount(TravelDirection.REVERSE) : 0;
-            int pts = line != null ? countAllSegmentPoints(line) : 0;
+            int segsFwd = line != null ? plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.FORWARD) : 0;
+            int segsRev = line != null ? plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.REVERSE) : 0;
+            int pts = line != null ? countAllSegmentPoints(line, plugin.getRouteManager()) : 0;
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_stop",
                     Map.of("count", String.valueOf(pts),
                             "segments", String.valueOf(segsFwd + segsRev),
@@ -407,11 +406,21 @@ public final class RouteRecordingManager {
         return line != null ? line.getDisplayName() : lineId;
     }
 
-    private static int countAllSegmentPoints(Line line) {
+    private static int countAllSegmentPoints(Line line, com.avery.atrain.manager.RouteManager routeManager) {
         int total = 0;
         for (int i = 0; i < line.getSegmentCount(); i++) {
-            total += line.getSegmentPoints(i, TravelDirection.FORWARD).size();
-            total += line.getSegmentPoints(i, TravelDirection.REVERSE).size();
+            String f1 = line.getSegmentFromStopId(i, TravelDirection.FORWARD);
+            String t1 = line.getSegmentToStopId(i, TravelDirection.FORWARD);
+            if (f1 != null && t1 != null) {
+                var r = routeManager.getRoute(f1, t1);
+                if (r != null) total += r.size();
+            }
+            String f2 = line.getSegmentFromStopId(i, TravelDirection.REVERSE);
+            String t2 = line.getSegmentToStopId(i, TravelDirection.REVERSE);
+            if (f2 != null && t2 != null) {
+                var r = routeManager.getRoute(f2, t2);
+                if (r != null) total += r.size();
+            }
         }
         return total;
     }

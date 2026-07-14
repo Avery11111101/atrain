@@ -26,11 +26,11 @@ public final class RailPathSampler {
 
     private RailPathSampler() {}
 
-    public static List<Location> betweenStops(Stop from, Stop to, Line line) {
-        return betweenStops(from, to, line, com.avery.atrain.model.TravelDirection.FORWARD);
+    public static List<Location> betweenStops(Stop from, Stop to, com.avery.atrain.manager.RouteManager routeManager) {
+        return betweenStops(from, to, routeManager, com.avery.atrain.model.TravelDirection.FORWARD);
     }
 
-    public static List<Location> betweenStops(Stop from, Stop to, Line line,
+    public static List<Location> betweenStops(Stop from, Stop to, com.avery.atrain.manager.RouteManager routeManager,
                                               com.avery.atrain.model.TravelDirection direction) {
         Location start = snapToRail(from.getRailLocation(direction));
         Location end = snapToRail(to.getRailLocation(direction));
@@ -38,24 +38,17 @@ public final class RailPathSampler {
 
         List<Location> raw = null;
 
-        if (line != null && from != null && to != null) {
-            int segIdx = line.findSegmentIndex(from.getId(), to.getId(), direction);
-            if (segIdx >= 0) {
-                List<RoutePoint> segPts = line.getSegmentPoints(segIdx, direction);
-                if (!segPts.isEmpty()) {
-                    raw = segmentToLocations(segPts, start, end);
-                }
+        if (routeManager != null && from != null && to != null) {
+            List<Location> locs = routeManager.getRouteLocations(from.getId(), to.getId());
+            if (locs != null && !locs.isEmpty()) {
+                raw = locs;
             }
         }
-        if ((raw == null || raw.size() < 2) && direction == com.avery.atrain.model.TravelDirection.FORWARD
-                && line != null && !line.getRoutePoints().isEmpty()) {
-            raw = sliceRoutePoints(line.getRoutePoints(), start, end);
+        if (raw == null || raw.size() < 2) {
+            raw = bfsAlongRails(start, end, 100000);
         }
         if (raw == null || raw.size() < 2) {
-            raw = bfsAlongRails(start, end, 4000);
-        }
-        if (raw == null || raw.size() < 2) {
-            raw = walkTowardTarget(start, end, 4000);
+            raw = walkTowardTarget(start, end, 100000);
         }
         if (raw == null || raw.size() < 2) {
             raw = List.of(start, end);
@@ -122,6 +115,25 @@ public final class RailPathSampler {
         return best;
     }
 
+    private static class Node implements Comparable<Node> {
+        Block block;
+        String key;
+        double gCost;
+        double fCost;
+
+        Node(Block block, String key, double gCost, double fCost) {
+            this.block = block;
+            this.key = key;
+            this.gCost = gCost;
+            this.fCost = fCost;
+        }
+
+        @Override
+        public int compareTo(Node o) {
+            return Double.compare(this.fCost, o.fCost);
+        }
+    }
+
     private static List<Location> bfsAlongRails(Location start, Location end, int maxNodes) {
         Block startRail = RailUtil.findNearestRailBlock(start, 4);
         Block endRail = RailUtil.findNearestRailBlock(end, 4);
@@ -129,25 +141,39 @@ public final class RailPathSampler {
         if (!startRail.getWorld().equals(endRail.getWorld())) return List.of();
 
         String goalKey = blockKey(endRail);
-        Map<String, Block> parent = new HashMap<>();
-        Queue<Block> queue = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
+        Location endLoc = endRail.getLocation();
 
-        queue.add(startRail);
-        visited.add(blockKey(startRail));
-        parent.put(blockKey(startRail), null);
+        Map<String, Block> parent = new HashMap<>();
+        Map<String, Double> gCosts = new HashMap<>();
+        java.util.PriorityQueue<Node> openSet = new java.util.PriorityQueue<>();
+        Set<String> closedSet = new HashSet<>();
+
+        String startKey = blockKey(startRail);
+        gCosts.put(startKey, 0.0);
+        openSet.add(new Node(startRail, startKey, 0.0, startRail.getLocation().distance(endLoc)));
 
         int expanded = 0;
-        while (!queue.isEmpty() && expanded++ < maxNodes) {
-            Block cur = queue.poll();
-            if (blockKey(cur).equals(goalKey)) {
-                return blocksToLocations(reconstruct(parent, cur));
+        while (!openSet.isEmpty() && expanded++ < maxNodes) {
+            Node cur = openSet.poll();
+            
+            if (cur.key.equals(goalKey)) {
+                return blocksToLocations(reconstruct(parent, cur.block));
             }
-            for (Block nb : connectedRailNeighbors(cur)) {
+
+            if (!closedSet.add(cur.key)) continue;
+
+            for (Block nb : connectedRailNeighbors(cur.block)) {
                 String nk = blockKey(nb);
-                if (visited.add(nk)) {
-                    parent.put(nk, cur);
-                    queue.add(nb);
+                if (closedSet.contains(nk)) continue;
+
+                double tentativeG = cur.gCost + cur.block.getLocation().distance(nb.getLocation());
+                double existingG = gCosts.getOrDefault(nk, Double.MAX_VALUE);
+
+                if (tentativeG < existingG) {
+                    parent.put(nk, cur.block);
+                    gCosts.put(nk, tentativeG);
+                    double fCost = tentativeG + nb.getLocation().distance(endLoc);
+                    openSet.add(new Node(nb, nk, tentativeG, fCost));
                 }
             }
         }

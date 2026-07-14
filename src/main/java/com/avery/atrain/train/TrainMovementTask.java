@@ -108,9 +108,9 @@ public class TrainMovementTask implements Listener {
             if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
             var line = session.getLine();
             if (line == null || session.getCurrentStopId() == null || session.getTargetStopId() == null) return;
-            var points = line.getGuidancePoints(
-                    session.getCurrentStopId(), session.getTargetStopId(), session.getDirection());
-            if (points.isEmpty()) return;
+            var points = session.getPlugin().getRouteManager().getRoute(
+                    session.getCurrentStopId(), session.getTargetStopId());
+            if (points == null || points.isEmpty()) return;
             int idx = pathGuide.findForwardRouteIndex(
                     points, session.getMinecart().getLocation(), session.getRouteIndex());
             session.setRouteIndex(idx);
@@ -122,9 +122,9 @@ public class TrainMovementTask implements Listener {
                 if (!session.isPassengerRiding() || session.getState() != TrainSession.State.MOVING_BETWEEN_STATIONS) return;
                 var line = session.getLine();
                 if (line == null || session.getCurrentStopId() == null || session.getTargetStopId() == null) return;
-                var points = line.getGuidancePoints(
-                        session.getCurrentStopId(), session.getTargetStopId(), session.getDirection());
-                if (points.isEmpty()) return;
+                var points = session.getPlugin().getRouteManager().getRoute(
+                        session.getCurrentStopId(), session.getTargetStopId());
+                if (points == null || points.isEmpty()) return;
                 pathGuide.recoverStall(session.getMinecart(), points, session.getRouteIndex());
             }, stallInterval, stallInterval);
         }

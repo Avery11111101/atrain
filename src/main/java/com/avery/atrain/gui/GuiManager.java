@@ -122,8 +122,8 @@ public class GuiManager {
             Line line = lines.get(i);
             if (slot % 9 == 8) slot += 2;
             boolean recording = line.getId().equals(recordingLineId);
-            int segFwd = line.getRecordedSegmentCount(TravelDirection.FORWARD);
-            int segRev = line.getRecordedSegmentCount(TravelDirection.REVERSE);
+            int segFwd = plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.FORWARD);
+            int segRev = plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.REVERSE);
             List<String> lore = new ArrayList<>();
             lore.add(msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))));
             lore.add(msg(player, "gui.record_segment.line_progress_dir",
@@ -188,12 +188,12 @@ public class GuiManager {
         inv.setItem(2, new ItemBuilder(dir == TravelDirection.FORWARD ? Material.LIME_DYE : Material.GRAY_DYE)
                 .name(msg(player, "gui.record_segment.tab_forward"))
                 .lore(List.of(msg(player, "gui.record_segment.tab_forward_lore",
-                        Map.of("count", String.valueOf(line.getRecordedSegmentCount(TravelDirection.FORWARD))))))
+                        Map.of("count", String.valueOf(plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.FORWARD))))))
                 .build());
         inv.setItem(6, new ItemBuilder(dir == TravelDirection.REVERSE ? Material.LIME_DYE : Material.GRAY_DYE)
                 .name(msg(player, "gui.record_segment.tab_reverse"))
                 .lore(List.of(msg(player, "gui.record_segment.tab_reverse_lore",
-                        Map.of("count", String.valueOf(line.getRecordedSegmentCount(TravelDirection.REVERSE))))))
+                        Map.of("count", String.valueOf(plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.REVERSE))))))
                 .build());
 
         int segCount = line.getSegmentCount();
@@ -209,7 +209,7 @@ public class GuiManager {
             String fromName = from != null ? from.getDisplayName() : (fromId != null ? fromId : "?");
             String toName = to != null ? to.getDisplayName() : (toId != null ? toId : "?");
 
-            boolean recorded = line.hasSegment(segIndex, dir);
+            boolean recorded = plugin.getRouteManager().hasSegment(line, segIndex, dir);
             boolean active = recordingLine && activeDir == dir && segIndex == activeSeg;
             Material icon = active ? Material.REDSTONE_BLOCK
                     : (recorded ? Material.LIME_CARPET : Material.GRAY_CARPET);
@@ -219,18 +219,27 @@ public class GuiManager {
                     "from", fromName, "to", toName,
                     "index", String.valueOf(segIndex + 1), "total", String.valueOf(segCount))));
             if (recorded) {
-                lore.add(msg(player, "gui.record_segment.recorded",
-                        Map.of("count", String.valueOf(line.getSegmentPoints(segIndex, dir).size()))));
+                int pts = 0;
+                String fId = line.getSegmentFromStopId(segIndex, dir);
+                String tId = line.getSegmentToStopId(segIndex, dir);
+                if (fId != null && tId != null) {
+                    var ptsList = plugin.getRouteManager().getRoute(fId, tId);
+                    if (ptsList != null) pts = ptsList.size();
+                }
+                lore.add(msg(player, "gui.record_segment.recorded", Map.of("count", String.valueOf(pts))));
             }
             if (active) {
                 lore.add(msg(player, "gui.record_segment.recording_now"));
             } else if (!recordingLine) {
                 lore.add(msg(player, "gui.record_segment.click_start"));
+                if (recorded) {
+                    lore.add("§c[中鍵/Shift+左鍵] 刪除此段錄製");
+                }
             }
             lore.add("");
 
             inv.setItem(slots[i], new ItemBuilder(icon)
-                    .name("§e#" + (segIndex + 1) + " §a" + fromName + " §7→ §a" + toName)
+                    .name(msg(player, "gui.record_segment.leg_name", Map.of("index", String.valueOf(segIndex + 1))))
                     .lore(lore)
                     .build());
             holder.set("seg_" + slots[i], String.valueOf(segIndex));
@@ -374,11 +383,11 @@ public class GuiManager {
 
         int dwellSec = stop.getDwellTimeTicks() / 20;
         var stopMgr = plugin.getStopManager();
-        Line displayLine = stopMgr.resolveDisplayLine(stop);
-        String prev = stopMgr.resolveDisplayPrev(stop);
-        String next = stopMgr.resolveDisplayNext(stop);
-        boolean hasPrev = stopMgr.hasDisplayPrev(stop);
-        boolean hasNext = stopMgr.hasDisplayNext(stop);
+        Line displayLine = stopMgr.resolveDisplayLine(stop, player.getLocation());
+        String prev = stopMgr.resolveDisplayPrev(stop, player.getLocation());
+        String next = stopMgr.resolveDisplayNext(stop, player.getLocation());
+        boolean hasPrev = stopMgr.hasDisplayPrev(stop, player.getLocation());
+        boolean hasNext = stopMgr.hasDisplayNext(stop, player.getLocation());
         String lineName = displayLine != null ? displayLine.getDisplayName() : "-";
 
         inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
@@ -469,6 +478,16 @@ public class GuiManager {
                 .lore(msg(player, "gui.station_edit.return_line_lore",
                         safePh(Map.of("line", returnLineName))))
                 .build());
+
+        boolean onReturn = stop.isOnReturnPlatformOnly(player.getLocation());
+        org.bukkit.Location otherLoc = onReturn ? stop.getPrimaryRailLocation() : stop.getRailLocation(com.avery.atrain.model.TravelDirection.REVERSE);
+        if (otherLoc != null) {
+            inv.setItem(33, new ItemBuilder(Material.ENDER_PEARL)
+                    .name("§d傳送至另一側月台")
+                    .lore(List.of("§7點擊傳送至" + (onReturn ? "去程" : "回程") + "月台。"))
+                    .build());
+            holder.set("tp_target", onReturn ? "forward" : "return");
+        }
 
         if (player.hasPermission("atrain.admin")) {
             inv.setItem(38, new ItemBuilder(Material.WRITABLE_BOOK)
@@ -676,8 +695,8 @@ public class GuiManager {
             var session = plugin.getRouteRecordingManager().getSession(player);
             pointCount = session != null ? session.getCurrentPointCount() : 0;
         } else {
-            pointCount = line.getRecordedSegmentCount(TravelDirection.FORWARD)
-                    + line.getRecordedSegmentCount(TravelDirection.REVERSE);
+            pointCount = plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.FORWARD)
+                    + plugin.getRouteManager().getRecordedSegmentCount(line, TravelDirection.REVERSE);
         }
         final int displayPointCount = pointCount;
         inv.setItem(40, new ItemBuilder(recordingThis ? Material.REDSTONE_BLOCK : Material.MAP)

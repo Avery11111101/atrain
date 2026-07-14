@@ -51,7 +51,14 @@ public final class RouteRecordingSession {
         if (clearOnFirstSample) {
             Line line = plugin.getLineManager().getLine(lineId);
             if (line != null) {
-                overwriteBackup = new ArrayList<>(line.getSegmentPoints(segmentIndex, this.direction));
+                String fromId = line.getSegmentFromStopId(segmentIndex, this.direction);
+                String toId = line.getSegmentToStopId(segmentIndex, this.direction);
+                if (fromId != null && toId != null) {
+                    List<RoutePoint> existing = plugin.getRouteManager().getRoute(fromId, toId);
+                    if (existing != null) {
+                        overwriteBackup = new ArrayList<>(existing);
+                    }
+                }
             }
         }
     }
@@ -125,12 +132,19 @@ public final class RouteRecordingSession {
         if (overwriteApplied) {
             Line line = plugin.getLineManager().getLine(lineId);
             if (line != null) {
-                if (overwriteBackup.isEmpty()) {
-                    line.clearSegment(segmentIndex, direction);
-                } else {
-                    line.setSegmentPoints(segmentIndex, direction, new ArrayList<>(overwriteBackup));
+                String fromId = line.getSegmentFromStopId(segmentIndex, direction);
+                String toId = line.getSegmentToStopId(segmentIndex, direction);
+                if (fromId != null && toId != null) {
+                    Stop from = plugin.getStopManager().getStop(fromId);
+                    Stop to = plugin.getStopManager().getStop(toId);
+                    if (from != null && to != null) {
+                        if (overwriteBackup.isEmpty()) {
+                            plugin.getRouteManager().deleteRoute(from, to);
+                        } else {
+                            plugin.getRouteManager().saveRoute(from, to, new ArrayList<>(overwriteBackup));
+                        }
+                    }
                 }
-                plugin.getDataStore().save();
             }
         }
         overwriteBackup = null;
@@ -141,8 +155,16 @@ public final class RouteRecordingSession {
         if (overwriteBackup == null || overwriteApplied) return;
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) return;
-        line.clearSegment(segmentIndex, direction);
-        overwriteApplied = true;
+        String fromId = line.getSegmentFromStopId(segmentIndex, direction);
+        String toId = line.getSegmentToStopId(segmentIndex, direction);
+        if (fromId != null && toId != null) {
+            Stop from = plugin.getStopManager().getStop(fromId);
+            Stop to = plugin.getStopManager().getStop(toId);
+            if (from != null && to != null) {
+                plugin.getRouteManager().deleteRoute(from, to);
+                overwriteApplied = true;
+            }
+        }
     }
 
     boolean tick(long serverTick) {
@@ -320,10 +342,17 @@ public final class RouteRecordingSession {
         if (currentSegmentPoints.isEmpty()) return;
         Line line = plugin.getLineManager().getLine(lineId);
         if (line == null) return;
-        line.setSegmentPoints(segmentIndex, direction, new ArrayList<>(currentSegmentPoints));
-        overwriteBackup = null;
-        overwriteApplied = false;
-        plugin.getDataStore().save();
+        String fromId = line.getSegmentFromStopId(segmentIndex, direction);
+        String toId = line.getSegmentToStopId(segmentIndex, direction);
+        if (fromId != null && toId != null) {
+            Stop from = plugin.getStopManager().getStop(fromId);
+            Stop to = plugin.getStopManager().getStop(toId);
+            if (from != null && to != null) {
+                plugin.getRouteManager().saveRoute(from, to, new ArrayList<>(currentSegmentPoints));
+                overwriteBackup = null;
+                overwriteApplied = false;
+            }
+        }
     }
 
     boolean isAutoFinished() { return autoFinished; }

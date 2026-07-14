@@ -50,10 +50,10 @@ public class GuiListener implements Listener {
             case LINE_DETAIL -> handleLineDetail(player, slot, holder, gui, event);
             case LINE_ADD_STOP -> handleLineAddStop(player, slot, holder, gui);
             case RECORD_SELECT -> handleRecordSelect(player, slot, holder, gui);
-            case RECORD_SEGMENT -> handleRecordSegment(player, slot, holder, gui);
+            case RECORD_SEGMENT -> handleRecordSegment(player, slot, holder, gui, event);
             case LANGUAGE -> handleLanguage(player, slot, holder, gui);
             case SPEED_BLOCK_EDIT -> handleSpeedBlockEdit(player, slot, holder, gui);
-            case CONFIRM -> handleConfirm(player, slot, holder, gui);
+            case CONFIRM -> handleConfirm(player, slot, holder, gui, event);
             case KEY_STATION_SELECT -> handleKeyStationSelect(player, slot, holder, gui);
             case LINE_REORDER -> handleLineReorder(player, slot, holder, gui, event);
             case RECORD_MODE_SELECT -> handleRecordModeSelect(player, slot, holder, gui);
@@ -209,6 +209,19 @@ public class GuiListener implements Listener {
                 player.closeInventory();
                 plugin.getBindPlatformManager().startBind(player, stopId);
                 TextUtil.send(player, lang(player, "stop.return_bind_hint"));
+            }
+            case 33 -> {
+                String tpTarget = holder.get("tp_target");
+                if (tpTarget != null) {
+                    org.bukkit.Location loc = tpTarget.equals("forward") 
+                            ? stop.getPrimaryRailLocation() 
+                            : stop.getRailLocation(com.avery.atrain.model.TravelDirection.REVERSE);
+                    if (loc != null) {
+                        player.closeInventory();
+                        player.teleport(loc.clone().add(0.5, 1, 0.5));
+                        TextUtil.send(player, "§a已傳送至" + (tpTarget.equals("forward") ? "去程" : "回程") + "月台。");
+                    }
+                }
             }
             case 34 -> gui.openLineList(player, 0, null, stopId);
             case 38 -> {
@@ -428,7 +441,7 @@ public class GuiListener implements Listener {
         }
     }
 
-    private void handleRecordSegment(Player player, int slot, GuiHolder holder, GuiManager gui) {
+    private void handleRecordSegment(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
         if (!player.hasPermission("atrain.station.edit")) {
             TextUtil.send(player, lang(player, "error.no_permission"));
             return;
@@ -498,13 +511,35 @@ public class GuiListener implements Listener {
             return;
         }
 
-        if (line.hasSegment(segmentIndex, direction)) {
+        if (plugin.getRouteManager().hasSegment(line, segmentIndex, direction)) {
+            if (event.getClick() == ClickType.MIDDLE || event.getClick() == ClickType.SHIFT_LEFT) {
+                String fId = line.getSegmentFromStopId(segmentIndex, direction);
+                String tId = line.getSegmentToStopId(segmentIndex, direction);
+                if (fId != null && tId != null) {
+                    Stop from = plugin.getStopManager().getStop(fId);
+                    Stop to = plugin.getStopManager().getStop(tId);
+                    if (from != null && to != null) {
+                        plugin.getRouteManager().deleteRoute(from, to);
+                        TextUtil.send(player, "§a已刪除路線：§e" + from.getDisplayName() + " §7→ §e" + to.getDisplayName());
+                        gui.openRecordSegmentSelect(player, lineId, direction, segPage);
+                    }
+                }
+                return;
+            }
+
+            int pts = 0;
+            String fId = line.getSegmentFromStopId(segmentIndex, direction);
+            String tId = line.getSegmentToStopId(segmentIndex, direction);
+            if (fId != null && tId != null) {
+                var r = plugin.getRouteManager().getRoute(fId, tId);
+                if (r != null) pts = r.size();
+            }
             gui.openConfirm(player, "start_record_segment",
                     lineId + "|" + segmentIndex + "|" + direction.name(),
                     lang(player, "route.confirm_overwrite_segment",
                             Map.of("from", segmentLabel(line, segmentIndex, direction, "from"),
                                     "to", segmentLabel(line, segmentIndex, direction, "to"),
-                                    "count", String.valueOf(line.getSegmentPoints(segmentIndex, direction).size()))),
+                                    "count", String.valueOf(pts))),
                     "record_segment", lineId + "|" + direction.name());
             return;
         }
@@ -651,7 +686,7 @@ public class GuiListener implements Listener {
         }
     }
 
-    private void handleConfirm(Player player, int slot, GuiHolder holder, GuiManager gui) {
+    private void handleConfirm(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
         if (slot == 15) {
             navigateBack(player, holder, gui);
             return;
@@ -720,7 +755,6 @@ public class GuiListener implements Listener {
             int segmentIndex = parseInt(parts[1], 0);
             TravelDirection direction = parts.length >= 3
                     ? TravelDirection.fromString(parts[2]) : TravelDirection.FORWARD;
-            String returnId = holder.get("return_id");
             gui.openRecordModeSelect(player, lineId, segmentIndex, direction);
         }
     }

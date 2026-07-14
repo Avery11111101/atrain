@@ -22,6 +22,7 @@ import com.avery.atrain.manager.BindPlatformManager;
 import com.avery.atrain.manager.CartSpawnManager;
 import com.avery.atrain.manager.ChatInputManager;
 import com.avery.atrain.manager.LineManager;
+import com.avery.atrain.manager.RouteManager;
 import com.avery.atrain.manager.SpeedBlockManager;
 import com.avery.atrain.manager.StopManager;
 import com.avery.atrain.map.BlueMapManager;
@@ -48,6 +49,7 @@ public final class AtrainPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private LineManager lineManager;
     private StopManager stopManager;
+    private RouteManager routeManager;
     private CartSpawnManager cartSpawnManager;
     private SpeedBlockManager speedBlockManager;
     private ChatInputManager chatInputManager;
@@ -76,6 +78,7 @@ public final class AtrainPlugin extends JavaPlugin {
         languageManager = new LanguageManager(this);
         lineManager = new LineManager(this);
         stopManager = new StopManager(this);
+        routeManager = new RouteManager(this);
         cartSpawnManager = new CartSpawnManager(this);
         speedBlockManager = new SpeedBlockManager(this);
         chatInputManager = new ChatInputManager();
@@ -85,7 +88,8 @@ public final class AtrainPlugin extends JavaPlugin {
 
         configManager.load();
         languageManager.load();
-        dataStore.load();
+        dataStore.load(); // 會在這裡面順便把舊的 line route data 轉移到 RouteManager 並 save
+        routeManager.load();
         speedBlockManager.load();
         stopManager.rebuildSpatialIndex();
 
@@ -195,6 +199,7 @@ public final class AtrainPlugin extends JavaPlugin {
     public LanguageManager getLanguageManager() { return languageManager; }
     public LineManager getLineManager() { return lineManager; }
     public StopManager getStopManager() { return stopManager; }
+    public RouteManager getRouteManager() { return routeManager; }
     public CartSpawnManager getCartSpawnManager() { return cartSpawnManager; }
     public SpeedBlockManager getSpeedBlockManager() { return speedBlockManager; }
     public ChatInputManager getChatInputManager() { return chatInputManager; }

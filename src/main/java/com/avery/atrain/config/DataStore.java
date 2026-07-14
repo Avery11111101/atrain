@@ -22,8 +22,8 @@ public class DataStore {
     public void load() {
         lines.clear();
         stops.clear();
-        loadLines();
         loadStops();
+        loadLines();
     }
 
     private void loadLines() {
@@ -48,19 +48,51 @@ public class DataStore {
             }
             Map<Integer, List<com.avery.atrain.model.RoutePoint>> reverseSegs = loadSegmentSection(
                     ls.getConfigurationSection("route_segments_reverse"));
+
+            boolean migrated = false;
             if (!forwardSegs.isEmpty()) {
-                line.setForwardRouteSegments(forwardSegs);
+                for (Map.Entry<Integer, List<com.avery.atrain.model.RoutePoint>> entry : forwardSegs.entrySet()) {
+                    int i = entry.getKey();
+                    String fromId = line.getSegmentFromStopId(i, com.avery.atrain.model.TravelDirection.FORWARD);
+                    String toId = line.getSegmentToStopId(i, com.avery.atrain.model.TravelDirection.FORWARD);
+                    if (fromId != null && toId != null) {
+                        Stop from = stops.get(fromId);
+                        Stop to = stops.get(toId);
+                        if (from != null && to != null) {
+                            plugin.getRouteManager().saveRoute(from, to, entry.getValue());
+                            migrated = true;
+                        }
+                    }
+                }
             }
             if (!reverseSegs.isEmpty()) {
-                line.setReverseRouteSegments(reverseSegs);
-            }
-            if (forwardSegs.isEmpty() && reverseSegs.isEmpty() && rawPoints != null && !rawPoints.isEmpty()) {
-                List<com.avery.atrain.model.RoutePoint> pts = new ArrayList<>();
-                for (String s : rawPoints) {
-                    com.avery.atrain.model.RoutePoint rp = com.avery.atrain.model.RoutePoint.fromString(s);
-                    if (rp != null) pts.add(rp);
+                for (Map.Entry<Integer, List<com.avery.atrain.model.RoutePoint>> entry : reverseSegs.entrySet()) {
+                    int i = entry.getKey();
+                    String fromId = line.getSegmentFromStopId(i, com.avery.atrain.model.TravelDirection.REVERSE);
+                    String toId = line.getSegmentToStopId(i, com.avery.atrain.model.TravelDirection.REVERSE);
+                    if (fromId != null && toId != null) {
+                        Stop from = stops.get(fromId);
+                        Stop to = stops.get(toId);
+                        if (from != null && to != null) {
+                            plugin.getRouteManager().saveRoute(from, to, entry.getValue());
+                            migrated = true;
+                        }
+                    }
                 }
-                line.setRoutePoints(pts);
+            }
+            if (rawPoints != null && !rawPoints.isEmpty()) {
+                migrated = true;
+            }
+
+            if (migrated) {
+                ls.set("route_points", null);
+                ls.set("route_segments", null);
+                ls.set("route_segments_forward", null);
+                ls.set("route_segments_reverse", null);
+                try {
+                    yaml.save(file);
+                } catch (IOException ignored) {}
+                plugin.getLogger().info("已將路線 " + id + " 的舊軌跡資料轉移到獨立檔案並清理完畢。");
             }
             lines.put(id, line);
         }
@@ -132,14 +164,7 @@ public class DataStore {
             yaml.set(path + ".max_speed", line.getMaxSpeed());
             yaml.set(path + ".circular", line.isCircular());
             yaml.set(path + ".stops", line.getStopIds());
-            line.rebuildRoutePoints();
-            List<String> pointStrings = new ArrayList<>();
-            for (com.avery.atrain.model.RoutePoint rp : line.getRoutePoints()) {
-                pointStrings.add(rp.toDataString());
-            }
-            yaml.set(path + ".route_points", pointStrings);
-            writeSegmentSection(yaml, path + ".route_segments_forward", line.getForwardRouteSegments());
-            writeSegmentSection(yaml, path + ".route_segments_reverse", line.getReverseRouteSegments());
+
         }
         try { yaml.save(file); } catch (IOException e) {
             plugin.getLogger().severe("無法儲存 lines.yml: " + e.getMessage());

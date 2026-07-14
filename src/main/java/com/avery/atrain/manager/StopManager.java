@@ -214,7 +214,7 @@ public class StopManager {
                     }
                 }
                 if (lineModified) {
-                    boolean hadSegments = line.getForwardRouteSegments().size() > 0;
+                    boolean hadSegments = plugin.getRouteManager().getRecordedSegmentCount(line, com.avery.atrain.model.TravelDirection.FORWARD) > 0;
                     line.updateStopsAndPreserveSegments(ids);
                     if (hadSegments) {
                         String msg = "§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！";
@@ -571,7 +571,7 @@ public class StopManager {
                 }
             }
             if (lineModified) {
-                boolean hadSegments = line.getForwardRouteSegments().size() > 0;
+                boolean hadSegments = plugin.getRouteManager().getRecordedSegmentCount(line, com.avery.atrain.model.TravelDirection.FORWARD) > 0;
                 line.updateStopsAndPreserveSegments(ids);
                 if (lineModified) {
                     String msg = "§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！";

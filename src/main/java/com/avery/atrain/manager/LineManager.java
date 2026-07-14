@@ -126,9 +126,9 @@ public class LineManager {
         String item = ids.remove(idx);
         ids.add(newIdx, item);
         
-        boolean hadSegments = line.getForwardRouteSegments().size() > 0;
+        boolean hadSegments = plugin.getRouteManager().getRecordedSegmentCount(line, com.avery.atrain.model.TravelDirection.FORWARD) > 0;
         line.updateStopsAndPreserveSegments(ids);
-        boolean hasSegmentsAfter = line.getForwardRouteSegments().size() > 0;
+        boolean hasSegmentsAfter = plugin.getRouteManager().getRecordedSegmentCount(line, com.avery.atrain.model.TravelDirection.FORWARD) > 0;
         
         if (hadSegments) {
             String msg = hasSegmentsAfter 

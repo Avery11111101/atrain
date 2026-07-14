@@ -94,7 +94,7 @@ public final class CinematicTransitTask {
             return;
         }
 
-        path = RailPathSampler.betweenStops(currentStop, target, line, direction);
+        path = RailPathSampler.betweenStops(currentStop, target, plugin.getRouteManager(), direction);
         if (path.size() < 2) {
             path = List.of(
                     currentStop.getRailLocation(direction),

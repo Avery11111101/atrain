@@ -97,54 +97,57 @@ public class BlueMapManager {
 
         // 添加路線標記
         for (com.avery.atrain.model.Line lineInfo : plugin.getLineManager().getAllLines()) {
-            List<RoutePoint> pts = lineInfo.getRoutePoints();
-            if (pts == null || pts.isEmpty()) continue;
+            int segCount = lineInfo.getSegmentCount();
+            for (int i = 0; i < segCount; i++) {
+                String fId = lineInfo.getSegmentFromStopId(i, com.avery.atrain.model.TravelDirection.FORWARD);
+                String tId = lineInfo.getSegmentToStopId(i, com.avery.atrain.model.TravelDirection.FORWARD);
+                if (fId == null || tId == null) continue;
+                List<com.avery.atrain.model.RoutePoint> pts = plugin.getRouteManager().getRoute(fId, tId);
+                if (pts == null || pts.isEmpty()) continue;
 
-            List<Vector3d> vectorLine = new ArrayList<>();
-            String currentWorldName = null;
+                List<Vector3d> vectorLine = new ArrayList<>();
+                String currentWorldName = null;
 
-            for (RoutePoint pt : pts) {
-                if (currentWorldName == null) currentWorldName = pt.getWorld();
-                if (!pt.getWorld().equals(currentWorldName)) {
-                    if (vectorLine.size() >= 2) {
-                        drawLineForWorld(api, mapMarkerSets, lineInfo, currentWorldName, vectorLine);
+                for (com.avery.atrain.model.RoutePoint pt : pts) {
+                    if (currentWorldName == null) currentWorldName = pt.getWorld();
+                    if (!pt.getWorld().equals(currentWorldName)) {
+                        if (vectorLine.size() >= 2) {
+                            drawLineForWorld(api, mapMarkerSets, lineInfo, currentWorldName, vectorLine, i);
+                        }
+                        vectorLine.clear();
+                        currentWorldName = pt.getWorld();
                     }
-                    vectorLine.clear();
-                    currentWorldName = pt.getWorld();
+                    vectorLine.add(new Vector3d(pt.getX(), pt.getY() + 0.5, pt.getZ()));
                 }
-                vectorLine.add(new Vector3d(pt.getX(), pt.getY() + 0.5, pt.getZ()));
-            }
-            if (vectorLine.size() >= 2) {
-                drawLineForWorld(api, mapMarkerSets, lineInfo, currentWorldName, vectorLine);
+                if (vectorLine.size() >= 2) {
+                    drawLineForWorld(api, mapMarkerSets, lineInfo, currentWorldName, vectorLine, i);
+                }
             }
         }
     }
 
-    private void drawLineForWorld(BlueMapAPI api, Map<String, MarkerSet> mapMarkerSets, com.avery.atrain.model.Line lineInfo, String worldName, List<Vector3d> points) {
+    private void drawLineForWorld(BlueMapAPI api, Map<String, MarkerSet> mapMarkerSets, com.avery.atrain.model.Line lineInfo, String worldName, List<Vector3d> vectorLine, int segIndex) {
         World w = Bukkit.getWorld(worldName);
         if (w == null) return;
         
         BlueMapWorld bmWorld = api.getWorld(w).orElse(null);
         if (bmWorld == null) return;
 
-        Line bmLine = new Line(points);
         Color color = parseColor(lineInfo.getColor());
 
         LineMarker lineMarker = LineMarker.builder()
-                .label(lineInfo.getDisplayName())
-                .line(bmLine)
+                .label(lineInfo.getDisplayName() + " [" + (segIndex + 1) + "]")
+                .line(new de.bluecolored.bluemap.api.math.Line(vectorLine))
                 .lineColor(color)
                 .lineWidth(4)
                 .depthTestEnabled(false)
                 .maxDistance(10000)
                 .build();
-
-        String markerId = "line_" + lineInfo.getId() + "_" + System.nanoTime();
         
         for (BlueMapMap map : bmWorld.getMaps()) {
             MarkerSet ms = mapMarkerSets.get(map.getId());
             if (ms != null) {
-                ms.put(markerId, lineMarker);
+                ms.put("line_" + lineInfo.getId() + "_seg_" + segIndex + "_" + worldName, lineMarker);
             }
         }
     }
