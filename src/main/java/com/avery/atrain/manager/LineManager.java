@@ -131,10 +131,14 @@ public class LineManager {
         boolean hasSegmentsAfter = line.getForwardRouteSegments().size() > 0;
         
         if (hadSegments) {
-            if (hasSegmentsAfter) {
-                plugin.getServer().broadcast("§a✔ 站點順序已變更，相鄰未變的軌跡段落已自動保留！", "atrain.admin");
-            } else {
-                plugin.getServer().broadcast("§e⚠️ 站點順序已變更，受影響的相鄰軌跡已被清空，請重新錄製！", "atrain.admin");
+            String msg = hasSegmentsAfter 
+                    ? "§a✔ 站點順序已變更，相鄰未變的軌跡段落已自動保留！"
+                    : "§e⚠️ 站點順序已變更，受影響的相鄰軌跡已被清空，請重新錄製！";
+            plugin.getServer().getConsoleSender().sendMessage(msg);
+            for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
+                if (p.hasPermission("atrain.admin")) {
+                    p.sendMessage(msg);
+                }
             }
         }
         

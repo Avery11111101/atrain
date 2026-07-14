@@ -202,7 +202,13 @@ public class StopManager {
                     boolean hadSegments = line.getForwardRouteSegments().size() > 0;
                     line.updateStopsAndPreserveSegments(ids);
                     if (hadSegments) {
-                        org.bukkit.Bukkit.broadcast("§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！", "atrain.admin");
+                        String msg = "§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！";
+                        plugin.getServer().getConsoleSender().sendMessage(msg);
+                        for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
+                            if (p.hasPermission("atrain.admin")) {
+                                p.sendMessage(msg);
+                            }
+                        }
                     }
                 }
             }
@@ -543,8 +549,14 @@ public class StopManager {
             if (lineModified) {
                 boolean hadSegments = line.getForwardRouteSegments().size() > 0;
                 line.updateStopsAndPreserveSegments(ids);
-                if (hadSegments) {
-                    org.bukkit.Bukkit.broadcast("§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！", "atrain.admin");
+                if (lineModified) {
+                    String msg = "§c[ATrain] 站點合併導致路線 " + line.getDisplayName() + " 站序變更，受影響的錄製軌段已清空，相鄰未變段落已保留！";
+                    plugin.getServer().getConsoleSender().sendMessage(msg);
+                    for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
+                        if (p.hasPermission("atrain.admin")) {
+                            p.sendMessage(msg);
+                        }
+                    }
                 }
             }
         }
