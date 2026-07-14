@@ -368,6 +368,8 @@ line.stop_moved_up: "<green>駅 <gold>{stop} <green>を1つ上に移動しまし
 line.stop_moved_down: "<green>駅 <gold>{stop} <green>を1つ下に移動しました。"
 line.stop_move_failed: "<yellow>移動できません。先頭または末尾です。"
 route.recording_cart_lost: "<yellow>録画用トロッコが消えました。現在区間の起点駅で右クリックして再召喚してください。"
+route.recording_wrong_platform_forward: "<red>往路区間の録画です。<white>往路ホーム<red>で右クリックしてトロッコを召喚してください。"
+route.recording_wrong_platform_return: "<red>復路区間の録画です。<white>復路ホーム<red>で右クリックしてトロッコを召喚してください。"
 route.recording_dwell_board: "<yellow>停車カウント中です。トロッコに乗ると続行します。"
 gui.record_segment.recording_dir: "§7録画方向：§f{dir}"
 line.circular_off: "<yellow>環状モードをオフにしました"

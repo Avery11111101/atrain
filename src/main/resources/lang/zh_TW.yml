@@ -132,6 +132,8 @@ route.recording_segment_start: "<aqua>錄製第 <gold>{index}<aqua>/<gold>{total
 route.recording_segment_done: "<green>第 <gold>{index} <green>段完成：<white>{from} <gray>→ <white>{to}"
 route.recording_segment_next: "<yellow>自動開始第 <gold>{index} <yellow>段：<white>{from} <gray>→ <white>{to} <gray>（請繼續駕駛）"
 route.recording_wrong_segment_start: "<red>請在路段起點站 <white>{from} <red>右鍵召喚礦車（第 {index}/{total} 段）"
+route.recording_wrong_platform_forward: "<red>此段為去程錄製，請至<white>去程月台<red>右鍵召喚礦車。"
+route.recording_wrong_platform_return: "<red>此段為回程錄製，請至<white>回程月台<red>右鍵召喚礦車。"
 route.recording_must_stop_first: "<yellow>請先停止或取消目前錄製，再選其他路段。"
 route.segment_invalid: "<red>路段索引無效。"
 route.confirm_overwrite_segment: "<yellow>路段 <white>{from} <gray>→ <white>{to} <yellow>已有 <gold>{count} <yellow>個點，覆寫？"

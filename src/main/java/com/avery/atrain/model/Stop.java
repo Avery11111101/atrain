@@ -164,17 +164,21 @@ public class Stop {
         return isOnPlatformGold(loc, forwardGoldKeys());
     }
 
-    /** 玩家是否站在回程月台（僅比對已註冊金磚，不讀取世界方塊） */
+    /** 玩家是否站在回程月台（與去程月台共用鐵軌向下掃描，避免站在軌道上時誤判） */
     public boolean isReturnPlatformAt(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
         if (returnGoldBlockKeys.isEmpty()) return false;
-        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        return hasReturnGoldBlock(x, y, z) || hasReturnGoldBlock(x, y - 1, z);
+        return isOnPlatformGold(loc, getReturnGoldBlocks());
     }
 
     /** 玩家是否站在回程月台 */
     public boolean isOnReturnPlatform(Location loc) {
         return isReturnPlatformAt(loc);
+    }
+
+    /** 是否僅站在回程月台（去程優先，與移動方向判定一致） */
+    public boolean isOnReturnPlatformOnly(Location loc) {
+        return isReturnPlatformAt(loc) && !isOnForwardPlatform(loc);
     }
 
     /** 依行駛方向取得月台鐵軌上的礦車停靠點 */
@@ -290,12 +294,10 @@ public class Stop {
         return hasDisplayBlock(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
-    /** 玩家站立位置是否應顯示站點資訊（金磚月台） */
+    /** 玩家站立位置是否應顯示站點資訊（金磚月台，含站在軌道上） */
     public boolean containsInfoLocation(Location loc) {
         if (loc == null || loc.getWorld() == null || !loc.getWorld().getName().equals(world)) return false;
-        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        if (hasGoldBlock(x, y, z) || hasReturnGoldBlock(x, y, z)) return true;
-        return hasGoldBlock(x, y - 1, z) || hasReturnGoldBlock(x, y - 1, z);
+        return isOnForwardPlatform(loc) || isReturnPlatformAt(loc);
     }
 
     public boolean hasReturnGoldBlock(int x, int y, int z) {

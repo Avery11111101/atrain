@@ -227,6 +227,19 @@ public final class RouteRecordingManager {
             return false;
         }
 
+        TravelDirection dir = session.getDirection();
+        Location railLoc = rail.getLocation();
+        if (dir == TravelDirection.REVERSE) {
+            if (!stop.isOnReturnPlatformOnly(railLoc)) {
+                TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_wrong_platform_return"));
+                return false;
+            }
+        } else if (!stop.getReturnGoldBlocks().isEmpty()
+                && stop.isOnReturnPlatformOnly(railLoc)) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_wrong_platform_forward"));
+            return false;
+        }
+
         Line line = plugin.getLineManager().getLine(session.getLineId());
         if (line == null) return false;
 

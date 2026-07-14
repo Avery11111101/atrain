@@ -185,3 +185,55 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 6. **GUI 文案優化**：在 `zh_TW.yml` 將原有的「停止」修改為「儲存並結束錄製」，將「取消」修改為「放棄並取消錄製」，並補充明顯警告，改善了誤按導致進度消失的問題。
 
 **驗證：** 第一輪 Verifier QA 指出了跨世界距離報錯等 3 個隱患，經 Fixer 修正後，第二輪 Verifier 獨立驗證完全通過，所有 UX 與邏輯問題皆已修復。
+
+### 2026-07-14 — 修復錄製中止功能失效與回程月台顯示邏輯釋疑
+
+**修改原因：**
+- Avery 回報錄製路線時，到達站點後「提示中止都沒了」（下車想停止或取消錄製，卻發現錄製卡死，系統沒有任何提示也無法跳出 GUI）。
+- 針對「回程月台顯示為去程」的現象再次提出疑問。
+
+**修復摘要：**
+1. **修復錄製中止失效 (`RouteRecordingSession.java`)**：
+   - 先前為了防堵玩家離開礦車亂跑拉直線，加入了「下車超過 5 格就自動拋棄並取消錄製」的防呆檢查。
+   - 但是這個檢查被放置在 `if (dwelling)` (停靠等待) 邏輯的「下方」。導致如果玩家是在「到站停靠時」下車想要中斷錄製，會因為卡在 `dwelling` 迴圈內提早 `return`，永遠走不到下方的距離檢查，造成錄製「假死」且沒有中止提示。
+   - **解法**：將「離開礦車與距離判斷」的防呆邏輯移至 `tick` 最上方。若在 `dwelling` 期間下車遠離，也能正確觸發 `route.recording_cancelled` 的邏輯並捨棄該段損壞軌跡，恢復原先的正常體驗。
+2. **回程月台顯示邏輯釋疑**：
+   - 經反覆排查，系統在處理「自動翻轉上一站/下一站」的邏輯 (`isReturnReversed`) 是完全正確的。如果回程月台依然顯示「去程」資訊（即 A -> B -> C），這是因為系統將該月台判斷成了「第二個去程月台」。
+   - **發生原因可能為**：
+     1. 未使用木棍的「綁定為回程月台」按鈕，直接新建了另一個站點。
+     2. 在設定路線時，手動配了一條新的回程路線，但裡面的站點順序依舊排成了去程的 A -> B -> C。
+   - 已透過訊息向 Avery 解釋如何正確操作綁定機制。
+
+### 2026-07-14 — 修復 Bukkit API 棄用警告 (Deprecation Warnings)
+
+**修改原因：**
+- Avery 回報在編譯時 (`gradle compileJava`) 遇到多個關於 `plugin.getServer().broadcast(String, String)` 和 `org.bukkit.Bukkit.broadcast(String, String)` 已被標記為廢棄 (deprecated) 的警告。
+
+**修復摘要：**
+1. **移除舊版廣播 API**：
+   - 在 `LineManager.java` 與 `StopManager.java` 中，移除了舊有的 `.broadcast(message, permission)` 呼叫。
+2. **改為手動跌代 (Manual Iteration)**：
+   - 透過 `plugin.getServer().getConsoleSender().sendMessage(msg)` 發送給後台。
+   - 透過 `for (Player p : plugin.getServer().getOnlinePlayers())` 走訪所有在線玩家，並檢查 `p.hasPermission("atrain.admin")`，藉此達成相同效果並順利消除編譯警告。
+
+（註：關於 `java.lang.System::load` 在 `NativeLibraryLoader` 的警告為 Gradle 在 JDK 21+ 環境下內部呼叫 JNI 的正常警告，不影響插件運作，可忽略。）
+
+### 2026-07-14 — 修復回程月台金磚資訊顯示錯誤（雙輪驗證 PASS）
+
+**修改原因：**
+- Avery 回報：回程站點移動正常（火車方向正確），但站在金磚/軌道上時 ActionBar 仍顯示去程的上一站/下一站。
+- 根因：`Stop.isReturnPlatformAt()` 只比對 `(x,y,z)` 與 `(x,y-1,z)`，缺少去程月台 `isOnPlatformGold()` 的鐵軌向下掃描。玩家站在軌道上時 `blockY` 為軌道格，金磚在更下方，導致被誤判為去程；礦車 Y 較低故能正確判為回程。
+
+**修復摘要：**
+1. `Stop.isReturnPlatformAt()` — 改用 `isOnPlatformGold(loc, getReturnGoldBlocks())`，與去程對稱。
+2. `Stop.isOnReturnPlatformOnly()` — 新增「僅回程月台」判定（去程優先），與 `CinematicTransitManager` 一致。
+3. `Stop.containsInfoLocation()` — 統一為 `isOnForwardPlatform || isReturnPlatformAt`。
+4. `StopManager.lookupGoldNear()` — 加入鐵軌向下掃描，`getStopByDisplay` 在軌道上也能找到站點。
+5. `StopManager.resolveDisplayLine` / `isReturnReversed` — 改用 `isOnReturnPlatformOnly(at)`。
+6. `StationDisplayListener` — ActionBar 加上 `(去程)`/`(回程)` 標籤；cache key 含方向。
+7. `RouteRecordingManager.spawnRecordingCart` — 去程/回程錄製分別驗證正確月台，錯誤月台顯示提示。
+8. `StopManager.findStopAdjacentTo` — 納入回程金磚。
+9. 語系 — 新增 `route.recording_wrong_platform_forward/return`（zh_TW/zh_CN/en_US/ja_JP）。
+
+**驗證：** 兩輪獨立子代理（盤點 / 修復 / 驗證分離），第二輪 8/8 PASS、0 BLOCKER、0 MAJOR。
+**使用者操作不變：** 不需重設設定檔或重新綁定站點，既有資料直接生效。

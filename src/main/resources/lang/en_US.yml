@@ -142,6 +142,8 @@ route.need_cart: "<red>Board a minecart before recording."
 route.use_gui_confirm: "<yellow>Use /train gui → line details → record route for overwrite confirmation."
 route.cleared: "<green>Cleared <gold>{count} <green>route points from <gold>{line}"
 route.recording_stop_reload: "<yellow>Recording stopped due to admin reload."
+route.recording_wrong_platform_forward: "<red>This segment records the outbound route. Right-click on the <white>outbound platform<red> to spawn a minecart."
+route.recording_wrong_platform_return: "<red>This segment records the return route. Right-click on the <white>return platform<red> to spawn a minecart."
 route.not_recording: "<yellow>You are not recording a route."
 route.recording_toggle: "§d§lRecord / Stop"
 

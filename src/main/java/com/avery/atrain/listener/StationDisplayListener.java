@@ -69,20 +69,27 @@ public class StationDisplayListener implements Listener {
             }
             return;
         }
-        String cacheKey = stop.getId() + "|" + (stop.isReturnPlatformAt(at) ? "R" : "F");
+        String cacheKey = stop.getId() + "|" + (stop.isOnReturnPlatformOnly(at) ? "R" : "F");
+        if (cacheKey.equals(lastStopId.get(player.getUniqueId()))) return;
         lastStopId.put(player.getUniqueId(), cacheKey);
-        sendDisplay(player, stop);
+        sendDisplay(player, stop, at);
     }
 
-    private void sendDisplay(Player player, Stop stop) {
+    private void sendDisplay(Player player, Stop stop, Location at) {
         if (!plugin.getConfigManager().isActionbarEnabled()) return;
         var lang = plugin.getLanguageManager();
         var stopMgr = plugin.getStopManager();
-        Location at = player.getLocation();
         String prev = stopMgr.resolveDisplayPrev(stop, at);
         String next = stopMgr.resolveDisplayNext(stop, at);
         boolean hasPrev = stopMgr.hasDisplayPrev(stop, at);
         boolean hasNext = stopMgr.hasDisplayNext(stop, at);
+
+        StringBuilder text = new StringBuilder();
+        if (!stop.getReturnGoldBlocks().isEmpty()) {
+            boolean onReturn = stop.isOnReturnPlatformOnly(at);
+            String dirKey = onReturn ? "route.direction_reverse" : "route.direction_forward";
+            text.append("§7(").append(lang.get(player, dirKey)).append(") ");
+        }
 
         String displayKey;
         Map<String, String> placeholders;
@@ -106,8 +113,7 @@ public class StationDisplayListener implements Listener {
             displayKey = "station.display_info_current_only";
             placeholders = Map.of("current", TextUtil.escapePlain(stop.getDisplayName()));
         }
-
-        StringBuilder text = new StringBuilder(lang.get(player, displayKey, placeholders));
+        text.append(lang.get(player, displayKey, placeholders));
 
         if (stop.hasKeyInfo()) {
             java.util.List<String> ksNames = plugin.getStopManager().getKeyStationDisplayNames(stop);

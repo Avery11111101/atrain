@@ -53,7 +53,17 @@ public class StopManager {
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
         Stop stop = lookupGoldBlock(world, x, y, z);
         if (stop != null) return stop;
-        return lookupGoldBlock(world, x, y - 1, z);
+        stop = lookupGoldBlock(world, x, y - 1, z);
+        if (stop != null) return stop;
+        Block rail = com.avery.atrain.util.RailUtil.findRailBlock(loc);
+        if (rail == null) return null;
+        Block below = rail.getRelative(BlockFace.DOWN);
+        for (int d = 0; d <= 4; d++) {
+            stop = lookupGoldBlock(world, below.getX(), below.getY(), below.getZ());
+            if (stop != null) return stop;
+            below = below.getRelative(BlockFace.DOWN);
+        }
+        return null;
     }
 
     public Collection<Stop> getAllStops() {
@@ -116,14 +126,19 @@ public class StopManager {
         for (Stop stop : getAllStops()) {
             if (!stop.getWorld().equals(block.getWorld().getName())) continue;
             for (String gk : stop.getGoldBlocks()) {
-                int[] g = Stop.parseKey(gk);
-                if (g == null) continue;
-                if (Math.abs(g[0] - x) <= 1 && Math.abs(g[1] - y) <= 1 && Math.abs(g[2] - z) <= 1) {
-                    return stop;
-                }
+                if (isAdjacentGold(gk, x, y, z)) return stop;
+            }
+            for (String gk : stop.getReturnGoldBlocks()) {
+                if (isAdjacentGold(gk, x, y, z)) return stop;
             }
         }
         return null;
+    }
+
+    private static boolean isAdjacentGold(String goldKey, int x, int y, int z) {
+        int[] g = Stop.parseKey(goldKey);
+        if (g == null) return false;
+        return Math.abs(g[0] - x) <= 1 && Math.abs(g[1] - y) <= 1 && Math.abs(g[2] - z) <= 1;
     }
 
     /** 從點擊的金磚/軌道掃描並建立或更新站點 */
@@ -361,7 +376,7 @@ public class StopManager {
 
     public Line resolveDisplayLine(Stop stop, Location at) {
         if (stop == null) return null;
-        if (at != null && stop.isOnReturnPlatform(at) && stop.getReturnLineId() != null) {
+        if (at != null && stop.isOnReturnPlatformOnly(at) && stop.getReturnLineId() != null) {
             Line returnLine = plugin.getLineManager().getLine(stop.getReturnLineId());
             if (returnLine != null && returnLine.getStopIds().contains(stop.getId())) return returnLine;
         }
@@ -456,7 +471,7 @@ public class StopManager {
      * 同線反向（含 returnLineId 指向去程同一條路線）需對調；僅獨立回程路線（不同 lineId）時沿用該線站序。
      */
     private boolean isReturnReversed(Stop stop, Location at) {
-        if (at == null || !stop.isOnReturnPlatform(at)) return false;
+        if (at == null || !stop.isOnReturnPlatformOnly(at)) return false;
         String returnLineId = stop.getReturnLineId();
         if (returnLineId == null) return true;
         Line returnLine = plugin.getLineManager().getLine(returnLineId);
