@@ -158,23 +158,6 @@ public final class RouteRecordingSession {
             return true;
         }
 
-        if (dwelling) {
-            holdCartStill();
-            if (!cart.getPassengers().contains(player)) {
-                if (!notifiedDwellWait) {
-                    notifiedDwellWait = true;
-                    TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_dwell_board"));
-                }
-                return !autoFinished;
-            }
-            notifiedDwellWait = false;
-            dwellTicksRemaining--;
-            if (dwellTicksRemaining <= 0) {
-                finishDwellAndAdvance();
-            }
-            return !autoFinished;
-        }
-
         if (!cart.getPassengers().contains(player)) {
             if (lastSampleLoc != null) {
                 if (!player.getWorld().equals(lastSampleLoc.getWorld()) || player.getLocation().distanceSquared(lastSampleLoc) > 25) {
@@ -184,7 +167,26 @@ public final class RouteRecordingSession {
                     return false;
                 }
             }
+            // If dwelling and out of cart but nearby, wait for them to board
+            if (dwelling) {
+                if (!notifiedDwellWait) {
+                    notifiedDwellWait = true;
+                    TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_dwell_board"));
+                }
+                return !autoFinished;
+            }
+            // If not dwelling and out of cart but nearby, wait for them to board
             return true;
+        }
+
+        if (dwelling) {
+            holdCartStill();
+            notifiedDwellWait = false;
+            dwellTicksRemaining--;
+            if (dwellTicksRemaining <= 0) {
+                finishDwellAndAdvance();
+            }
+            return !autoFinished;
         }
 
         if (!RailUtil.isOnRail(cart.getLocation())) return true;
