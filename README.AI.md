@@ -168,3 +168,20 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
    - 在 `LineManager` 裡的 `addStopToLine`, `removeStopFromLine`, `moveStopInLine` 全面廢除 `clearAllSegments()`。
    - 新增動態廣播機制，如果有段落被成功保留，則廣播 `§a✔ 站點順序已變更，相鄰未變的軌跡段落已自動保留！`；如果整條斷光光才會廣播黃字警告。
    - 同步修正 `StopManager` 在進行站點合併 (`mergeStopsInto`, `absorbStopAsReturnPlatform`) 時，一併套用智能保留邏輯，最小化資料遺失。
+
+### 2026-07-14 — 修復站點顯示與錄製 UX 漏洞 (多輪子代理驗證 PASS)
+
+**修改原因：**
+- Avery 回報「車站兩邊資訊應該要不同，因為彼此上下站顛倒，但他都顯示去程的」。
+- Avery 亦回報「錄製路線的問題，感覺怪怪的」（包含錄製中途下車會直線偏移、自動倒退嚕、停止與取消按鈕不直覺，以及玩家習慣直接點擊礦車本體而非鐵軌方塊）。
+- 依據要求使用多輪獨立子代理 (Finder -> Fixer -> Verifier -> Verifier Round 2) 的雙重驗證流程。
+
+**修復摘要：**
+1. **站點資訊反轉**：在 `StopManager.java` 修復了沒有綁定路線時的備用邏輯，正確參照 `isReturnReversed` 屬性來翻轉手動設定的 `infoPrev` / `infoNext`。
+2. **修復顯示快取閃退**：在 `StationDisplayListener.java` 移除錯誤的 action bar `cacheKey` 早期 return，確保持續刷新避免文字消失，同時維持離開金磚時的正確清理機制。
+3. **距離防呆與自動取消**：在 `RouteRecordingSession.java` 實裝中途下車防呆，如果玩家離開礦車所在世界或距離大於 5 格，會自動拋棄當前損壞的路段並取消錄製，徹底防堵「拉直線」現象。
+4. **自動推車向量修正**：在 `sampleNow` 時記錄物理移動的 `approachVector`，並在 `pickDepartDirection` 時使用內積 (Dot Product) 比較，選出最貼近實際行進方向的鐵軌分支，解決「到站後會反方向退回去」的問題。
+5. **錄製實體互動 (UX 優化)**：新增 `PlayerInteractEntityEvent` 攔截，玩家現在可以直接右鍵點擊錄製用礦車來上車綁定，不再強制要求必須點擊正下方的鐵軌方塊。若 `auto-mount` 未啟用則自然放行原版上車機制。
+6. **GUI 文案優化**：在 `zh_TW.yml` 將原有的「停止」修改為「儲存並結束錄製」，將「取消」修改為「放棄並取消錄製」，並補充明顯警告，改善了誤按導致進度消失的問題。
+
+**驗證：** 第一輪 Verifier QA 指出了跨世界距離報錯等 3 個隱患，經 Fixer 修正後，第二輪 Verifier 獨立驗證完全通過，所有 UX 與邏輯問題皆已修復。

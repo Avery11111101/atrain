@@ -70,7 +70,6 @@ public class StationDisplayListener implements Listener {
             return;
         }
         String cacheKey = stop.getId() + "|" + (stop.isReturnPlatformAt(at) ? "R" : "F");
-        if (cacheKey.equals(lastStopId.get(player.getUniqueId()))) return;
         lastStopId.put(player.getUniqueId(), cacheKey);
         sendDisplay(player, stop);
     }

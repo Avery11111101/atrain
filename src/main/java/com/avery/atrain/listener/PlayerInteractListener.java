@@ -12,6 +12,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 import java.util.Map;
 
@@ -71,6 +72,21 @@ public class PlayerInteractListener implements Listener {
                 return;
             }
             handleCartSpawn(event, player, block);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityInteract(PlayerInteractEntityEvent event) {
+        if (!(event.getRightClicked() instanceof org.bukkit.entity.minecart.RideableMinecart cart)) return;
+        Player player = event.getPlayer();
+        if (plugin.getRouteRecordingManager() != null && plugin.getRouteRecordingManager().isRecording(player)) {
+            org.bukkit.block.Block rail = com.avery.atrain.util.RailUtil.findRailBlock(cart.getLocation());
+            if (rail != null) {
+                boolean success = plugin.getRouteRecordingManager().spawnRecordingCart(player, rail);
+                if (!success || plugin.getConfigManager().isCartSpawnAutoMount()) {
+                    event.setCancelled(true);
+                }
+            }
         }
     }
 

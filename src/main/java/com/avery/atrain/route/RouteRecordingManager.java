@@ -143,6 +143,7 @@ public final class RouteRecordingManager {
 
     public void autoRecordSegment(Player player, String lineId, int segmentIndex, TravelDirection direction) {
         if (player == null || lineId == null) return;
+        player.closeInventory();
         if (byPlayer.containsKey(player.getUniqueId())) {
             RouteRecordingSession active = getSession(player);
             TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_other_line",

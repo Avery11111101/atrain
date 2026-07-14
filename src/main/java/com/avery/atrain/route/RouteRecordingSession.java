@@ -175,7 +175,17 @@ public final class RouteRecordingSession {
             return !autoFinished;
         }
 
-        if (!cart.getPassengers().contains(player)) return true;
+        if (!cart.getPassengers().contains(player)) {
+            if (lastSampleLoc != null) {
+                if (!player.getWorld().equals(lastSampleLoc.getWorld()) || player.getLocation().distanceSquared(lastSampleLoc) > 25) {
+                    TextUtil.send(player, plugin.getLanguageManager().get(player, "route.recording_cancelled"));
+                    discardCurrentSegment();
+                    ended = true;
+                    return false;
+                }
+            }
+            return true;
+        }
 
         if (!RailUtil.isOnRail(cart.getLocation())) return true;
 
@@ -199,9 +209,17 @@ public final class RouteRecordingSession {
         sampleNow(loc);
     }
 
+    private Vector approachVector;
+
     private void sampleNow(Location loc) {
         maybeApplyOverwrite();
         Location snapped = RailUtil.snapToRailCenter(loc);
+        if (lastSampleLoc != null) {
+            Vector diff = snapped.toVector().subtract(lastSampleLoc.toVector());
+            if (diff.lengthSquared() > 0.01) {
+                approachVector = diff.normalize();
+            }
+        }
         currentSegmentPoints.add(new RoutePoint(snapped));
         lastSampleLoc = snapped.clone();
     }
@@ -264,6 +282,17 @@ public final class RouteRecordingSession {
     private Vector pickDepartDirection(Location loc) {
         var dirs = RailUtil.getRailDirections(loc);
         if (dirs.isEmpty()) return null;
+        if (approachVector != null) {
+            Vector best = dirs.get(0);
+            double maxDot = -Double.MAX_VALUE;
+            for (Vector d : dirs) {
+                if (d.dot(approachVector) > maxDot) {
+                    maxDot = d.dot(approachVector);
+                    best = d;
+                }
+            }
+            return best.clone();
+        }
         return dirs.get(0).clone();
     }
 

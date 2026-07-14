@@ -378,7 +378,7 @@ public class StopManager {
     public String resolveDisplayPrev(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
         if (line == null) {
-            String manual = stop.getInfoPrev();
+            String manual = isReturnReversed(stop, at) ? stop.getInfoNext() : stop.getInfoPrev();
             return isUnset(manual) ? null : manual;
         }
         return isReturnReversed(stop, at)
@@ -393,7 +393,7 @@ public class StopManager {
     public String resolveDisplayNext(Stop stop, Location at) {
         Line line = resolveDisplayLine(stop, at);
         if (line == null) {
-            String manual = stop.getInfoNext();
+            String manual = isReturnReversed(stop, at) ? stop.getInfoPrev() : stop.getInfoNext();
             return isUnset(manual) ? null : manual;
         }
         return isReturnReversed(stop, at)
