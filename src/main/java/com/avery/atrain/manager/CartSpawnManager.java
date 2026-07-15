@@ -128,14 +128,25 @@ public class CartSpawnManager {
 
         java.util.Queue<SpawnRequest> q = spawnQueues.computeIfAbsent(stop.getId(), k -> new java.util.concurrent.ConcurrentLinkedQueue<>());
 
+        for (SpawnRequest req : q) {
+            if (req.player().getUniqueId().equals(player.getUniqueId())) {
+                TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
+                return false;
+            }
+        }
+
+        boolean isOccupied = false;
         boolean hasExistingEmpty = false;
         RideableMinecart existingEmpty = null;
         for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
             if (!(entity instanceof Minecart existing) || !existing.isValid() || existing.isDead()) continue;
+            isOccupied = true;
             if (existing instanceof RideableMinecart rideable && rideable.getPassengers().isEmpty() && !pendingMounts.contains(rideable.getUniqueId())) {
                 hasExistingEmpty = true;
                 existingEmpty = rideable;
-                break;
+                // 不 break，因為我們還要確認是否有其他礦車佔用，不過這邊找到了空車，
+                // 如果我們只想上這個空車，其實可以 break。
+                // 為了安全起見，isOccupied 會讓它知道站上有車。
             }
         }
 
@@ -151,7 +162,7 @@ public class CartSpawnManager {
         q.add(new SpawnRequest(player, clicked));
         lastSpawnTick.put(player.getUniqueId(), now);
 
-        if (q.size() > 1 || hasExistingEmpty || now < nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
+        if (q.size() > 1 || isOccupied || now < nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
             TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
         }
 
