@@ -320,3 +320,21 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 2. **修正站點佔用判定**：
    - 將「尋找可用空車」與「判斷站點是否被佔用 (isOccupied)」的邏輯脫鉤。只要範圍內有任何礦車（包含有乘客的），`isOccupied` 就為 true。
    - 在決定是否顯示排隊提示時，只要發現 `isOccupied == true`，就會明確地告知玩家「前方有列車，已加入排隊序列」。
+
+### 2026-07-16 — 實作 Grim Anticheat 動態豁免 (防止礦車誤判)
+
+**修改原因：**
+- Avery 回報 Grim Anticheat 會在礦車移動時一直產生防作弊誤判。
+- 因為火車插件會強制介入控制礦車的速度與移動軌跡，這會被反作弊插件判定為異常。
+- 需求是：「當玩家在插件生成的礦車上時，暫時停止偵測」。
+
+**修復摘要：**
+1. **動態權限發放 (`EmptyCartListener.java`)**：
+   - 採用無侵入式（免依賴 API）的 Bukkit `PermissionAttachment` 做法。
+   - 當 `VehicleEnterEvent` 發生且確認礦車帶有專屬標籤 (`isManagedCart`)，使用 `player.addAttachment(plugin)` 動態賦予玩家 `grim.exempt` 權限，以暫時關閉 Grim 的偵測，並快取在 `Map` 中。
+2. **權限回收與清理**：
+   - 於 `VehicleExitEvent` 玩家下車時，透過 UUID 找回對應的 Attachment 並安全移除。
+   - 新增 `PlayerQuitEvent` 監聽，若玩家在車上斷線，也會正確清除權限並移除 Map 中的參照，防止潛在的記憶體流失 (Memory Leak)。
+
+**驗證：**
+- 已順利通過 `./gradlew build`。修改僅影響受管理的礦車，不影響伺服器原本的一般礦車或其他防作弊檢查。
