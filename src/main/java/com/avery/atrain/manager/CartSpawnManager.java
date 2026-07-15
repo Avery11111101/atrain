@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.minecart.RideableMinecart;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,6 +24,8 @@ public class CartSpawnManager {
     private final AtrainPlugin plugin;
     private final Map<UUID, Long> lastSpawnTick = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> despawnTaskIds = new ConcurrentHashMap<>();
+
+    private final Set<UUID> pendingMounts = ConcurrentHashMap.newKeySet();
 
     public CartSpawnManager(AtrainPlugin plugin) {
         this.plugin = plugin;
@@ -71,16 +74,32 @@ public class CartSpawnManager {
             return false;
         }
 
-        Location spawnLoc = rail.getLocation().add(0.5, 0.0625, 0.5);
+        Location centerLoc = RailUtil.cartPositionOnRail(rail);
+        if (centerLoc == null) centerLoc = rail.getLocation().add(0.5, 0.5, 0.5);
         double radius = cfg.getCartSpawnRadius();
-        for (var entity : world.getNearbyEntities(spawnLoc, radius, radius, radius)) {
+
+        // 1. Check if the exact station rail has an available cart
+        for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
             if (!(entity instanceof Minecart existing) || !existing.isValid() || existing.isDead()) continue;
-            TextUtil.send(player, lang.get(player, "cart.already_nearby"));
-            if (cfg.isCartSpawnAutoMount() && existing instanceof RideableMinecart rideable) {
-                mountNextTick(player, rideable);
+            if (existing instanceof RideableMinecart rideable) {
+                if (rideable.getPassengers().isEmpty() && !pendingMounts.contains(rideable.getUniqueId())) {
+                    TextUtil.send(player, lang.get(player, "cart.already_nearby"));
+                    if (cfg.isCartSpawnAutoMount()) {
+                        mountNextTick(player, rideable);
+                    }
+                    return false;
+                }
             }
+        }
+
+        // 2. Find an empty rail nearby to spawn
+        Block emptyRail = findEmptyRailConnectedTo(rail, world, radius);
+        if (emptyRail == null) {
+            TextUtil.send(player, lang.get(player, "cart.already_nearby"));
             return false;
         }
+
+        Location spawnLoc = emptyRail.getLocation().add(0.5, RailUtil.cartHeightOnRail(emptyRail) + 0.0625, 0.5);
 
         RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> {
             entity.setMaxSpeed((float) cfg.getCartSpeed());
@@ -102,8 +121,42 @@ public class CartSpawnManager {
         return true;
     }
 
+    private Block findEmptyRailConnectedTo(Block startRail, World world, double radius) {
+        java.util.Set<Block> visited = new java.util.HashSet<>();
+        java.util.Queue<Block> queue = new java.util.ArrayDeque<>();
+        queue.add(startRail);
+        visited.add(startRail);
+
+        while (!queue.isEmpty() && visited.size() < 30) {
+            Block curr = queue.poll();
+            Location loc = RailUtil.cartPositionOnRail(curr);
+            if (loc == null) loc = curr.getLocation().add(0.5, 0.5, 0.5);
+
+            boolean occupied = false;
+            for (var entity : world.getNearbyEntities(loc, radius, radius, radius)) {
+                if (entity instanceof Minecart m && m.isValid() && !m.isDead()) {
+                    occupied = true;
+                    break;
+                }
+            }
+            if (!occupied) {
+                return curr;
+            }
+
+            for (org.bukkit.util.Vector dir : RailUtil.getRailDirections(curr.getLocation())) {
+                Block next = RailUtil.walkNextRail(curr, dir);
+                if (next != null && visited.add(next)) {
+                    queue.add(next);
+                }
+            }
+        }
+        return null;
+    }
+
     private void mountNextTick(Player player, RideableMinecart cart) {
+        pendingMounts.add(cart.getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
+            pendingMounts.remove(cart.getUniqueId());
             if (!cart.isValid() || cart.isDead()) return;
             if (player.isInsideVehicle()) return;
             cart.addPassenger(player);
