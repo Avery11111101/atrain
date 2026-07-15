@@ -29,7 +29,7 @@ public class CartSpawnManager {
 
     private record SpawnRequest(Player player, Block clickedRail) {}
     private final Map<String, java.util.Queue<SpawnRequest>> spawnQueues = new ConcurrentHashMap<>();
-    private final Map<String, Long> nextAllowedSpawnTick = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastOccupiedTick = new ConcurrentHashMap<>(); // 紀錄最後一次被佔用的 Tick
 
     public CartSpawnManager(AtrainPlugin plugin) {
         this.plugin = plugin;
@@ -42,9 +42,6 @@ public class CartSpawnManager {
             String stopId = entry.getKey();
             var queue = entry.getValue();
             if (queue.isEmpty()) continue;
-
-            long nextAllowed = nextAllowedSpawnTick.getOrDefault(stopId, 0L);
-            if (now < nextAllowed) continue;
 
             SpawnRequest req = queue.peek();
             if (!req.player().isOnline()) {
@@ -71,10 +68,16 @@ public class CartSpawnManager {
                 }
             }
 
-            if (!occupied) {
-                queue.poll();
-                performSpawn(req.player(), rail, plugin.getStopManager().getStop(stopId));
-                nextAllowedSpawnTick.put(stopId, now + 20); // 1秒間隔
+            if (occupied) {
+                lastOccupiedTick.put(stopId, now); // 只要有車，就更新最後佔用時間
+            } else {
+                long lastOcc = lastOccupiedTick.getOrDefault(stopId, 0L);
+                // 必須距離最後一次被佔用超過 20 Ticks (1秒)，才允許發下一班車
+                if (now - lastOcc >= 20) {
+                    queue.poll();
+                    performSpawn(req.player(), rail, plugin.getStopManager().getStop(stopId));
+                    lastOccupiedTick.put(stopId, now); // 發車瞬間也算佔用，重置計時
+                }
             }
         }
     }
@@ -150,7 +153,7 @@ public class CartSpawnManager {
             }
         }
 
-        if (hasExistingEmpty && q.isEmpty() && now >= nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
+        if (hasExistingEmpty && q.isEmpty() && now - lastOccupiedTick.getOrDefault(stop.getId(), 0L) >= 20) {
             TextUtil.send(player, lang.get(player, "cart.already_nearby"));
             if (cfg.isCartSpawnAutoMount()) {
                 mountNextTick(player, existingEmpty);
@@ -162,7 +165,7 @@ public class CartSpawnManager {
         q.add(new SpawnRequest(player, clicked));
         lastSpawnTick.put(player.getUniqueId(), now);
 
-        if (q.size() > 1 || isOccupied || now < nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
+        if (q.size() > 1 || isOccupied || now - lastOccupiedTick.getOrDefault(stop.getId(), 0L) < 20) {
             TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
         }
 
