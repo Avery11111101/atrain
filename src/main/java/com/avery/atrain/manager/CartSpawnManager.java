@@ -27,8 +27,56 @@ public class CartSpawnManager {
 
     private final Set<UUID> pendingMounts = ConcurrentHashMap.newKeySet();
 
+    private record SpawnRequest(Player player, Block clickedRail) {}
+    private final Map<String, java.util.Queue<SpawnRequest>> spawnQueues = new ConcurrentHashMap<>();
+    private final Map<String, Long> nextAllowedSpawnTick = new ConcurrentHashMap<>();
+
     public CartSpawnManager(AtrainPlugin plugin) {
         this.plugin = plugin;
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::processQueues, 1L, 1L);
+    }
+
+    private void processQueues() {
+        long now = plugin.getServer().getCurrentTick();
+        for (var entry : spawnQueues.entrySet()) {
+            String stopId = entry.getKey();
+            var queue = entry.getValue();
+            if (queue.isEmpty()) continue;
+
+            long nextAllowed = nextAllowedSpawnTick.getOrDefault(stopId, 0L);
+            if (now < nextAllowed) continue;
+
+            SpawnRequest req = queue.peek();
+            if (!req.player().isOnline()) {
+                queue.poll();
+                continue;
+            }
+
+            Block rail = StationUtil.resolveRailBlock(req.clickedRail());
+            if (rail == null) {
+                queue.poll();
+                continue;
+            }
+
+            Location centerLoc = RailUtil.cartPositionOnRail(rail);
+            if (centerLoc == null) centerLoc = rail.getLocation().add(0.5, 0.5, 0.5);
+            double radius = plugin.getConfigManager().getCartSpawnRadius();
+
+            boolean occupied = false;
+            World world = rail.getWorld();
+            for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
+                if (entity instanceof Minecart m && m.isValid() && !m.isDead()) {
+                    occupied = true;
+                    break;
+                }
+            }
+
+            if (!occupied) {
+                queue.poll();
+                performSpawn(req.player(), rail, plugin.getStopManager().getStop(stopId));
+                nextAllowedSpawnTick.put(stopId, now + 20); // 1秒間隔
+            }
+        }
     }
 
     public boolean trySpawn(Player player, Block clicked) {
@@ -78,79 +126,61 @@ public class CartSpawnManager {
         if (centerLoc == null) centerLoc = rail.getLocation().add(0.5, 0.5, 0.5);
         double radius = cfg.getCartSpawnRadius();
 
-        // 1. Check if the exact station rail has an available cart
+        java.util.Queue<SpawnRequest> q = spawnQueues.computeIfAbsent(stop.getId(), k -> new java.util.concurrent.ConcurrentLinkedQueue<>());
+
+        boolean hasExistingEmpty = false;
+        RideableMinecart existingEmpty = null;
         for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
             if (!(entity instanceof Minecart existing) || !existing.isValid() || existing.isDead()) continue;
-            if (existing instanceof RideableMinecart rideable) {
-                if (rideable.getPassengers().isEmpty() && !pendingMounts.contains(rideable.getUniqueId())) {
-                    TextUtil.send(player, lang.get(player, "cart.already_nearby"));
-                    if (cfg.isCartSpawnAutoMount()) {
-                        mountNextTick(player, rideable);
-                    }
-                    return false;
-                }
+            if (existing instanceof RideableMinecart rideable && rideable.getPassengers().isEmpty() && !pendingMounts.contains(rideable.getUniqueId())) {
+                hasExistingEmpty = true;
+                existingEmpty = rideable;
+                break;
             }
         }
 
-        // 2. Find an empty rail nearby to spawn
-        Block emptyRail = findEmptyRailConnectedTo(rail, world, radius);
-        if (emptyRail == null) {
+        if (hasExistingEmpty && q.isEmpty() && now >= nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
             TextUtil.send(player, lang.get(player, "cart.already_nearby"));
+            if (cfg.isCartSpawnAutoMount()) {
+                mountNextTick(player, existingEmpty);
+                lastSpawnTick.put(player.getUniqueId(), now);
+            }
             return false;
         }
 
-        Location spawnLoc = emptyRail.getLocation().add(0.5, RailUtil.cartHeightOnRail(emptyRail) + 0.0625, 0.5);
+        q.add(new SpawnRequest(player, clicked));
+        lastSpawnTick.put(player.getUniqueId(), now);
+
+        if (q.size() > 1 || hasExistingEmpty || now < nextAllowedSpawnTick.getOrDefault(stop.getId(), 0L)) {
+            TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
+        }
+
+        return true;
+    }
+
+    private void performSpawn(Player player, Block rail, Stop stop) {
+        World world = rail.getWorld();
+        var cfg = plugin.getConfigManager();
+        Location spawnLoc = rail.getLocation().add(0.5, RailUtil.cartHeightOnRail(rail) + 0.0625, 0.5);
 
         RideableMinecart cart = world.spawn(spawnLoc, RideableMinecart.class, entity -> {
             entity.setMaxSpeed((float) cfg.getCartSpeed());
             plugin.markAsManagedCart(entity);
         });
 
-        lastSpawnTick.put(player.getUniqueId(), now);
         scheduleEmptyDespawn(cart);
-        TextUtil.send(player, lang.get(player, "cart.spawned", Map.of(
-                "stop", TextUtil.escapePlain(stop.getDisplayName()))));
+        if (stop != null) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "cart.spawned", Map.of(
+                    "stop", TextUtil.escapePlain(stop.getDisplayName()))));
+        }
 
         if (!RailUtil.isPoweredRail(spawnLoc)) {
-            TextUtil.send(player, lang.get(player, "cart.need_power"));
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "cart.need_power"));
         }
 
         if (cfg.isCartSpawnAutoMount()) {
             mountNextTick(player, cart);
         }
-        return true;
-    }
-
-    private Block findEmptyRailConnectedTo(Block startRail, World world, double radius) {
-        java.util.Set<Block> visited = new java.util.HashSet<>();
-        java.util.Queue<Block> queue = new java.util.ArrayDeque<>();
-        queue.add(startRail);
-        visited.add(startRail);
-
-        while (!queue.isEmpty() && visited.size() < 30) {
-            Block curr = queue.poll();
-            Location loc = RailUtil.cartPositionOnRail(curr);
-            if (loc == null) loc = curr.getLocation().add(0.5, 0.5, 0.5);
-
-            boolean occupied = false;
-            for (var entity : world.getNearbyEntities(loc, radius, radius, radius)) {
-                if (entity instanceof Minecart m && m.isValid() && !m.isDead()) {
-                    occupied = true;
-                    break;
-                }
-            }
-            if (!occupied) {
-                return curr;
-            }
-
-            for (org.bukkit.util.Vector dir : RailUtil.getRailDirections(curr.getLocation())) {
-                Block next = RailUtil.walkNextRail(curr, dir);
-                if (next != null && visited.add(next)) {
-                    queue.add(next);
-                }
-            }
-        }
-        return null;
     }
 
     private void mountNextTick(Player player, RideableMinecart cart) {

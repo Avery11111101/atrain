@@ -84,6 +84,7 @@ train.departing: "§a列車發車！"
 
 cart.spawned: "<green><bold>列車已進站：</bold><white>{stop}<green>，歡迎搭乘！"
 cart.already_nearby: "<yellow>站內已有礦車，請直接上車。"
+cart.queued: "<yellow>站內有其他列車或剛發車，已加入排隊（第 <gold>{pos} <yellow>順位），請稍候…"
 cart.need_station: "<red>此處尚未註冊站點，請先 §e蹲下右鍵 §7建站。"
 cart.spawn_disabled: "<red>站點召車功能已關閉。"
 cart.cooldown: "<yellow>請稍候再召喚列車。"
