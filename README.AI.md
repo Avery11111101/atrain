@@ -325,16 +325,17 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 
 **修改原因：**
 - Avery 回報 Grim Anticheat 會在礦車移動時一直產生防作弊誤判。
-- 因為火車插件會強制介入控制礦車的速度與移動軌跡，這會被反作弊插件判定為異常。
-- 需求是：「當玩家在插件生成的礦車上時，暫時停止偵測」。
+- 第一版使用 Bukkit 的 `PermissionAttachment` 給予 `grim.disabled` 權限，但在玩家下車移除權限後，防作弊卻沒有恢復運作（下車開外掛依舊沒有偵測到）。
+- 經過調查，Grim Anticheat 不會動態監聽 Bukkit 的權限變更，必須透過 Grim API 的 `updatePermissions()` 才能讓它即時重新讀取快取中的權限狀態。
 
 **修復摘要：**
-1. **動態權限發放 (`EmptyCartListener.java`)**：
-   - 採用無侵入式（免依賴 API）的 Bukkit `PermissionAttachment` 做法。
-   - 當 `VehicleEnterEvent` 發生且確認礦車帶有專屬標籤 (`isManagedCart`)，使用 `player.addAttachment(plugin)` 動態賦予玩家 `grim.disabled` 權限，以暫時關閉 Grim 的偵測，並快取在 `Map` 中。（註：不使用 `grim.exempt` 是因為該權限會完全註銷玩家，收回時需要重登才會恢復偵測）。
-2. **權限回收與清理**：
-   - 於 `VehicleExitEvent` 玩家下車時，透過 UUID 找回對應的 Attachment 並安全移除，同時強制呼叫 `player.recalculatePermissions()` 確保權限立即生效，恢復防作弊偵測。
-   - 新增 `PlayerQuitEvent` 監聽，若玩家在車上斷線，也會正確清除權限並移除 Map 中的參照，防止潛在的記憶體流失 (Memory Leak)。
+1. **引入 GrimAPI 依賴**：
+   - 在 `build.gradle.kts` 中新增 Grim 的官方 Maven repository (`https://repo.grim.ac/snapshots`) 以及 API 依賴 `compileOnly("ac.grim.grimac:GrimAPI:1.6.0.9")`。
+2. **呼叫 API 更新快取 (`EmptyCartListener.java`)**：
+   - 在玩家上車 (`onEnter`) 與下車 (`onExit`/`onQuit`) 改變權限 (`player.recalculatePermissions()`) 之後，透過 `Bukkit.getPluginManager().isPluginEnabled("GrimAC")` 安全判定。
+   - 若有裝 Grim，則呼叫 `GrimAPIProvider.get().getGrimUser(player.getUniqueId()).updatePermissions()`，主動迫使 Grim Anticheat 重新抓取該玩家的最新權限。
+   - 這解決了因為 Grim 內部權限快取而導致的「豁免權限卡住無法恢復」問題。
 
 **驗證：**
-- 已順利通過 `./gradlew build`。修改僅影響受管理的礦車，不影響伺服器原本的一般礦車或其他防作弊檢查。
+- 成功編譯通過，程式碼在未安裝 Grim 的伺服器上也不會報錯 (安全的 try-catch 處理)。
+- 下次測試時，玩家下車後 Grim 會被強制要求重新計算權限，進而恢復防作弊檢查。

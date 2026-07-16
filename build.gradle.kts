@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "1.6.0"
+version = "1.6.1"
 
 java {
     toolchain {
@@ -16,11 +16,13 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.bluecolored.de/releases")
+    maven("https://repo.grim.ac/snapshots")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
     compileOnly("de.bluecolored:bluemap-api:2.7.3")
+    compileOnly("ac.grim.grimac:GrimAPI:1.6.0.9") // Ensure API exists
 }
 
 tasks.processResources {

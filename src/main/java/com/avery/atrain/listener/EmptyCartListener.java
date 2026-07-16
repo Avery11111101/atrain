@@ -33,10 +33,15 @@ public class EmptyCartListener implements Listener {
 
         if (!(event.getEntered() instanceof Player player)) return;
 
+        // 避免重複賦予
+        if (grimExemptions.containsKey(player.getUniqueId())) return;
+
         // 給予 Grim Anticheat 豁免權限 (避免在礦車上被誤判)
         PermissionAttachment attachment = player.addAttachment(plugin);
         attachment.setPermission("grim.disabled", true);
         grimExemptions.put(player.getUniqueId(), attachment);
+        player.recalculatePermissions();
+        updateGrimPermissions(player);
 
         if (plugin.getRouteRecordingManager() != null
                 && plugin.getRouteRecordingManager().isRecordingCart(rideable.getUniqueId())) {
@@ -65,6 +70,7 @@ public class EmptyCartListener implements Listener {
             try {
                 player.removeAttachment(attachment);
                 player.recalculatePermissions();
+                updateGrimPermissions(player);
             } catch (IllegalArgumentException ignored) {}
         }
 
@@ -89,8 +95,22 @@ public class EmptyCartListener implements Listener {
         if (attachment != null) {
             try {
                 player.removeAttachment(attachment);
+                // 玩家退出遊戲時不一定需要 recalculate，但安全起見
                 player.recalculatePermissions();
+                updateGrimPermissions(player);
             } catch (IllegalArgumentException ignored) {}
+        }
+    }
+
+    private void updateGrimPermissions(Player player) {
+        if (!org.bukkit.Bukkit.getPluginManager().isPluginEnabled("GrimAC")) return;
+        try {
+            ac.grim.grimac.api.GrimUser grimUser = ac.grim.grimac.api.GrimAPIProvider.get().getGrimUser(player.getUniqueId());
+            if (grimUser != null) {
+                grimUser.updatePermissions();
+            }
+        } catch (Throwable t) {
+            // Ignore
         }
     }
 }
