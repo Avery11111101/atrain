@@ -331,9 +331,9 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 **修復摘要：**
 1. **動態權限發放 (`EmptyCartListener.java`)**：
    - 採用無侵入式（免依賴 API）的 Bukkit `PermissionAttachment` 做法。
-   - 當 `VehicleEnterEvent` 發生且確認礦車帶有專屬標籤 (`isManagedCart`)，使用 `player.addAttachment(plugin)` 動態賦予玩家 `grim.exempt` 權限，以暫時關閉 Grim 的偵測，並快取在 `Map` 中。
+   - 當 `VehicleEnterEvent` 發生且確認礦車帶有專屬標籤 (`isManagedCart`)，使用 `player.addAttachment(plugin)` 動態賦予玩家 `grim.disabled` 權限，以暫時關閉 Grim 的偵測，並快取在 `Map` 中。（註：不使用 `grim.exempt` 是因為該權限會完全註銷玩家，收回時需要重登才會恢復偵測）。
 2. **權限回收與清理**：
-   - 於 `VehicleExitEvent` 玩家下車時，透過 UUID 找回對應的 Attachment 並安全移除。
+   - 於 `VehicleExitEvent` 玩家下車時，透過 UUID 找回對應的 Attachment 並安全移除，同時強制呼叫 `player.recalculatePermissions()` 確保權限立即生效，恢復防作弊偵測。
    - 新增 `PlayerQuitEvent` 監聽，若玩家在車上斷線，也會正確清除權限並移除 Map 中的參照，防止潛在的記憶體流失 (Memory Leak)。
 
 **驗證：**

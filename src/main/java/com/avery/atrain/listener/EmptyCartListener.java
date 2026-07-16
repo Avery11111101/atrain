@@ -35,7 +35,7 @@ public class EmptyCartListener implements Listener {
 
         // 給予 Grim Anticheat 豁免權限 (避免在礦車上被誤判)
         PermissionAttachment attachment = player.addAttachment(plugin);
-        attachment.setPermission("grim.exempt", true);
+        attachment.setPermission("grim.disabled", true);
         grimExemptions.put(player.getUniqueId(), attachment);
 
         if (plugin.getRouteRecordingManager() != null
@@ -64,6 +64,7 @@ public class EmptyCartListener implements Listener {
         if (attachment != null) {
             try {
                 player.removeAttachment(attachment);
+                player.recalculatePermissions();
             } catch (IllegalArgumentException ignored) {}
         }
 
@@ -88,6 +89,7 @@ public class EmptyCartListener implements Listener {
         if (attachment != null) {
             try {
                 player.removeAttachment(attachment);
+                player.recalculatePermissions();
             } catch (IllegalArgumentException ignored) {}
         }
     }
