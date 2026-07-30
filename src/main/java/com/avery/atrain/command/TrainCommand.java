@@ -77,10 +77,13 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
         }
         if (p.hasPermission("atrain.admin")) {
             plugin.getGuiManager().openMain(p);
-        } else if (p.hasPermission("atrain.user") || p.hasPermission("atrain.gui")) {
-            plugin.getGuiManager().openGuideMain(p);
         } else {
-            TextUtil.send(p, lang.get(p, "error.no_permission"));
+            // 所有玩家打 /tr 預設均可開啟站點導覽選單（除非被權限插件顯式設為 false）
+            if (p.isPermissionSet("atrain.user") && !p.hasPermission("atrain.user")) {
+                TextUtil.send(p, lang.get(p, "error.no_permission"));
+                return;
+            }
+            plugin.getGuiManager().openGuideMain(p);
         }
     }
 
