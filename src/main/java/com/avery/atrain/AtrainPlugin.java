@@ -63,6 +63,8 @@ public final class AtrainPlugin extends JavaPlugin {
     private RouteRecordingManager routeRecordingManager;
     private HangRailTask hangRailTask;
     private BlueMapManager blueMapManager;
+    private com.avery.atrain.service.RoutePlannerService routePlannerService;
+    private com.avery.atrain.service.ActiveNavigationManager activeNavigationManager;
 
     private NamespacedKey managedCartKey;
 
@@ -85,6 +87,8 @@ public final class AtrainPlugin extends JavaPlugin {
         bindPlatformManager = new BindPlatformManager();
         guiManager = new GuiManager(this);
         stationAutoStopListener = new StationAutoStopListener(this);
+        routePlannerService = new com.avery.atrain.service.RoutePlannerService(this);
+        activeNavigationManager = new com.avery.atrain.service.ActiveNavigationManager(this);
 
         configManager.load();
         languageManager.load();
@@ -210,6 +214,8 @@ public final class AtrainPlugin extends JavaPlugin {
     public CinematicTransitManager getCinematicTransitManager() { return cinematicTransitManager; }
     public RouteRecordingManager getRouteRecordingManager() { return routeRecordingManager; }
     public BlueMapManager getBlueMapManager() { return blueMapManager; }
+    public com.avery.atrain.service.RoutePlannerService getRoutePlannerService() { return routePlannerService; }
+    public com.avery.atrain.service.ActiveNavigationManager getActiveNavigationManager() { return activeNavigationManager; }
 
     public NamespacedKey getManagedCartKey() { return managedCartKey; }
 

@@ -25,7 +25,7 @@ Minecraft 金磚站點插件 — **零指令**操作，蹲下右鍵即可設定�
 ## 安裝
 ./gradlew build
 1. **Paper 1.21+**、**Java 21+**
-2. 放入 `plugins/atrain-1.0.jar`
+2. 放入 `plugins/atrain-1.7.jar`
 3. 重啟伺服器
 
 ## 快速開始（不需指令）
@@ -48,12 +48,13 @@ Minecraft 金磚站點插件 — **零指令**操作，蹲下右鍵即可設定�
 
 ## 權限
 
-所有權限**預設僅 OP**；若要開放給特定身分組，請用 LuckPerms 等插件授予對應節點。
+所有管理權限**預設僅 OP**；一般玩家預設擁有 `atrain.user` 權限。若要自訂身分組，請用 LuckPerms 授予對應節點。
 
 | 權限 | 說明 | 預設 |
 |------|------|------|
+| `atrain.user` | 玩家使用 `/tr` 導覽介面、路線規劃與搭乘指引 | 所有人 (`true`) |
 | `atrain.admin` | 管理員全權（含下方所有子權限） | OP |
-| `atrain.gui` | 開啟 `/train` GUI、站點/路線列表 | OP |
+| `atrain.gui` | 開啟 `/train` 管理員主介面、站點/路線列表 | OP |
 | `atrain.station.edit` | 蹲下右鍵編輯金磚站點 | OP |
 | `atrain.speed.edit` | 蹲下右鍵編輯調速鑽石塊 | OP |
 | `atrain.cart.spawn` | 站點右鍵召喚礦車 | OP |

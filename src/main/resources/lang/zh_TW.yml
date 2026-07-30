@@ -178,6 +178,13 @@ gui.main.lines_lore:
   - "§7設定站點順序與速度"
   - ""
   - "§e點擊開啟"
+gui.main.guide: "§a§l站點導覽與路線指南"
+gui.main.guide_lore:
+  - "§7查詢離您最近的車站"
+  - "§7瀏覽伺服器全部路線與轉乘站"
+  - "§7規劃最佳搭乘路線與轉乘指引"
+  - ""
+  - "§e點擊開啟導覽面板"
 gui.main.stops: "§6§l站點管理"
 gui.main.stops_lore:
   - "§7查看已註冊的金磚站點"
@@ -685,3 +692,35 @@ gui.line_detail.reorder: "§6調整站點順序"
 gui.line_detail.reorder_lore:
   - "§7進入專屬介面"
   - "§7使用左右鍵移動站點"
+
+gui.guide.title: "§b§l火車站點導覽與路線指南"
+gui.guide.nearest: "§a§l離我最近的站點"
+gui.guide.nearest_name: "§e站名: §f{name}"
+gui.guide.nearest_dist: "§e距離: §a{dist} 公尺"
+gui.guide.nearest_lines: "§e途經路線: {lines}"
+gui.guide.nearest_click: "§e▶ 點擊將此站設為導航起點"
+gui.guide.no_nearest: "§c同世界內未搜尋到站點"
+gui.guide.lines_overview: "§b§l伺服器路線總覽"
+gui.guide.lines_overview_lore:
+  - "§7查看伺服器目前全部火車路線"
+  - "§7與各路線行經站點順序"
+gui.guide.transfers_overview: "§d§l轉乘站 / 重疊站一覽"
+gui.guide.transfers_overview_lore:
+  - "§7盤點擁有兩條以上路線行經"
+  - "§7或設有重點轉乘標記的站點"
+gui.guide.planner: "§e§l搭乘指引 / 路線規劃"
+gui.guide.planner_lore:
+  - "§7選擇起點站與終點站"
+  - "§7自動計算最優乘車與轉乘指引"
+gui.guide.admin_panel: "§c§l管理員控制面板"
+gui.guide.admin_panel_lore: "§7切換至管理員路線與站點維護介面"
+
+gui.guide_line_list.title: "§8伺服器路線總覽"
+gui.guide_transfers.title: "§8轉乘站 / 重疊站一覽"
+gui.guide_planner.title: "§8搭乘指引與路線規劃"
+
+nav.started: "<green>[導航] 已為您開啟從 <gold>{origin} <green>到 <gold>{destination} <green>的即時導航。"
+nav.next_instruction: "<yellow>[導航] 請搭乘 <white>{line} <yellow>前往 <gold>{target}<yellow>。"
+nav.cancelled: "<red>[導航] 已取消即時導航行程。"
+nav.destination_arrived: "<green>[導航] 已成功抵達目的地 <gold>{stop}<green>！祝您旅途愉快。"
+nav.transfer_dismount: "<yellow>[導航] 抵達轉乘站 <gold>{stop}<yellow>！已自動為您下車，請前往轉乘 <white>{line}<yellow>。"

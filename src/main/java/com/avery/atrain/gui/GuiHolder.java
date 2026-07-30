@@ -16,7 +16,9 @@ public class GuiHolder implements InventoryHolder {
         RECORD_SELECT, RECORD_SEGMENT, RECORD_MODE_SELECT,
         KEY_STATION_SELECT,
         SPEED_BLOCK_EDIT,
-        CONFIRM, LANGUAGE
+        CONFIRM, LANGUAGE,
+        GUIDE_MAIN, GUIDE_LINE_LIST, GUIDE_LINE_DETAIL, GUIDE_TRANSFER_LIST,
+        GUIDE_PLANNER, GUIDE_SELECT_STOP, GUIDE_PLANNER_RESULT
     }
 
     private final Type type;

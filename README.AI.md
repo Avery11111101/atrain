@@ -24,6 +24,31 @@ Avery 回報路線管理無法用說明的方式調整站點順序，以及軌�
 
 ## 歷史變更軌跡
 
+### 2026-07-30 — 站點導覽、路線規劃、轉乘站自動下車與聊天室分享系統 (v1.7)
+
+**修改原因：**
+- Avery 要求新增玩家專屬的 `/tr` 指令選單功能（純 GUI 面板化，無須指令），供玩家查詢最近站點、伺服器路線總覽、轉乘/重疊站一覽與乘車指引。
+- 權限支援 LuckPerms (`atrain.user`)：非管理員玩家打 `/tr` 直接開啟「站點導覽」選單；管理員打 `/tr` 開啟原管理選單並提供按鈕可手動切換至導覽選單。
+- 支持乘車指引分享至公眾聊天室、中途隨時取消導航、以及搭車至轉乘站時**自動下車**提示換線乘車。
+- Avery 回報修正：
+  1. 版本號維持 `1.7`。
+  2. 修正起點與終點選站 GUI 狀態未互相傳遞導致的互相蓋掉（無法同時設起終點）問題。
+  3. 調整「離我最近的站點」行為：點擊時發送該站世界座標 (X, Y, Z) 與距離指引，提醒玩家步行至該站附近（<=15m）後方可設定為乘車起點。
+
+**修復/更新摘要：**
+1. **`RoutePlannerService` (BFS 圖形搜尋)**：實作跨路線與轉乘站的最優路徑搜尋算法，計算總站數、轉乘次數與分段指引。
+2. **`ActiveNavigationManager` (即時導航 Session 與自動下車)**：追蹤線上玩家的乘車進度。在 `CinematicTransitTask.arrive()` 抵達轉乘站點時，自動為玩家卸下礦車 (`cart.removePassenger(player)`) 並提示前往目標月台轉乘；抵達目的地時自動發送完成訊息。
+3. **導覽 GUI 面板系統 (`GuiManager` & `GuiListener`)**：
+   - `openGuideMain`: 展示離我最近站點名稱、座標 (X,Y,Z) 與距離，點擊發送地點指引；若已在 15m 內則可自動設為起點。
+   - `openGuideLineList` / `openGuideLineDetail`: 查看路線與停靠站。
+   - `openGuideTransferList`: 查看交會與轉乘站點。
+   - `openGuidePlanner` / `openGuideSelectStop`: 支援雙向 state (`originStopId` & `destStopId`) 完整保留，解決起終點覆寫問題。
+   - `openGuidePlannerResult`: 呈現指引結果、提供「📢 分享至聊天室」廣播按鈕與「🚀 開始即時導航」功能。
+4. **權限與指令 (`TrainCommand` & `plugin.yml`)**：
+   - 註冊 `atrain.user` 權限（預設 `true`）。
+   - `TrainCommand.openGui`: 依 `atrain.admin` 與 `atrain.user` 自動導向管理員選單或玩家導覽選單。
+5. **版本號與構建**：`build.gradle.kts` 版本號維持為 `1.7`，Gradle 編譯通過 (BUILD SUCCESSFUL)。
+
 ### 2026-07-30 — 多人站點即時上車與順序 1 秒間隔發車防重疊機制
 
 **修改原因：**

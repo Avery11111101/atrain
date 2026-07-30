@@ -57,6 +57,13 @@ public class GuiListener implements Listener {
             case KEY_STATION_SELECT -> handleKeyStationSelect(player, slot, holder, gui);
             case LINE_REORDER -> handleLineReorder(player, slot, holder, gui, event);
             case RECORD_MODE_SELECT -> handleRecordModeSelect(player, slot, holder, gui);
+            case GUIDE_MAIN -> handleGuideMain(player, slot, holder, gui);
+            case GUIDE_LINE_LIST -> handleGuideLineList(player, slot, holder, gui, event);
+            case GUIDE_LINE_DETAIL -> handleGuideLineDetail(player, slot, holder, gui, event);
+            case GUIDE_TRANSFER_LIST -> handleGuideTransferList(player, slot, holder, gui, event);
+            case GUIDE_PLANNER -> handleGuidePlanner(player, slot, holder, gui, event);
+            case GUIDE_SELECT_STOP -> handleGuideSelectStop(player, slot, holder, gui, event);
+            case GUIDE_PLANNER_RESULT -> handleGuidePlannerResult(player, slot, holder, gui);
         }
     }
 
@@ -76,6 +83,7 @@ public class GuiListener implements Listener {
             case 10 -> gui.openTutorial(player);
             case 13 -> gui.openStopList(player, 0);
             case 16 -> gui.openLineList(player, 0);
+            case 20 -> gui.openGuideMain(player);
             case 22 -> {
                 if (!player.hasPermission("atrain.station.edit")) {
                     TextUtil.send(player, lang(player, "error.no_permission"));
@@ -917,5 +925,194 @@ public class GuiListener implements Listener {
 
     private String lang(Player player, String key, Map<String, String> ph) {
         return plugin.getLanguageManager().get(player, key, ph);
+    }
+
+    // ==========================================
+    // 站點導覽與路線指南 事件處理 (Station Guide Event Handlers)
+    // ==========================================
+
+    private void handleGuideMain(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        switch (slot) {
+            case 10 -> {
+                String nearestId = holder.get("nearest_stop_id");
+                if (nearestId != null) {
+                    Stop stop = plugin.getStopManager().getStop(nearestId);
+                    String coords = holder.get("nearest_coords");
+                    double dist = Double.parseDouble(holder.get("nearest_dist") != null ? holder.get("nearest_dist") : "999");
+                    String stopName = stop != null ? stop.getDisplayName() : nearestId;
+
+                    if (dist <= 15.0) {
+                        TextUtil.send(player, "§a✔ 您已抵達【" + stopName + "】附近，已將此站設為搭乘起點站！");
+                        gui.openGuidePlanner(player, nearestId, null);
+                    } else {
+                        TextUtil.send(player, "§6📍 【最近車站座標指引】 §f" + stopName);
+                        TextUtil.send(player, "§e車站座標: §f" + coords + " §7(距離您 §a" + String.format("%.1f", dist) + " §7公尺)");
+                        TextUtil.send(player, "§e請依照座標指引步行前往該站點附近，抵達後方可在此設為搭乘起點！");
+                        player.sendActionBar(TextUtil.component("§6📍 最近車站: §f" + stopName + " §7➔ 座標: §f" + coords + " §7(" + String.format("%.1f", dist) + "m)"));
+                        player.closeInventory();
+                    }
+                } else {
+                    TextUtil.send(player, "§c附近未找到金磚站點。");
+                }
+            }
+            case 12 -> gui.openGuideLineList(player, 0);
+            case 14 -> gui.openGuideTransferList(player, 0);
+            case 16 -> gui.openGuidePlanner(player);
+            case 20 -> {
+                if (player.hasPermission("atrain.admin")) {
+                    gui.openMain(player);
+                }
+            }
+        }
+    }
+
+    private void handleGuideLineList(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        if (isBackSlot(event.getInventory(), slot)) {
+            gui.openGuideMain(player);
+            return;
+        }
+        int page = parsePage(holder);
+        if (slot == 48 && page > 0) {
+            gui.openGuideLineList(player, page - 1);
+            return;
+        }
+        if (slot == 50) {
+            gui.openGuideLineList(player, page + 1);
+            return;
+        }
+
+        String lineId = holder.get("line_" + slot);
+        if (lineId != null) {
+            gui.openGuideLineDetail(player, lineId);
+        }
+    }
+
+    private void handleGuideLineDetail(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        if (isBackSlot(event.getInventory(), slot)) {
+            gui.openGuideLineList(player, 0);
+            return;
+        }
+
+        String stopId = holder.get("stop_" + slot);
+        if (stopId != null) {
+            if (event.isRightClick()) {
+                gui.openGuidePlanner(player, null, stopId);
+            } else {
+                gui.openGuidePlanner(player, stopId, null);
+            }
+        }
+    }
+
+    private void handleGuideTransferList(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        if (isBackSlot(event.getInventory(), slot)) {
+            gui.openGuideMain(player);
+            return;
+        }
+        int page = parsePage(holder);
+        if (slot == 48 && page > 0) {
+            gui.openGuideTransferList(player, page - 1);
+            return;
+        }
+        if (slot == 50) {
+            gui.openGuideTransferList(player, page + 1);
+            return;
+        }
+
+        String stopId = holder.get("stop_" + slot);
+        if (stopId != null) {
+            if (event.isRightClick()) {
+                gui.openGuidePlanner(player, null, stopId);
+            } else {
+                gui.openGuidePlanner(player, stopId, null);
+            }
+        }
+    }
+
+    private void handleGuidePlanner(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        String originId = holder.get("origin_stop_id");
+        String destId = holder.get("dest_stop_id");
+
+        if (isBackSlot(event.getInventory(), slot)) {
+            gui.openGuideMain(player);
+            return;
+        }
+
+        switch (slot) {
+            case 11 -> gui.openGuideSelectStop(player, true, originId, destId, 0);
+            case 15 -> gui.openGuideSelectStop(player, false, originId, destId, 0);
+            case 22 -> {
+                if (originId != null && destId != null && !originId.equals(destId)) {
+                    var plan = plugin.getRoutePlannerService().calculateRoute(originId, destId);
+                    gui.openGuidePlannerResult(player, plan);
+                }
+            }
+            case 31 -> {
+                plugin.getActiveNavigationManager().cancelNavigation(player);
+                gui.openGuidePlanner(player, originId, destId);
+            }
+        }
+    }
+
+    private void handleGuideSelectStop(Player player, int slot, GuiHolder holder, GuiManager gui, InventoryClickEvent event) {
+        boolean isOrigin = Boolean.parseBoolean(holder.get("is_origin"));
+        int page = parsePage(holder);
+        String originId = holder.get("origin_stop_id");
+        String destId = holder.get("dest_stop_id");
+
+        if (isBackSlot(event.getInventory(), slot)) {
+            gui.openGuidePlanner(player, originId, destId);
+            return;
+        }
+        if (slot == 48 && page > 0) {
+            gui.openGuideSelectStop(player, isOrigin, originId, destId, page - 1);
+            return;
+        }
+        if (slot == 50) {
+            gui.openGuideSelectStop(player, isOrigin, originId, destId, page + 1);
+            return;
+        }
+
+        String stopId = holder.get("stop_" + slot);
+        if (stopId != null) {
+            if (isOrigin) {
+                gui.openGuidePlanner(player, stopId, destId);
+            } else {
+                gui.openGuidePlanner(player, originId, stopId);
+            }
+        }
+    }
+
+    private void handleGuidePlannerResult(Player player, int slot, GuiHolder holder, GuiManager gui) {
+        String originId = holder.get("origin_stop_id");
+        String destId = holder.get("dest_stop_id");
+
+        if (slot == 38) { // 🚀 開始即時導航
+            if (originId != null && destId != null) {
+                var plan = plugin.getRoutePlannerService().calculateRoute(originId, destId);
+                plugin.getActiveNavigationManager().startNavigation(player, plan);
+                player.closeInventory();
+            }
+        } else if (slot == 40) { // 📢 分享至聊天室
+            if (originId != null && destId != null) {
+                var plan = plugin.getRoutePlannerService().calculateRoute(originId, destId);
+                if (plan.found()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("§6【火車路線指引】 §f").append(player.getName()).append(" §7分享了路線搭乘指引：\n");
+                    sb.append("§e起點: §f").append(plan.originStopName()).append(" §7➔ §e終點: §f").append(plan.destStopName());
+                    sb.append(" §7(共 ").append(plan.totalStops()).append(" 站, ").append(plan.totalTransfers()).append(" 次轉乘)\n");
+                    for (int i = 0; i < plan.steps().size(); i++) {
+                        var step = plan.steps().get(i);
+                        sb.append(" §7• 搭乘 ").append(step.lineColor()).append(step.lineDisplayName())
+                          .append(" §7由 §f").append(step.fromStopName()).append(" §7到 §f").append(step.toStopName());
+                        if (step.isTransferNext()) sb.append(" §e(轉乘)");
+                        if (i < plan.steps().size() - 1) sb.append("\n");
+                    }
+                    org.bukkit.Bukkit.broadcast(TextUtil.component(sb.toString()));
+                    TextUtil.send(player, "§a✔ 已成功將搭乘指引分享至公眾聊天室！");
+                }
+            }
+        } else if (slot == 42) { // ❌ 取消 / 返回
+            gui.openGuidePlanner(player, originId, destId);
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.avery.atrain.model.Stop;
 import com.avery.atrain.model.TravelDirection;
 import com.avery.atrain.util.TextUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -71,6 +72,11 @@ public class GuiManager {
         inv.setItem(16, new ItemBuilder(Material.MINECART)
                 .name(msg(player, "gui.main.lines"))
                 .lore(plugin.getLanguageManager().getList(player, "gui.main.lines_lore"))
+                .build());
+
+        inv.setItem(20, new ItemBuilder(Material.COMPASS)
+                .name(msg(player, "gui.main.guide"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.main.guide_lore"))
                 .build());
 
         inv.setItem(22, new ItemBuilder(Material.WRITABLE_BOOK)
@@ -950,6 +956,393 @@ public class GuiManager {
                 .build());
 
         fillBorder(inv);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    // ==========================================
+    // 站點導覽與路線指南 GUI (Station Guide GUIs)
+    // ==========================================
+
+    public void openGuideMain(Player player) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_MAIN);
+        Inventory inv = Bukkit.createInventory(holder, 45, TextUtil.component(msg(player, "gui.guide.title")));
+        holder.setInventory(inv);
+
+        Stop nearest = null;
+        double minDistance = Double.MAX_VALUE;
+        Location pLoc = player.getLocation();
+        for (Stop stop : plugin.getStopManager().getAllStops()) {
+            if (!stop.getWorld().equals(pLoc.getWorld().getName())) continue;
+            Location sLoc = stop.getPrimaryRailLocation();
+            if (sLoc != null) {
+                double dist = pLoc.distance(sLoc);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearest = stop;
+                }
+            }
+        }
+
+        ItemBuilder nearestItem = new ItemBuilder(Material.COMPASS)
+                .name(msg(player, "gui.guide.nearest"));
+        List<String> nearestLore = new ArrayList<>();
+        if (nearest != null) {
+            List<Line> lines = plugin.getLineManager().getLinesAtStop(nearest.getId());
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < lines.size(); i++) {
+                sb.append(lines.get(i).getFormattedName());
+                if (i < lines.size() - 1) sb.append("§7, ");
+            }
+            Location sLoc = nearest.getPrimaryRailLocation();
+            String coordsStr = sLoc != null ? String.format("%d, %d, %d", sLoc.getBlockX(), sLoc.getBlockY(), sLoc.getBlockZ()) : "未知";
+
+            nearestLore.add(msg(player, "gui.guide.nearest_name", Map.of("name", nearest.getDisplayName())));
+            nearestLore.add(msg(player, "gui.guide.nearest_dist", Map.of("dist", String.format("%.1f", minDistance))));
+            nearestLore.add("§e站點座標: §f" + coordsStr);
+            nearestLore.add(msg(player, "gui.guide.nearest_lines", Map.of("lines", sb.toString().isEmpty() ? "§7無" : sb.toString())));
+            nearestLore.add("");
+            if (minDistance <= 15.0) {
+                nearestLore.add("§a▶ 您已在車站附近，點擊設為乘車起點");
+            } else {
+                nearestLore.add("§e▶ 點擊取得該站座標指引 (需前往附近方可設為起點)");
+            }
+            holder.set("nearest_stop_id", nearest.getId());
+            holder.set("nearest_dist", String.valueOf(minDistance));
+            holder.set("nearest_coords", coordsStr);
+        } else {
+            nearestLore.add(msg(player, "gui.guide.no_nearest"));
+        }
+        nearestItem.lore(nearestLore);
+        inv.setItem(10, nearestItem.build());
+
+        inv.setItem(12, new ItemBuilder(Material.MAP)
+                .name(msg(player, "gui.guide.lines_overview"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.guide.lines_overview_lore"))
+                .build());
+
+        inv.setItem(14, new ItemBuilder(Material.HOPPER)
+                .name(msg(player, "gui.guide.transfers_overview"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.guide.transfers_overview_lore"))
+                .build());
+
+        inv.setItem(16, new ItemBuilder(Material.BEACON)
+                .name(msg(player, "gui.guide.planner"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.guide.planner_lore"))
+                .build());
+
+        if (player.hasPermission("atrain.admin")) {
+            inv.setItem(20, new ItemBuilder(Material.REDSTONE_TORCH)
+                    .name(msg(player, "gui.guide.admin_panel"))
+                    .lore(msg(player, "gui.guide.admin_panel_lore"))
+                    .build());
+        }
+
+        fillBorder(inv);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuideLineList(Player player, int page) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_LINE_LIST);
+        holder.set("page", String.valueOf(page));
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(msg(player, "gui.guide_line_list.title")));
+        holder.setInventory(inv);
+
+        List<Line> lines = new ArrayList<>(plugin.getLineManager().getAllLines());
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+
+        for (int i = start; i < Math.min(start + perPage, lines.size()); i++) {
+            Line line = lines.get(i);
+            if (slot % 9 == 8) slot += 2;
+            List<String> lore = new ArrayList<>();
+            lore.add(msg(player, "gui.line_list.stops_count", Map.of("count", String.valueOf(line.getStopIds().size()))));
+            lore.add(line.isCircular() ? "§e[環狀線]" : "§b[雙向線]");
+            lore.add("");
+            lore.add("§e▶ 點擊查看路線詳細站點與轉乘");
+
+            inv.setItem(slot, new ItemBuilder(Material.MINECART)
+                    .name(line.getFormattedName() + " §7(" + line.getId() + ")")
+                    .lore(lore)
+                    .build());
+            holder.set("line_" + slot, line.getId());
+            slot++;
+        }
+
+        if (page > 0) inv.setItem(48, new ItemBuilder(Material.ARROW).name(msg(player, "gui.prev_page")).build());
+        if ((page + 1) * perPage < lines.size()) inv.setItem(50, new ItemBuilder(Material.ARROW).name(msg(player, "gui.next_page")).build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuideLineDetail(Player player, String lineId) {
+        Line line = plugin.getLineManager().getLine(lineId);
+        if (line == null) {
+            openGuideLineList(player, 0);
+            return;
+        }
+
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_LINE_DETAIL);
+        holder.set("line_id", lineId);
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component("§b路線詳情: " + line.getFormattedName()));
+        holder.setInventory(inv);
+
+        List<String> stopIds = line.getStopIds();
+        int slot = 10;
+        for (int i = 0; i < Math.min(28, stopIds.size()); i++) {
+            if (slot % 9 == 8) slot += 2;
+            String stopId = stopIds.get(i);
+            Stop stop = plugin.getStopManager().getStop(stopId);
+            String stopName = stop != null ? stop.getDisplayName() : stopId;
+
+            List<Line> linesAtStop = plugin.getLineManager().getLinesAtStop(stopId);
+            List<String> lore = new ArrayList<>();
+            lore.add("§7順序: §f第 " + (i + 1) + " 站");
+
+            if (linesAtStop.size() > 1) {
+                StringBuilder sb = new StringBuilder("§e可轉乘: ");
+                for (Line l : linesAtStop) {
+                    if (!l.getId().equals(lineId)) sb.append(l.getFormattedName()).append(" ");
+                }
+                lore.add(sb.toString());
+            }
+
+            lore.add("");
+            lore.add("§a左鍵 ➔ 設為導航起點");
+            lore.add("§c右鍵 ➔ 設為導航終點");
+
+            inv.setItem(slot, new ItemBuilder(linesAtStop.size() > 1 ? Material.GOLD_BLOCK : Material.MINECART)
+                    .name("§f" + stopName)
+                    .lore(lore)
+                    .build());
+            holder.set("stop_" + slot, stopId);
+            slot++;
+        }
+
+        fillBorder(inv);
+        addBack(inv, player);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuideTransferList(Player player, int page) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_TRANSFER_LIST);
+        holder.set("page", String.valueOf(page));
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(msg(player, "gui.guide_transfers.title")));
+        holder.setInventory(inv);
+
+        List<Stop> transferStops = new ArrayList<>();
+        for (Stop stop : plugin.getStopManager().getAllStops()) {
+            if (plugin.getLineManager().getLinesAtStop(stop.getId()).size() >= 2 || !stop.getKeyStations().isEmpty()) {
+                transferStops.add(stop);
+            }
+        }
+
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+
+        for (int i = start; i < Math.min(start + perPage, transferStops.size()); i++) {
+            Stop stop = transferStops.get(i);
+            if (slot % 9 == 8) slot += 2;
+
+            List<Line> lines = plugin.getLineManager().getLinesAtStop(stop.getId());
+            List<String> lore = new ArrayList<>();
+            lore.add("§e交會路線 (" + lines.size() + " 條):");
+            for (Line l : lines) {
+                lore.add("  §7• " + l.getFormattedName());
+            }
+            if (!stop.getKeyStations().isEmpty()) {
+                lore.add("§6重點轉乘標記: §f" + stop.getKeyStations().size() + " 個");
+            }
+            lore.add("");
+            lore.add("§a左鍵 ➔ 設為導航起點");
+            lore.add("§c右鍵 ➔ 設為導航終點");
+
+            inv.setItem(slot, new ItemBuilder(Material.HOPPER)
+                    .name("§f" + stop.getDisplayName() + " §7(轉乘站)")
+                    .lore(lore)
+                    .build());
+            holder.set("stop_" + slot, stop.getId());
+            slot++;
+        }
+
+        if (page > 0) inv.setItem(48, new ItemBuilder(Material.ARROW).name(msg(player, "gui.prev_page")).build());
+        if ((page + 1) * perPage < transferStops.size()) inv.setItem(50, new ItemBuilder(Material.ARROW).name(msg(player, "gui.next_page")).build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuidePlanner(Player player) {
+        openGuidePlanner(player, null, null);
+    }
+
+    public void openGuidePlanner(Player player, String originStopId, String destStopId) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_PLANNER);
+        if (originStopId != null) holder.set("origin_stop_id", originStopId);
+        if (destStopId != null) holder.set("dest_stop_id", destStopId);
+
+        Inventory inv = Bukkit.createInventory(holder, 45, TextUtil.component(msg(player, "gui.guide_planner.title")));
+        holder.setInventory(inv);
+
+        Stop origin = originStopId != null ? plugin.getStopManager().getStop(originStopId) : null;
+        Stop dest = destStopId != null ? plugin.getStopManager().getStop(destStopId) : null;
+
+        inv.setItem(11, new ItemBuilder(Material.EMERALD)
+                .name("§a§l起點站: §f" + (origin != null ? origin.getDisplayName() : "未選擇 (點擊設定)"))
+                .lore("§7點擊開啟站點選單選擇起點")
+                .build());
+
+        inv.setItem(15, new ItemBuilder(Material.REDSTONE_BLOCK)
+                .name("§c§l終點站: §f" + (dest != null ? dest.getDisplayName() : "未選擇 (點擊設定)"))
+                .lore("§7點擊開啟站點選單選擇終點")
+                .build());
+
+        boolean canCalculate = origin != null && dest != null && !origin.getId().equals(dest.getId());
+        inv.setItem(22, new ItemBuilder(canCalculate ? Material.COMPASS : Material.BARRIER)
+                .name(canCalculate ? "§b§l搜尋最優搭乘路線 §e[點擊規劃]" : "§7請先設定起點與終點")
+                .lore(canCalculate ? List.of("§7點擊計算轉乘與搭乘路線") : List.of("§c起點與終點不可相同"))
+                .build());
+
+        if (plugin.getActiveNavigationManager().hasActiveNavigation(player)) {
+            inv.setItem(31, new ItemBuilder(Material.BARRIER)
+                    .name("§c§l❌ 取消當前進行中的導航")
+                    .lore("§7點擊終止目前的即時導航狀態")
+                    .build());
+        }
+
+        fillBorder(inv);
+        addBack(inv, player);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuideSelectStop(Player player, boolean isOrigin, int page) {
+        openGuideSelectStop(player, isOrigin, null, null, page);
+    }
+
+    public void openGuideSelectStop(Player player, boolean isOrigin, String originStopId, String destStopId, int page) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_SELECT_STOP);
+        holder.set("is_origin", String.valueOf(isOrigin));
+        holder.set("page", String.valueOf(page));
+        if (originStopId != null) holder.set("origin_stop_id", originStopId);
+        if (destStopId != null) holder.set("dest_stop_id", destStopId);
+        String title = isOrigin ? "§a請選擇【起點站】" : "§c請選擇【終點站】";
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component(title));
+        holder.setInventory(inv);
+
+        List<Stop> stops = new ArrayList<>(plugin.getStopManager().getAllStops());
+        Location pLoc = player.getLocation();
+
+        int perPage = 28, start = page * perPage;
+        int slot = 10;
+
+        for (int i = start; i < Math.min(start + perPage, stops.size()); i++) {
+            Stop stop = stops.get(i);
+            if (slot % 9 == 8) slot += 2;
+
+            List<String> lore = new ArrayList<>();
+            List<Line> lines = plugin.getLineManager().getLinesAtStop(stop.getId());
+            StringBuilder sb = new StringBuilder("§e途經路線: ");
+            for (int k = 0; k < lines.size(); k++) {
+                sb.append(lines.get(k).getFormattedName());
+                if (k < lines.size() - 1) sb.append("§7, ");
+            }
+            lore.add(sb.toString().isEmpty() ? "§7無路線" : sb.toString());
+
+            if (stop.getWorld().equals(pLoc.getWorld().getName())) {
+                Location sLoc = stop.getPrimaryRailLocation();
+                if (sLoc != null) {
+                    lore.add("§7距離您: §a" + String.format("%.1f", pLoc.distance(sLoc)) + " 公尺");
+                }
+            }
+
+            lore.add("");
+            lore.add("§e▶ 點擊選取此站");
+
+            inv.setItem(slot, new ItemBuilder(isOrigin ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK)
+                    .name("§f" + stop.getDisplayName())
+                    .lore(lore)
+                    .build());
+            holder.set("stop_" + slot, stop.getId());
+            slot++;
+        }
+
+        if (page > 0) inv.setItem(48, new ItemBuilder(Material.ARROW).name(msg(player, "gui.prev_page")).build());
+        if ((page + 1) * perPage < stops.size()) inv.setItem(50, new ItemBuilder(Material.ARROW).name(msg(player, "gui.next_page")).build());
+
+        fillBorder(inv);
+        addBack(inv, player);
+        addClose(inv, player);
+        player.openInventory(inv);
+    }
+
+    public void openGuidePlannerResult(Player player, com.avery.atrain.service.RoutePlannerService.RoutePlan plan) {
+        GuiHolder holder = new GuiHolder(GuiHolder.Type.GUIDE_PLANNER_RESULT);
+        holder.set("origin_stop_id", plan.originStopId());
+        holder.set("dest_stop_id", plan.destStopId());
+
+        Inventory inv = Bukkit.createInventory(holder, 54, TextUtil.component("§b搭乘指引規劃結果"));
+        holder.setInventory(inv);
+
+        if (!plan.found()) {
+            inv.setItem(22, new ItemBuilder(Material.BARRIER)
+                    .name("§c無法找到可連通的搭乘路線")
+                    .lore("§7請檢查起點與終點站是否由路線連接")
+                    .build());
+        } else {
+            inv.setItem(4, new ItemBuilder(Material.BEACON)
+                    .name("§a§l路線搜尋完成：§f" + plan.originStopName() + " §7➔ §f" + plan.destStopName())
+                    .lore(List.of(
+                            "§e總行經站數: §f" + plan.totalStops() + " 站",
+                            "§e轉乘次數: §f" + plan.totalTransfers() + " 次"
+                    ))
+                    .build());
+
+            int slot = 19;
+            List<com.avery.atrain.service.RoutePlannerService.RouteStep> steps = plan.steps();
+            for (int i = 0; i < steps.size(); i++) {
+                var step = steps.get(i);
+                List<String> lore = new ArrayList<>();
+                lore.add("§7搭乘線路: " + step.lineColor() + step.lineDisplayName());
+                lore.add("§7上車站點: §f" + step.fromStopName());
+                lore.add("§7下車站點: §f" + step.toStopName() + (step.isTransferNext() ? " §e[需換線轉乘]" : " §a[抵達目的地]"));
+                if (!step.intermediateStopNames().isEmpty()) {
+                    lore.add("§7途經站點: §f" + String.join(" ➔ ", step.intermediateStopNames()));
+                }
+
+                inv.setItem(slot, new ItemBuilder(step.isTransferNext() ? Material.HOPPER : Material.MINECART)
+                        .name("§e第 " + (i + 1) + " 段行程: " + step.lineColor() + step.lineDisplayName())
+                        .lore(lore)
+                        .build());
+                slot += 2;
+                if (slot > 25) break;
+            }
+
+            inv.setItem(38, new ItemBuilder(Material.EMERALD_BLOCK)
+                    .name("§a§l🚀 開始即時導航")
+                    .lore("§7開啟導航追蹤，轉乘時系統將自動為您下車！")
+                    .build());
+
+            inv.setItem(40, new ItemBuilder(Material.PAPER)
+                    .name("§b§l📢 分享至聊天室")
+                    .lore("§7將此搭乘指引廣播給全伺服器玩家觀看")
+                    .build());
+
+            inv.setItem(42, new ItemBuilder(Material.BARRIER)
+                    .name("§c§l❌ 取消 / 返回")
+                    .lore("§7返回路線規劃選單")
+                    .build());
+        }
+
+        fillBorder(inv);
+        addBack(inv, player);
         addClose(inv, player);
         player.openInventory(inv);
     }

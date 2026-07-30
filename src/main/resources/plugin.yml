@@ -25,6 +25,10 @@ permissions:
       atrain.speed.edit: true
       atrain.cart.spawn: true
       atrain.block.break: true
+      atrain.user: true
+  atrain.user:
+    description: 使用站點導覽、路線規劃與搭乘指引（/train、/tr）
+    default: true
   atrain.gui:
     description: 開啟管理介面（/train gui、站點/路線列表）
     default: op

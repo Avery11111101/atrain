@@ -157,6 +157,9 @@ public final class CinematicTransitTask {
         freeze();
         currentStop = target;
         notifyPassenger("cinematic.arrived", Map.of("stop", target.getDisplayName()));
+        if (passenger != null) {
+            plugin.getActiveNavigationManager().onPlayerArriveAtStop(passenger, target);
+        }
 
         Line line = plugin.getLineManager().getLine(lineId);
         String next = line != null ? line.getNextStopId(target.getId(), direction) : null;

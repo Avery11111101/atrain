@@ -75,11 +75,13 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TextUtil.colorize(lang.getRaw(lang.getDefaultLanguage(), "error.players_only")));
             return;
         }
-        if (!p.hasPermission("atrain.gui")) {
+        if (p.hasPermission("atrain.admin")) {
+            plugin.getGuiManager().openMain(p);
+        } else if (p.hasPermission("atrain.user") || p.hasPermission("atrain.gui")) {
+            plugin.getGuiManager().openGuideMain(p);
+        } else {
             TextUtil.send(p, lang.get(p, "error.no_permission"));
-            return;
         }
-        plugin.getGuiManager().openMain(p);
     }
 
     /** 對準調速方塊開啟編輯 GUI（右鍵無反應時的後備方式） */

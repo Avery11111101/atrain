@@ -522,3 +522,43 @@ gui.line_platforms.forward: "§7去程: {status}"
 gui.line_platforms.return: "§7回程: {status}"
 
 gui.line_platforms.click_edit: "§e點擊編輯站點月台"
+
+gui.main.guide: "§a§l站点导览与路线指南"
+gui.main.guide_lore:
+  - "§7查询离您最近的车站"
+  - "§7浏览服务器全部路线与换乘站"
+  - "§7规划最佳搭乘路线与换乘指引"
+  - ""
+  - "§e点击开启导览面板"
+
+gui.guide.title: "§b§l火车站点导览与路线指南"
+gui.guide.nearest: "§a§l离我最近的站点"
+gui.guide.nearest_name: "§e站名: §f{name}"
+gui.guide.nearest_dist: "§e距离: §a{dist} 米"
+gui.guide.nearest_lines: "§e途经路线: {lines}"
+gui.guide.nearest_click: "§e▶ 点击将此站设为导航起点"
+gui.guide.no_nearest: "§c同世界内未搜索到站点"
+gui.guide.lines_overview: "§b§l服务器路线总览"
+gui.guide.lines_overview_lore:
+  - "§7查看服务器目前全部火车路线"
+  - "§7与各路线行经站点顺序"
+gui.guide.transfers_overview: "§d§l换乘站 / 重叠站一览"
+gui.guide.transfers_overview_lore:
+  - "§7盘点拥有两条以上路线行经"
+  - "§7或设有重点换乘标记的站点"
+gui.guide.planner: "§e§l搭乘指引 / 路线规划"
+gui.guide.planner_lore:
+  - "§7选择起点站与终点站"
+  - "§7自动计算最优乘车与换乘指引"
+gui.guide.admin_panel: "§c§l管理员控制面板"
+gui.guide.admin_panel_lore: "§7切换至管理员路线与站点维护界面"
+
+gui.guide_line_list.title: "§8服务器路线总览"
+gui.guide_transfers.title: "§8换乘站 / 重叠站一览"
+gui.guide_planner.title: "§8搭乘指引与路线规划"
+
+nav.started: "<green>[导航] 已为您开启从 <gold>{origin} <green>到 <gold>{destination} <green>的即时导航。"
+nav.next_instruction: "<yellow>[导航] 请搭乘 <white>{line} <yellow>前往 <gold>{target}<yellow>。"
+nav.cancelled: "<red>[导航] 已取消即时导航行程。"
+nav.destination_arrived: "<green>[导航] 已成功抵达目的地 <gold>{stop}<green>！祝您旅途愉快。"
+nav.transfer_dismount: "<yellow>[导航] 抵达换乘站 <gold>{stop}<yellow>！已自动为您下车，请前往换乘 <white>{line}<yellow>。"
