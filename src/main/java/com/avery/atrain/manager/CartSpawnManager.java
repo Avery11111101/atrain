@@ -13,6 +13,9 @@ import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.minecart.RideableMinecart;
 
+import org.bukkit.util.Vector;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -33,53 +36,6 @@ public class CartSpawnManager {
 
     public CartSpawnManager(AtrainPlugin plugin) {
         this.plugin = plugin;
-        plugin.getServer().getScheduler().runTaskTimer(plugin, this::processQueues, 1L, 1L);
-    }
-
-    private void processQueues() {
-        long now = plugin.getServer().getCurrentTick();
-        for (var entry : spawnQueues.entrySet()) {
-            String stopId = entry.getKey();
-            var queue = entry.getValue();
-            if (queue.isEmpty()) continue;
-
-            SpawnRequest req = queue.peek();
-            if (!req.player().isOnline()) {
-                queue.poll();
-                continue;
-            }
-
-            Block rail = StationUtil.resolveRailBlock(req.clickedRail());
-            if (rail == null) {
-                queue.poll();
-                continue;
-            }
-
-            Location centerLoc = RailUtil.cartPositionOnRail(rail);
-            if (centerLoc == null) centerLoc = rail.getLocation().add(0.5, 0.5, 0.5);
-            double radius = plugin.getConfigManager().getCartSpawnRadius();
-
-            boolean occupied = false;
-            World world = rail.getWorld();
-            for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
-                if (entity instanceof Minecart m && m.isValid() && !m.isDead()) {
-                    occupied = true;
-                    break;
-                }
-            }
-
-            if (occupied) {
-                lastOccupiedTick.put(stopId, now); // 只要有車，就更新最後佔用時間
-            } else {
-                long lastOcc = lastOccupiedTick.getOrDefault(stopId, 0L);
-                // 必須距離最後一次被佔用超過 20 Ticks (1秒)，才允許發下一班車
-                if (now - lastOcc >= 20) {
-                    queue.poll();
-                    performSpawn(req.player(), rail, plugin.getStopManager().getStop(stopId));
-                    lastOccupiedTick.put(stopId, now); // 發車瞬間也算佔用，重置計時
-                }
-            }
-        }
     }
 
     public boolean trySpawn(Player player, Block clicked) {
@@ -125,51 +81,65 @@ public class CartSpawnManager {
             return false;
         }
 
+        // 搜尋可用、未被佔用之鐵軌格，防止礦車重疊
+        Block spawnRail = findAvailableRailBlock(rail, stop);
+
+        performSpawn(player, spawnRail, stop);
+        lastSpawnTick.put(player.getUniqueId(), now);
+        return true;
+    }
+
+    /** 搜尋未被礦車佔用的鐵軌格，避免重疊 */
+    public Block findAvailableRailBlock(Block clickedRail, Stop stop) {
+        if (!isRailOccupiedByCart(clickedRail)) {
+            return clickedRail;
+        }
+
+        World world = clickedRail.getWorld();
+        if (stop != null) {
+            Set<Location> goldLocs = stop.getGoldLocations(world);
+            for (Location gLoc : goldLocs) {
+                Block r = RailUtil.findRailBlock(gLoc.clone().add(0, 1, 0));
+                if (r == null) {
+                    r = RailUtil.findRailBlock(gLoc);
+                }
+                if (r != null && !isRailOccupiedByCart(r)) {
+                    return r;
+                }
+            }
+        }
+
+        List<Vector> dirs = RailUtil.getRailDirections(clickedRail.getLocation());
+        if (!dirs.isEmpty()) {
+            for (Vector dir : dirs) {
+                List<Block> path = RailUtil.walkRailPath(clickedRail, dir, 5);
+                for (Block p : path) {
+                    if (!isRailOccupiedByCart(p)) {
+                        return p;
+                    }
+                }
+                List<Block> pathRev = RailUtil.walkRailPath(clickedRail, dir.clone().multiply(-1), 5);
+                for (Block p : pathRev) {
+                    if (!isRailOccupiedByCart(p)) {
+                        return p;
+                    }
+                }
+            }
+        }
+
+        return clickedRail;
+    }
+
+    private boolean isRailOccupiedByCart(Block rail) {
+        if (rail == null || rail.getWorld() == null) return false;
         Location centerLoc = RailUtil.cartPositionOnRail(rail);
         if (centerLoc == null) centerLoc = rail.getLocation().add(0.5, 0.5, 0.5);
-        double radius = cfg.getCartSpawnRadius();
-
-        java.util.Queue<SpawnRequest> q = spawnQueues.computeIfAbsent(stop.getId(), k -> new java.util.concurrent.ConcurrentLinkedQueue<>());
-
-        for (SpawnRequest req : q) {
-            if (req.player().getUniqueId().equals(player.getUniqueId())) {
-                TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
-                return false;
+        for (var entity : rail.getWorld().getNearbyEntities(centerLoc, 0.7, 0.7, 0.7)) {
+            if (entity instanceof Minecart m && m.isValid() && !m.isDead()) {
+                return true;
             }
         }
-
-        boolean isOccupied = false;
-        boolean hasExistingEmpty = false;
-        RideableMinecart existingEmpty = null;
-        for (var entity : world.getNearbyEntities(centerLoc, radius, radius, radius)) {
-            if (!(entity instanceof Minecart existing) || !existing.isValid() || existing.isDead()) continue;
-            isOccupied = true;
-            if (existing instanceof RideableMinecart rideable && rideable.getPassengers().isEmpty() && !pendingMounts.contains(rideable.getUniqueId())) {
-                hasExistingEmpty = true;
-                existingEmpty = rideable;
-                // 不 break，因為我們還要確認是否有其他礦車佔用，不過這邊找到了空車，
-                // 如果我們只想上這個空車，其實可以 break。
-                // 為了安全起見，isOccupied 會讓它知道站上有車。
-            }
-        }
-
-        if (hasExistingEmpty && q.isEmpty() && now - lastOccupiedTick.getOrDefault(stop.getId(), 0L) >= 20) {
-            TextUtil.send(player, lang.get(player, "cart.already_nearby"));
-            if (cfg.isCartSpawnAutoMount()) {
-                mountNextTick(player, existingEmpty);
-                lastSpawnTick.put(player.getUniqueId(), now);
-            }
-            return false;
-        }
-
-        q.add(new SpawnRequest(player, clicked));
-        lastSpawnTick.put(player.getUniqueId(), now);
-
-        if (q.size() > 1 || isOccupied || now - lastOccupiedTick.getOrDefault(stop.getId(), 0L) < 20) {
-            TextUtil.send(player, lang.get(player, "cart.queued", Map.of("pos", String.valueOf(q.size()))));
-        }
-
-        return true;
+        return false;
     }
 
     private void performSpawn(Player player, Block rail, Stop stop) {

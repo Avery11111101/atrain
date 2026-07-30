@@ -29,6 +29,7 @@ public class StationAutoStopListener implements Listener {
     private final Map<UUID, String> mustLeaveStop = new ConcurrentHashMap<>();
     /** 本次進站是否已觸發（含生點在站內的情況） */
     private final Map<UUID, String> visitStop = new ConcurrentHashMap<>();
+    private final Map<String, Long> stationLastDepartureTick = new ConcurrentHashMap<>();
 
     public StationAutoStopListener(AtrainPlugin plugin) {
         this.plugin = plugin;
@@ -113,10 +114,12 @@ public class StationAutoStopListener implements Listener {
         }
 
         int dwell = stop.getDwellTimeTicks();
-        if (dwell <= 0) {
-            mustLeaveStop.put(cartId, stop.getId());
-            return;
-        }
+        long now = plugin.getServer().getCurrentTick();
+        long minDep = now + dwell;
+        long lastDep = stationLastDepartureTick.getOrDefault(stop.getId(), 0L);
+        long actualDep = Math.max(minDep, lastDep + 20L);
+        stationLastDepartureTick.put(stop.getId(), actualDep);
+        long dwellTicks = Math.max(1L, actualDep - now);
 
         Vector approach = cart.getVelocity().clone();
         if (approach.lengthSquared() < 0.0001) {
@@ -134,7 +137,7 @@ public class StationAutoStopListener implements Listener {
         state.active = true;
 
         state.releaseTask = Bukkit.getScheduler().runTaskLater(plugin,
-                () -> releaseDwell(cartId, true), dwell);
+                () -> releaseDwell(cartId, true), dwellTicks);
     }
 
     private void releaseDwell(UUID cartId, boolean restoreSpeed) {

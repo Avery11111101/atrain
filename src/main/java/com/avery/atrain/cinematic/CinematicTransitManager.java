@@ -18,6 +18,7 @@ public final class CinematicTransitManager {
 
     private final AtrainPlugin plugin;
     private final Map<UUID, CinematicTransitTask> tasks = new ConcurrentHashMap<>();
+    private final Map<String, Long> stationLastDepartureTick = new ConcurrentHashMap<>();
     private BukkitTask ticker;
 
     public CinematicTransitManager(AtrainPlugin plugin) {
@@ -41,6 +42,7 @@ public final class CinematicTransitManager {
             task.cancel();
         }
         tasks.clear();
+        stationLastDepartureTick.clear();
     }
 
     public boolean isManaged(UUID cartId) {
@@ -83,8 +85,22 @@ public final class CinematicTransitManager {
 
         CinematicTransitTask task = new CinematicTransitTask(plugin, cart, player, stop, line, direction);
         tasks.put(cart.getUniqueId(), task);
-        task.beginDwell();
+        int dwellTicks = calculateDwellTicks(stop, line.getId(), direction);
+        task.beginDwell(dwellTicks);
         return true;
+    }
+
+    /** 計算發車所需停留 Ticks，確保同一站點/路線發車間隔至少 1 秒 (20 ticks) */
+    public int calculateDwellTicks(Stop stop, String lineId, TravelDirection direction) {
+        if (stop == null) return 80;
+        long now = plugin.getServer().getCurrentTick();
+        int baseDwell = stop.getDwellTimeTicks();
+        long minDeparture = now + baseDwell;
+        String key = stop.getId() + ":" + (lineId != null ? lineId : "default") + ":" + direction;
+        long lastDep = stationLastDepartureTick.getOrDefault(key, 0L);
+        long actualDeparture = Math.max(minDeparture, lastDep + 20L);
+        stationLastDepartureTick.put(key, actualDeparture);
+        return (int) Math.max(0, actualDeparture - now);
     }
 
     private void tickAll() {

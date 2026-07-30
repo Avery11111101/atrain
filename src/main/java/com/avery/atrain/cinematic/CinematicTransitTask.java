@@ -58,23 +58,30 @@ public final class CinematicTransitTask {
 
     /** 進站後開始停留倒數 */
     public void beginDwell() {
+        int dwell = plugin.getCinematicTransitManager() != null
+                ? plugin.getCinematicTransitManager().calculateDwellTicks(currentStop, lineId, direction)
+                : (currentStop != null ? currentStop.getDwellTimeTicks() : 80);
+        beginDwell(dwell);
+    }
+
+    public void beginDwell(int dwellTicks) {
         phase = Phase.DWELLING;
         freeze();
+        int displaySec = Math.max(1, (int) Math.ceil(dwellTicks / 20.0));
         if (currentStop != null) {
             notifyPassenger("cinematic.dwelling", Map.of(
                     "stop", currentStop.getDisplayName(),
-                    "sec", String.valueOf(Math.max(1, currentStop.getDwellTimeTicks() / 20))));
+                    "sec", String.valueOf(displaySec)));
         }
-        int dwell = currentStop != null ? currentStop.getDwellTimeTicks() : 80;
         if (dwellTask != null) dwellTask.cancel();
-        if (dwell <= 0) {
+        if (dwellTicks <= 0) {
             plugin.getServer().getScheduler().runTask(plugin, this::beginMove);
             return;
         }
         dwellTask = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             dwellTask = null;
             beginMove();
-        }, dwell);
+        }, dwellTicks);
     }
 
     private void beginMove() {
