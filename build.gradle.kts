@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "1.7"
+version = "1.7.0"
 
 java {
     toolchain {
