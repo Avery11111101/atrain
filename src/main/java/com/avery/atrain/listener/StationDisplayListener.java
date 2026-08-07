@@ -46,6 +46,8 @@ public class StationDisplayListener implements Listener {
             return;
         }
 
+        if (!plugin.getStopManager().hasStopsInWorld(to.getWorld().getName())) return;
+
         updateDisplay(event.getPlayer(), to);
     }
 

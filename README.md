@@ -25,7 +25,7 @@ Minecraft 金磚站點插件 — **零指令**操作，蹲下右鍵即可設定�
 ## 安裝
 ./gradlew build
 1. **Paper 1.21+**、**Java 21+**
-2. 放入 `plugins/atrain-1.7.0.jar`
+2. 放入 `plugins/atrain-1.8.0.jar`
 3. 重啟伺服器
 
 ## 快速開始（不需指令）

@@ -47,23 +47,23 @@ public class StopManager {
         return worldIndex.get(BlockCoords.pack(x, y, z));
     }
 
+    /**
+     * 改用記憶體空間位移查詢，避免世界方塊 I/O 拖累 Main Thread。
+     */
     private Stop lookupGoldNear(Location loc) {
         if (loc == null || loc.getWorld() == null) return null;
         String world = loc.getWorld().getName();
         int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
-        Stop stop = lookupGoldBlock(world, x, y, z);
-        if (stop != null) return stop;
-        stop = lookupGoldBlock(world, x, y - 1, z);
-        if (stop != null) return stop;
-        Block rail = com.avery.atrain.util.RailUtil.findRailBlock(loc);
-        if (rail == null) return null;
-        Block below = rail.getRelative(BlockFace.DOWN);
-        for (int d = 0; d <= 4; d++) {
-            stop = lookupGoldBlock(world, below.getX(), below.getY(), below.getZ());
+        for (int dy = 0; dy >= -6; dy--) {
+            Stop stop = lookupGoldBlock(world, x, y + dy, z);
             if (stop != null) return stop;
-            below = below.getRelative(BlockFace.DOWN);
         }
         return null;
+    }
+
+    public boolean hasStopsInWorld(String worldName) {
+        Map<Long, Stop> worldIndex = goldBlockIndex.get(worldName);
+        return worldIndex != null && !worldIndex.isEmpty();
     }
 
     public Collection<Stop> getAllStops() {
