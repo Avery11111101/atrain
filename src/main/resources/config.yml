@@ -13,7 +13,15 @@
 # ===============================================================
 
 # 設定檔版本（供插件升級自動遷移用，請勿手動更改）
-config-version: 1
+config-version: 2
+
+# 自動更新與檢測設定
+update:
+  # 是否在開機與管理員登入時自動檢測 GitHub 最新版本
+  auto_check: true
+  # 是否在檢測到新版本時自動下載至 plugins/update/ 目錄
+  auto_download: false
+
 
 settings:
   # 巡航滿速：直線路段的全速（方塊/tick，數值越大越快）

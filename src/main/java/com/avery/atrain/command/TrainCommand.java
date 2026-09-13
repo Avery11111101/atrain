@@ -61,13 +61,30 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadAll();
             }
             case "speed" -> openSpeedBlock(sender, lang);
-            case "version" -> sendVersion(sender, lang);
+            case "version" -> plugin.getUpdateService().displayVersionInfo(sender);
+            case "update" -> handleUpdateCommand(sender, args);
             case "help" -> sendHelp(sender);
             default -> {
                 if (sender instanceof Player p) TextUtil.send(p, lang.get(p, "command.unknown"));
             }
         }
         return true;
+    }
+
+    private void handleUpdateCommand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("atrain.admin")) {
+            if (sender instanceof Player p) TextUtil.send(p, plugin.getLanguageManager().get(p, "error.no_permission"));
+            return;
+        }
+
+        if (args.length <= 1 || "check".equalsIgnoreCase(args[1])) {
+            plugin.getUpdateService().checkUpdate(sender);
+        } else if ("download".equalsIgnoreCase(args[1])) {
+            String track = args.length > 2 ? args[2] : "release";
+            plugin.getUpdateService().downloadUpdate(sender, track);
+        } else {
+            sender.sendMessage(TextUtil.colorize("<yellow>用法: /train update [check|download] [release|beta]"));
+        }
     }
 
     private void openGui(CommandSender sender, com.avery.atrain.i18n.LanguageManager lang) {
@@ -103,15 +120,6 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void sendVersion(CommandSender sender, com.avery.atrain.i18n.LanguageManager lang) {
-        String ver = plugin.getPluginMeta().getVersion();
-        String msg = lang.getRaw(
-                sender instanceof Player p ? lang.getPlayerLanguage(p) : lang.getDefaultLanguage(),
-                "command.version");
-        msg = msg.replace("{version}", ver);
-        sender.sendMessage(TextUtil.colorize(msg));
-    }
-
     private void sendHelp(CommandSender sender) {
         String langCode = sender instanceof Player p
                 ? plugin.getLanguageManager().getPlayerLanguage(p)
@@ -123,6 +131,7 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
                 plugin.getLanguageManager().getRaw(langCode, "command.help_lines"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_speed"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_version"),
+                "<gold>/train update <white>- 檢查與下載最新插件版本 (Release/Beta)",
                 plugin.getLanguageManager().getRaw(langCode, "command.help_lang"),
                 plugin.getLanguageManager().getRaw(langCode, "command.help_reload")
         );
@@ -134,10 +143,15 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filter(List.of("gui", "stops", "lines", "speed", "version", "reload", "help"), args[0]);
+            return filter(List.of("gui", "stops", "lines", "speed", "version", "update", "reload", "help"), args[0]);
+        } else if (args.length == 2 && "update".equalsIgnoreCase(args[0])) {
+            return filter(List.of("check", "download"), args[1]);
+        } else if (args.length == 3 && "update".equalsIgnoreCase(args[0]) && "download".equalsIgnoreCase(args[1])) {
+            return filter(List.of("release", "beta"), args[2]);
         }
         return List.of();
     }
+
 
     private List<String> filter(List<String> options, String input) {
         String lower = input.toLowerCase();

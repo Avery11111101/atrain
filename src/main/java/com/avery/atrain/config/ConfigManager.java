@@ -113,8 +113,12 @@ public class ConfigManager {
     public boolean isHangRailEnabled() { return config.getBoolean("hang_rail.enabled", false); }
     public List<HangRailType> getHangRailTypes() { return hangRailTypes; }
 
+    public boolean isAutoCheckUpdate() { return config.getBoolean("update.auto_check", true); }
+    public boolean isAutoDownloadUpdate() { return config.getBoolean("update.auto_download", false); }
+
     public void setHangRailEnabled(boolean enabled) {
         config.set("hang_rail.enabled", enabled);
         plugin.saveConfig();
     }
 }
+

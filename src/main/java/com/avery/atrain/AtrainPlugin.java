@@ -65,6 +65,8 @@ public final class AtrainPlugin extends JavaPlugin {
     private BlueMapManager blueMapManager;
     private com.avery.atrain.service.RoutePlannerService routePlannerService;
     private com.avery.atrain.service.ActiveNavigationManager activeNavigationManager;
+    private com.avery.atrain.service.ConfigMigrationService configMigrationService;
+    private com.avery.atrain.update.UpdateService updateService;
 
     private NamespacedKey managedCartKey;
 
@@ -74,6 +76,9 @@ public final class AtrainPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         managedCartKey = new NamespacedKey(this, "managed_cart");
+
+        configMigrationService = new com.avery.atrain.service.ConfigMigrationService(this);
+        configMigrationService.checkAndMigrate();
 
         configManager = new ConfigManager(this);
         dataStore = new DataStore(this);
@@ -89,6 +94,7 @@ public final class AtrainPlugin extends JavaPlugin {
         stationAutoStopListener = new StationAutoStopListener(this);
         routePlannerService = new com.avery.atrain.service.RoutePlannerService(this);
         activeNavigationManager = new com.avery.atrain.service.ActiveNavigationManager(this);
+        updateService = new com.avery.atrain.update.UpdateService(this);
 
         configManager.load();
         languageManager.load();
@@ -109,6 +115,12 @@ public final class AtrainPlugin extends JavaPlugin {
         pm.registerEvents(new EmptyCartListener(this), this);
         pm.registerEvents(new StationBlockListener(this), this);
         pm.registerEvents(new GuiListener(this), this);
+        pm.registerEvents(new com.avery.atrain.listener.PlayerJoinListener(this), this);
+
+        if (configManager.isAutoCheckUpdate()) {
+            updateService.fetchReleasesAsync();
+        }
+
 
         var trainCmd = new TrainCommand(this);
         getCommand("train").setExecutor(trainCmd);
@@ -216,8 +228,14 @@ public final class AtrainPlugin extends JavaPlugin {
     public BlueMapManager getBlueMapManager() { return blueMapManager; }
     public com.avery.atrain.service.RoutePlannerService getRoutePlannerService() { return routePlannerService; }
     public com.avery.atrain.service.ActiveNavigationManager getActiveNavigationManager() { return activeNavigationManager; }
+    public com.avery.atrain.service.ConfigMigrationService getConfigMigrationService() { return configMigrationService; }
+    public com.avery.atrain.update.UpdateService getUpdateService() { return updateService; }
+
+    public java.io.File getPluginFile() { return getFile(); }
 
     public NamespacedKey getManagedCartKey() { return managedCartKey; }
+
+
 
     public void markAsManagedCart(Minecart cart) {
         if (cart == null) return;
