@@ -12,26 +12,49 @@ public final class TextUtil {
     private static final MiniMessage MINI = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
 
+    private static final java.util.regex.Pattern LEGACY_HEX_REGEX = java.util.regex.Pattern.compile("[§&]x[§&]([0-9a-fA-F])[§&]([0-9a-fA-F])[§&]([0-9a-fA-F])[§&]([0-9a-fA-F])[§&]([0-9a-fA-F])[§&]([0-9a-fA-F])", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern HASH_HEX_REGEX = java.util.regex.Pattern.compile("[§&]#([0-9a-fA-F]{6})", java.util.regex.Pattern.CASE_INSENSITIVE);
+
     private TextUtil() {}
 
-    /** 將混用的 § 色碼轉成 MiniMessage，避免解析失敗後標籤原樣顯示 */
+    /** 將混用的 § 色碼與 Hex 色碼轉成 MiniMessage，避免解析失敗後標籤原樣顯示 */
     public static String preprocessForMiniMessage(String text) {
-        if (text == null || !text.contains("§")) return text;
-        return text
-                .replace("§l", "<bold>").replace("§L", "<bold>")
-                .replace("§o", "<italic>").replace("§O", "<italic>")
-                .replace("§n", "<underlined>").replace("§N", "<underlined>")
-                .replace("§m", "<strikethrough>").replace("§M", "<strikethrough>")
-                .replace("§k", "<obfuscated>").replace("§K", "<obfuscated>")
-                .replace("§r", "<reset>").replace("§R", "<reset>")
-                .replace("§0", "<black>").replace("§1", "<dark_blue>")
-                .replace("§2", "<dark_green>").replace("§3", "<dark_aqua>")
-                .replace("§4", "<dark_red>").replace("§5", "<dark_purple>")
-                .replace("§6", "<gold>").replace("§7", "<gray>")
-                .replace("§8", "<dark_gray>").replace("§9", "<blue>")
-                .replace("§a", "<green>").replace("§b", "<aqua>")
-                .replace("§c", "<red>").replace("§d", "<light_purple>")
-                .replace("§e", "<yellow>").replace("§f", "<white>");
+        if (text == null || text.isEmpty()) return text;
+        String s = text;
+        if (s.contains("§") || s.contains("&")) {
+            s = LEGACY_HEX_REGEX.matcher(s).replaceAll("<#$1$2$3$4$5$6>");
+            s = HASH_HEX_REGEX.matcher(s).replaceAll("<#$1>");
+            s = s
+                    .replace("§l", "<bold>").replace("§L", "<bold>")
+                    .replace("&l", "<bold>").replace("&L", "<bold>")
+                    .replace("§o", "<italic>").replace("§O", "<italic>")
+                    .replace("&o", "<italic>").replace("&O", "<italic>")
+                    .replace("§n", "<underlined>").replace("§N", "<underlined>")
+                    .replace("&n", "<underlined>").replace("&N", "<underlined>")
+                    .replace("§m", "<strikethrough>").replace("§M", "<strikethrough>")
+                    .replace("&m", "<strikethrough>").replace("&M", "<strikethrough>")
+                    .replace("§k", "<obfuscated>").replace("§K", "<obfuscated>")
+                    .replace("&k", "<obfuscated>").replace("&K", "<obfuscated>")
+                    .replace("§r", "<reset>").replace("§R", "<reset>")
+                    .replace("&r", "<reset>").replace("&R", "<reset>")
+                    .replace("§0", "<black>").replace("&0", "<black>")
+                    .replace("§1", "<dark_blue>").replace("&1", "<dark_blue>")
+                    .replace("§2", "<dark_green>").replace("&2", "<dark_green>")
+                    .replace("§3", "<dark_aqua>").replace("&3", "<dark_aqua>")
+                    .replace("§4", "<dark_red>").replace("&4", "<dark_red>")
+                    .replace("§5", "<dark_purple>").replace("&5", "<dark_purple>")
+                    .replace("§6", "<gold>").replace("&6", "<gold>")
+                    .replace("§7", "<gray>").replace("&7", "<gray>")
+                    .replace("§8", "<dark_gray>").replace("&8", "<dark_gray>")
+                    .replace("§9", "<blue>").replace("&9", "<blue>")
+                    .replace("§a", "<green>").replace("&a", "<green>")
+                    .replace("§b", "<aqua>").replace("&b", "<aqua>")
+                    .replace("§c", "<red>").replace("&c", "<red>")
+                    .replace("§d", "<light_purple>").replace("&d", "<light_purple>")
+                    .replace("§e", "<yellow>").replace("&e", "<yellow>")
+                    .replace("§f", "<white>").replace("&f", "<white>");
+        }
+        return s;
     }
 
     /** 語系模板著色（可含 MiniMessage） */

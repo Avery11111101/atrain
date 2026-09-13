@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "1.8.0"
+version = "1.9.0"
 
 java {
     toolchain {
@@ -23,6 +23,14 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
     compileOnly("de.bluecolored:bluemap-api:2.7.3")
     compileOnly("ac.grim.grimac:GrimAPI:1.6.0.9") // Ensure API exists
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("de.bluecolored:bluemap-api:2.7.3")
+    testImplementation("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.processResources {

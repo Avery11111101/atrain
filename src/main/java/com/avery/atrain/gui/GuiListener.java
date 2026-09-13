@@ -368,6 +368,14 @@ public class GuiListener implements Listener {
             return;
         }
         switch (slot) {
+            case 2 -> {
+                player.closeInventory();
+                plugin.getChatInputManager().setPending(player, ChatInputManager.Type.LINE_COLOR, lineId);
+                TextUtil.send(player, lang(player, "line.color_prompt", Map.of(
+                        "name", line.getDisplayName(),
+                        "color", line.getFormattedColor() + (line.getColor() != null ? line.getColor() : "§a"))));
+                TextUtil.send(player, lang(player, "input.chat_hint"));
+            }
             case 4 -> {
                 player.closeInventory();
                 plugin.getChatInputManager().setPending(player, ChatInputManager.Type.LINE_RENAME, lineId);

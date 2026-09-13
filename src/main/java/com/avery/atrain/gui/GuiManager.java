@@ -647,6 +647,12 @@ public class GuiManager {
                 TextUtil.component(msg(player, "gui.line_detail.title", safePh(Map.of("name", line.getDisplayName())))));
         holder.setInventory(inv);
 
+        inv.setItem(2, new ItemBuilder(Material.FIREWORK_STAR)
+                .name(msg(player, "gui.line_detail.color"))
+                .lore(plugin.getLanguageManager().getList(player, "gui.line_detail.color_lore", Map.of(
+                        "color", line.getFormattedColor() + (line.getColor() != null ? line.getColor() : "§a"))))
+                .build());
+
         inv.setItem(4, new ItemBuilder(Material.NAME_TAG)
                 .name(msg(player, "gui.line_detail.rename"))
                 .lore(msg(player, "gui.line_detail.rename_lore", safePh(Map.of("name", line.getDisplayName()))))

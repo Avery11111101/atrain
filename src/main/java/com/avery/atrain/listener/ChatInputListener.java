@@ -55,6 +55,7 @@ public class ChatInputListener implements Listener {
             case STOP_ADMIN_INFO -> applyAdminInfo(player, pending, message);
             case LINE_CREATE -> applyLineCreate(player, message);
             case LINE_RENAME -> applyLineRename(player, pending, message);
+            case LINE_COLOR -> applyLineColor(player, pending, message);
             case SPEED_BLOCK_SPEED -> applySpeedBlockSpeed(player, pending, message);
         }
     }
@@ -116,6 +117,28 @@ public class ChatInputListener implements Listener {
         plugin.getLineManager().renameLine(lineId, message.trim());
         plugin.getChatInputManager().clear(player);
         TextUtil.send(player, plugin.getLanguageManager().get(player, "line.renamed", Map.of("name", message.trim())));
+        plugin.getGuiManager().openLineDetail(player, lineId, 0);
+    }
+
+    private void applyLineColor(Player player, ChatInputManager.Pending pending, String message) {
+        String lineId = pending.contextId();
+        var line = plugin.getLineManager().getLine(lineId);
+        if (line == null) {
+            plugin.getChatInputManager().clear(player);
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "line.not_found", Map.of("id", lineId)));
+            return;
+        }
+        String input = message.trim();
+        if (input.isBlank() || !com.avery.atrain.util.ColorUtil.isValidColor(input)) {
+            TextUtil.send(player, plugin.getLanguageManager().get(player, "line.color_invalid"));
+            return;
+        }
+        String normalized = com.avery.atrain.util.ColorUtil.normalizeColor(input);
+        line.setColor(normalized);
+        plugin.getDataStore().save();
+        plugin.getBlueMapManager().updateMap();
+        plugin.getChatInputManager().clear(player);
+        TextUtil.send(player, plugin.getLanguageManager().get(player, "line.color_set", Map.of("color", line.getFormattedColor() + normalized)));
         plugin.getGuiManager().openLineDetail(player, lineId, 0);
     }
 
@@ -191,7 +214,7 @@ public class ChatInputListener implements Listener {
             }
             return;
         }
-        if (pending.type() == ChatInputManager.Type.LINE_RENAME) {
+        if (pending.type() == ChatInputManager.Type.LINE_RENAME || pending.type() == ChatInputManager.Type.LINE_COLOR) {
             plugin.getGuiManager().openLineDetail(player, pending.contextId(), 0);
             return;
         }

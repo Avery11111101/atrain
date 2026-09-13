@@ -129,12 +129,21 @@ public class LanguageManager {
     }
 
     public List<String> getList(Player player, String key) {
+        return getList(player, key, Map.of());
+    }
+
+    public List<String> getList(Player player, String key, Map<String, String> placeholders) {
         String lang = getPlayerLanguage(player);
         List<String> list = resolveList(lang, key);
         if (list.isEmpty() && !lang.equals(defaultLang)) {
             list = resolveList(defaultLang, key);
         }
-        return list;
+        if (placeholders == null || placeholders.isEmpty()) return list;
+        List<String> formatted = new ArrayList<>(list.size());
+        for (String line : list) {
+            formatted.add(TextUtil.format(line, placeholders));
+        }
+        return formatted;
     }
 
     private List<String> resolveList(String lang, String key) {

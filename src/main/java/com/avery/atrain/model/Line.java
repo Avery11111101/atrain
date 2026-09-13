@@ -127,8 +127,15 @@ public class Line {
         return circular && !stopIds.isEmpty() ? stopIds.get(stopIds.size() - 1) : null;
     }
 
-    public String getFormattedName() {
-        return (color != null ? color : "§a") + displayName;
+    public String getFormattedColor() {
+        return com.avery.atrain.util.ColorUtil.toLegacyPrefix(color);
     }
 
+    public String getMiniMessageColor() {
+        return com.avery.atrain.util.ColorUtil.toMiniMessageTag(color);
+    }
+
+    public String getFormattedName() {
+        return getFormattedColor() + displayName;
+    }
 }

@@ -107,7 +107,7 @@ public class RoutePlannerService {
             RawEdge edge = edges.get(i);
             Line line = plugin.getLineManager().getLine(edge.lineId);
             String lineName = line != null ? line.getDisplayName() : edge.lineId;
-            String lineColor = line != null ? line.getColor() : "§a";
+            String lineColor = line != null ? line.getFormattedColor() : "§a";
 
             Stop fromStop = plugin.getStopManager().getStop(edge.fromStopId);
             Stop toStop = plugin.getStopManager().getStop(edge.toStopId);

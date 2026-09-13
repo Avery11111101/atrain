@@ -12,6 +12,7 @@ import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.markers.POIMarker;
 import de.bluecolored.bluemap.api.math.Color;
 import de.bluecolored.bluemap.api.math.Line;
+import com.avery.atrain.util.ColorUtil;
 import com.flowpowered.math.vector.Vector3d;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -133,8 +134,7 @@ public class BlueMapManager {
         BlueMapWorld bmWorld = api.getWorld(w).orElse(null);
         if (bmWorld == null) return;
 
-        Color color = parseColor(lineInfo.getColor());
-
+        Color color = ColorUtil.toBlueMapColor(lineInfo.getColor());
         LineMarker lineMarker = LineMarker.builder()
                 .label(lineInfo.getDisplayName() + " [" + (segIndex + 1) + "]")
                 .line(new de.bluecolored.bluemap.api.math.Line(vectorLine))
@@ -152,29 +152,6 @@ public class BlueMapManager {
         }
     }
 
-    private Color parseColor(String colorCode) {
-        if (colorCode == null || colorCode.isEmpty()) return new Color(100, 255, 100, 255);
-        char code = colorCode.charAt(colorCode.length() - 1);
-        switch (code) {
-            case '0': return new Color(0, 0, 0, 255);
-            case '1': return new Color(0, 0, 170, 255);
-            case '2': return new Color(0, 170, 0, 255);
-            case '3': return new Color(0, 170, 170, 255);
-            case '4': return new Color(170, 0, 0, 255);
-            case '5': return new Color(170, 0, 170, 255);
-            case '6': return new Color(255, 170, 0, 255);
-            case '7': return new Color(170, 170, 170, 255);
-            case '8': return new Color(85, 85, 85, 255);
-            case '9': return new Color(85, 85, 255, 255);
-            case 'a': return new Color(85, 255, 85, 255);
-            case 'b': return new Color(85, 255, 255, 255);
-            case 'c': return new Color(255, 85, 85, 255);
-            case 'd': return new Color(255, 85, 255, 255);
-            case 'e': return new Color(255, 255, 85, 255);
-            case 'f': return new Color(255, 255, 255, 255);
-            default: return new Color(100, 255, 100, 255);
-        }
-    }
 
     public void disable() {
         if (onEnableListener != null) BlueMapAPI.unregisterListener(onEnableListener);

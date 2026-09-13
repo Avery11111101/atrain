@@ -17,6 +17,7 @@ public class ChatInputManager {
         STOP_ADMIN_INFO,
         LINE_CREATE,
         LINE_RENAME,
+        LINE_COLOR,
         SPEED_BLOCK_SPEED
     }
 
