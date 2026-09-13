@@ -70,6 +70,38 @@ public final class RailPathSampler {
         return loc.clone();
     }
 
+    /**
+     * 僅吸附鐵軌高度與爬坡斜率，保留連續的浮點 X/Z 座標。
+     * 避免將礦車強制吸附到方塊中心 (+0.5) 導致離站與進站低速時每格停滯瞬移。
+     */
+    public static Location snapToRailHeight(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        int chunkX = loc.getBlockX() >> 4;
+        int chunkZ = loc.getBlockZ() >> 4;
+        if (!loc.getWorld().isChunkLoaded(chunkX, chunkZ)) {
+            return loc.clone();
+        }
+        Block rail = RailUtil.findNearestRailBlock(loc, 4);
+        if (rail != null) {
+            double y = rail.getY();
+            if (rail.getBlockData() instanceof org.bukkit.block.data.Rail r) {
+                switch (r.getShape()) {
+                    case ASCENDING_EAST -> y += Math.max(0.0, Math.min(1.0, loc.getX() - rail.getX()));
+                    case ASCENDING_WEST -> y += Math.max(0.0, Math.min(1.0, rail.getX() + 1.0 - loc.getX()));
+                    case ASCENDING_SOUTH -> y += Math.max(0.0, Math.min(1.0, loc.getZ() - rail.getZ()));
+                    case ASCENDING_NORTH -> y += Math.max(0.0, Math.min(1.0, rail.getZ() + 1.0 - loc.getZ()));
+                    default -> y += RailUtil.cartHeightOnRail(rail);
+                }
+            } else {
+                y += RailUtil.cartHeightOnRail(rail);
+            }
+            Location out = loc.clone();
+            out.setY(y);
+            return out;
+        }
+        return loc.clone();
+    }
+
     private static List<Location> segmentToLocations(List<RoutePoint> points, Location start, Location end) {
         List<Location> out = new ArrayList<>();
         out.add(snapToRail(start));
@@ -264,12 +296,12 @@ public final class RailPathSampler {
     private static List<Location> densifyAndSnap(List<Location> sparse) {
         if (sparse.isEmpty()) return sparse;
         List<Location> dense = new ArrayList<>();
-        Location first = snapToRail(sparse.get(0));
+        Location first = snapToRailHeight(sparse.get(0));
         dense.add(first);
 
         for (int i = 0; i < sparse.size() - 1; i++) {
-            Location a = snapToRail(sparse.get(i));
-            Location b = snapToRail(sparse.get(i + 1));
+            Location a = sparse.get(i);
+            Location b = sparse.get(i + 1);
             if (a == null || b == null) continue;
 
             double dist = a.distance(b);
@@ -283,7 +315,7 @@ public final class RailPathSampler {
                         a.getX() + (b.getX() - a.getX()) * t,
                         a.getY() + (b.getY() - a.getY()) * t,
                         a.getZ() + (b.getZ() - a.getZ()) * t);
-                dense.add(snapToRail(mid));
+                dense.add(snapToRailHeight(mid));
             }
         }
         return dedupe(dense);
@@ -305,11 +337,11 @@ public final class RailPathSampler {
         return b.getWorld().getName() + "@" + b.getX() + "," + b.getY() + "," + b.getZ();
     }
 
-    /** 依路徑弧長比例取樣（0~1），輸出必吸附鐵軌 */
+    /** 依路徑弧長比例取樣（0~1），輸出必吸附鐵軌高度，維持平滑連續的 X/Z 座標 */
     public static Location sampleAt(List<Location> path, double t) {
         if (path == null || path.isEmpty()) return null;
-        if (path.size() == 1 || t <= 0) return snapToRail(path.get(0).clone());
-        if (t >= 1) return snapToRail(path.get(path.size() - 1).clone());
+        if (path.size() == 1 || t <= 0) return snapToRailHeight(path.get(0).clone());
+        if (t >= 1) return snapToRailHeight(path.get(path.size() - 1).clone());
 
         double total = 0;
         double[] segLen = new double[path.size() - 1];
@@ -317,7 +349,7 @@ public final class RailPathSampler {
             segLen[i] = path.get(i).distance(path.get(i + 1));
             total += segLen[i];
         }
-        if (total < 0.001) return snapToRail(path.get(path.size() - 1).clone());
+        if (total < 0.001) return snapToRailHeight(path.get(path.size() - 1).clone());
 
         double want = t * total;
         double acc = 0;
@@ -331,7 +363,7 @@ public final class RailPathSampler {
                         a.getY() + (b.getY() - a.getY()) * local,
                         a.getZ() + (b.getZ() - a.getZ()) * local);
                 Vector dir = b.toVector().subtract(a.toVector());
-                Location snapped = snapToRail(out);
+                Location snapped = snapToRailHeight(out);
                 if (dir.lengthSquared() > 0.0001) {
                     snapped.setDirection(dir);
                 }
@@ -339,10 +371,20 @@ public final class RailPathSampler {
             }
             acc += segLen[i];
         }
-        return snapToRail(path.get(path.size() - 1).clone());
+        return snapToRailHeight(path.get(path.size() - 1).clone());
     }
 
     public static double easeInOut(double t) {
         return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    /**
+     * 平滑列車進出站過渡曲線：
+     * 結合 15% 線性基底與 85% EaseInOut，保證離站起步與進站有平滑且具備動態可見度的初速，
+     * 避免在極小 t 時停滯成 0 導致視覺卡頓。
+     */
+    public static double smoothTransit(double t) {
+        double clamped = Math.max(0.0, Math.min(1.0, t));
+        return 0.15 * clamped + 0.85 * easeInOut(clamped);
     }
 }

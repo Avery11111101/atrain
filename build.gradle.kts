@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "2.0.0-beta.1"
+version = "2.0.0-beta.2"
 
 
 java {
@@ -32,6 +32,7 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    enabled = false // 避免 Windows 中文目錄下 Gradle Test Worker 載入測試類別例外
 }
 
 tasks.processResources {

@@ -36,6 +36,7 @@ public final class CinematicTransitTask {
     private int moveElapsed;
     private BukkitTask dwellTask;
     private boolean gravityWasEnabled = true;
+    private Location lastPos;
 
     public CinematicTransitTask(AtrainPlugin plugin, RideableMinecart cart, Player passenger,
                                 Stop atStop, Line line, TravelDirection direction) {
@@ -116,6 +117,7 @@ public final class CinematicTransitTask {
 
         gravityWasEnabled = cart.hasGravity();
         cart.setGravity(false);
+        lastPos = cart.getLocation();
 
         notifyPassenger("cinematic.departing", Map.of(
                 "from", currentStop.getDisplayName(),
@@ -132,12 +134,16 @@ public final class CinematicTransitTask {
         if (phase != Phase.MOVING) return;
 
         moveElapsed++;
-        double t = RailPathSampler.easeInOut(Math.min(1.0, moveElapsed / (double) moveTicks));
+        double t = RailPathSampler.smoothTransit(Math.min(1.0, moveElapsed / (double) moveTicks));
         Location pos = RailPathSampler.sampleAt(path, t);
         if (pos != null) {
+            if (lastPos != null && lastPos.getWorld().equals(pos.getWorld())) {
+                Vector vel = pos.toVector().subtract(lastPos.toVector());
+                cart.setVelocity(vel);
+            }
             cart.teleport(pos);
+            lastPos = pos;
         }
-        cart.setVelocity(new Vector(0, 0, 0));
 
         if (moveElapsed >= moveTicks) {
             arrive();
@@ -170,6 +176,7 @@ public final class CinematicTransitTask {
     private void freeze() {
         cart.setVelocity(new Vector(0, 0, 0));
         cart.setMaxSpeed(0);
+        lastPos = null;
     }
 
     public void cancel() {
@@ -177,6 +184,7 @@ public final class CinematicTransitTask {
             dwellTask.cancel();
             dwellTask = null;
         }
+        lastPos = null;
         if (cart.isValid() && !cart.isDead()) {
             cart.setGravity(gravityWasEnabled);
             cart.setMaxSpeed(0.4);
