@@ -91,7 +91,7 @@ public class UpdateService {
                     boolean draft = obj.has("draft") && obj.get("draft").getAsBoolean();
                     if (draft) continue;
 
-                    boolean prerelease = obj.has("prerelease") && obj.get("prerelease").getAsBoolean();
+                    boolean prereleaseFromGh = obj.has("prerelease") && obj.get("prerelease").getAsBoolean();
                     String tagName = obj.has("tag_name") ? obj.get("tag_name").getAsString() : "";
                     String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : tagName;
                     String body = obj.has("body") && !obj.get("body").isJsonNull() ? obj.get("body").getAsString() : "";
@@ -99,13 +99,20 @@ public class UpdateService {
                     String publishedAt = obj.has("published_at") && !obj.get("published_at").isJsonNull()
                             ? obj.get("published_at").getAsString() : "";
 
+                    // 判斷是否為預發布/測試版：GitHub 標記為 prerelease，或 tag/name 中包含 beta/alpha/rc/preview/dev/snapshot/pre
+                    boolean isBetaOrPre = prereleaseFromGh
+                            || tagName.toLowerCase().matches(".*[-._](beta|alpha|rc|pre|preview|snapshot|dev).*")
+                            || name.toLowerCase().matches(".*[-._](beta|alpha|rc|pre|preview|snapshot|dev).*");
+
                     String downloadUrl = null;
+                    String assetFileName = null;
                     if (obj.has("assets") && obj.get("assets").isJsonArray()) {
                         for (JsonElement a : obj.getAsJsonArray("assets")) {
                             if (a.isJsonObject()) {
                                 var assetObj = a.getAsJsonObject();
                                 String aname = assetObj.get("name").getAsString();
                                 if (aname.endsWith(".jar")) {
+                                    assetFileName = aname;
                                     downloadUrl = assetObj.get("browser_download_url").getAsString();
                                     break;
                                 }
@@ -113,13 +120,18 @@ public class UpdateService {
                         }
                     }
 
-                    var release = new ReleaseInfo(tagName, name, body, htmlUrl, downloadUrl, prerelease, publishedAt);
+                    if (assetFileName == null && !tagName.isBlank()) {
+                        String clean = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+                        assetFileName = "atrain-" + clean + ".jar";
+                    }
+
+                    var release = new ReleaseInfo(tagName, name, body, htmlUrl, downloadUrl, assetFileName, isBetaOrPre, publishedAt);
                     list.add(release);
 
-                    if (!prerelease && firstOfficial == null) {
+                    if (!isBetaOrPre && firstOfficial == null) {
                         firstOfficial = release;
                     }
-                    if (prerelease && firstBeta == null) {
+                    if (isBetaOrPre && firstBeta == null) {
                         firstBeta = release;
                     }
 
@@ -253,7 +265,8 @@ public class UpdateService {
             return;
         }
 
-        if (sender != null) sender.sendMessage(TextUtil.colorize("<yellow>正在自 GitHub 準備下載更新檔 (" + track + ")..."));
+        String trackDisplay = (track == null || track.isBlank() || "auto".equalsIgnoreCase(track) || "latest".equalsIgnoreCase(track)) ? "最新版" : track;
+        if (sender != null) sender.sendMessage(TextUtil.colorize("<yellow>正在自 GitHub 準備下載更新檔 (" + trackDisplay + ")..."));
 
         fetchReleasesAsync(false).thenAccept(catalog -> {
             if (catalog == null) {
@@ -263,9 +276,19 @@ public class UpdateService {
                 return;
             }
 
-            ReleaseInfo target = "beta".equalsIgnoreCase(track) ? catalog.latestBeta() : catalog.latestOfficial();
-            if (target == null) {
+            ReleaseInfo target;
+            if ("beta".equalsIgnoreCase(track)) {
+                target = catalog.latestBeta() != null ? catalog.latestBeta() : catalog.latestOfficial();
+            } else if ("release".equalsIgnoreCase(track) || "official".equalsIgnoreCase(track)) {
                 target = catalog.latestOfficial() != null ? catalog.latestOfficial() : catalog.latestBeta();
+            } else {
+                // 自動模式：挑選兩軌中真正最新的版本
+                if (catalog.latestOfficial() != null && catalog.latestBeta() != null) {
+                    boolean betaIsNewer = isNewerVersion(catalog.latestOfficial().tagName(), catalog.latestBeta().tagName());
+                    target = betaIsNewer ? catalog.latestBeta() : catalog.latestOfficial();
+                } else {
+                    target = catalog.latestOfficial() != null ? catalog.latestOfficial() : catalog.latestBeta();
+                }
             }
 
             if (target == null || target.downloadUrl() == null || target.downloadUrl().isEmpty()) {
@@ -279,7 +302,7 @@ public class UpdateService {
             ReleaseInfo finalTarget = target;
 
             if (sender != null) Bukkit.getScheduler().runTask(plugin, () ->
-                    sender.sendMessage(TextUtil.colorize("<yellow>開始下載 <gold>" + finalTarget.tagName() + " <yellow>更新檔...")));
+                    sender.sendMessage(TextUtil.colorize("<yellow>開始下載 <gold>" + finalTarget.tagName() + " <yellow>更新檔 (" + finalTarget.fileName() + ")...")));
 
             try {
                 var url = URI.create(downloadUrl).toURL();
@@ -297,7 +320,18 @@ public class UpdateService {
                 }
 
                 File pluginsFolder = plugin.getDataFolder().getParentFile();
-                File tempFile = new File(pluginsFolder, ".atrain_download.part");
+                if (pluginsFolder == null || !pluginsFolder.exists()) {
+                    throw new IllegalStateException("無法定位 plugins 目錄！");
+                }
+
+                String targetFileName = finalTarget.fileName();
+                if (targetFileName == null || targetFileName.isBlank()) {
+                    String cleanTag = finalTarget.tagName().startsWith("v") ? finalTarget.tagName().substring(1) : finalTarget.tagName();
+                    targetFileName = "atrain-" + cleanTag + ".jar";
+                }
+
+                // 暫存下載檔
+                File tempFile = new File(pluginsFolder, "." + targetFileName + ".part");
                 if (tempFile.exists()) tempFile.delete();
 
                 try (var in = new BufferedInputStream(conn.getInputStream());
@@ -314,16 +348,62 @@ public class UpdateService {
                     throw new IllegalStateException("下載檔案為空或寫入失敗！");
                 }
 
-                // 安全替換機制 (Windows Safe Update)
-                File updateFolder = new File(pluginsFolder, "update");
-                if (!updateFolder.exists()) updateFolder.mkdirs();
+                // 放置新版本至 /plugins
+                File newJarFile = new File(pluginsFolder, targetFileName);
+                Files.move(tempFile.toPath(), newJarFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-                File updateTarget = new File(updateFolder, plugin.getPluginFile().getName());
-                Files.move(tempFile.toPath(), updateTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                // 處理舊版 Jar 檔案置換與移除
+                File currentJar = plugin.getPluginFile();
+                boolean oldDeleted = false;
+                String oldJarName = (currentJar != null) ? currentJar.getName() : "舊版檔案";
 
+                if (currentJar != null && currentJar.exists()) {
+                    boolean isSameFile = false;
+                    try {
+                        isSameFile = currentJar.getCanonicalPath().equalsIgnoreCase(newJarFile.getCanonicalPath());
+                    } catch (Exception ignored) {}
+
+                    if (!isSameFile) {
+                        // 嘗試直接刪除舊版檔案
+                        try {
+                            oldDeleted = currentJar.delete();
+                        } catch (Exception ignored) {}
+
+                        if (!oldDeleted) {
+                            // Windows 常見檔案被佔用鎖定：嘗試重新命名排除 .jar 附檔名，以防重載載入雙版本
+                            File backupFile = new File(pluginsFolder, currentJar.getName() + ".old");
+                            if (backupFile.exists()) {
+                                try { backupFile.delete(); } catch (Exception ignored) {}
+                            }
+                            boolean renamed = false;
+                            try {
+                                renamed = currentJar.renameTo(backupFile);
+                            } catch (Exception ignored) {}
+
+                            if (renamed) {
+                                backupFile.deleteOnExit();
+                                oldDeleted = true;
+                            } else {
+                                // 若無法重命名，標記於 JVM 關閉時刪除，並註冊待清理清單
+                                currentJar.deleteOnExit();
+                                plugin.registerPendingOldJar(currentJar);
+                            }
+                        }
+                    } else {
+                        oldDeleted = true; // 同檔名已原地覆蓋
+                    }
+                }
+
+                boolean finalOldDeleted = oldDeleted;
                 if (sender != null) Bukkit.getScheduler().runTask(plugin, () -> {
-                    sender.sendMessage(TextUtil.colorize("<green>✅ 下載完成！更新檔已存放於: <gold>plugins/update/" + updateTarget.getName()));
-                    sender.sendMessage(TextUtil.colorize("<yellow>💡 請重啟伺服器 (/restart 或 /stop)，核心將於開機時自動完成置換！"));
+                    sender.sendMessage(TextUtil.colorize("<green>✅ 下載完成！新版檔案已存放於: <gold>plugins/" + newJarFile.getName()));
+                    if (finalOldDeleted) {
+                        sender.sendMessage(TextUtil.colorize("<green>🗑️ 已成功置換並移除舊版本檔案: <gray>" + oldJarName));
+                        sender.sendMessage(TextUtil.colorize("<yellow>💡 您可以直接執行 <gold>/plugman restart atrain <yellow>或重啟伺服器套用新版！"));
+                    } else {
+                        sender.sendMessage(TextUtil.colorize("<yellow>⚠️ 舊版檔案 <gray>" + oldJarName + " <yellow>目前被系統鎖定，已排程於關機/重載時自動清除。"));
+                        sender.sendMessage(TextUtil.colorize("<yellow>💡 請重啟伺服器或使用 PlugMan 重載以完成置換！"));
+                    }
                 });
 
             } catch (Exception e) {

@@ -25,7 +25,7 @@ Minecraft 金磚站點插件 — **零指令**操作，蹲下右鍵即可設定�
 ## 安裝
 ./gradlew build
 1. **Paper 1.21+**、**Java 21+**
-2. 放入 `plugins/atrain-2.0.0-beta.3.jar`
+2. 放入 `plugins/atrain-2.0.0-beta.4.jar`
 3. 重啟伺服器
 
 
@@ -45,7 +45,7 @@ Minecraft 金磚站點插件 — **零指令**操作，蹲下右鍵即可設定�
 | `/train` / `/train gui` | 管理介面 |
 | `/train stops` | 站點列表 |
 | `/train version` | 查詢目前與最新版本及動態發布日誌 |
-| `/train update [check\|download]` | 檢查與下載最新插件版本 (Release/Beta) |
+| `/train update [check\|download] [release\|beta\|auto]` | 檢查與下載最新版本（自動下載至 plugins 目錄並置換舊版 Jar） |
 | `/train reload` | 重新載入（管理員） |
 | `/lang <語言>` | 切換語言 |
 

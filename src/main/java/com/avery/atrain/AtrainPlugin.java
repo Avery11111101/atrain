@@ -36,7 +36,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.bukkit.entity.minecart.RideableMinecart;
 
@@ -71,10 +73,12 @@ public final class AtrainPlugin extends JavaPlugin {
     private NamespacedKey managedCartKey;
 
     public final Set<RideableMinecart> activeManagedCarts = new HashSet<>();
+    private final List<File> pendingOldJars = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @Override
     public void onEnable() {
         instance = this;
+        cleanupResidualFiles();
         managedCartKey = new NamespacedKey(this, "managed_cart");
 
         configMigrationService = new com.avery.atrain.service.ConfigMigrationService(this);
@@ -191,7 +195,45 @@ public final class AtrainPlugin extends JavaPlugin {
         dataStore.save();
         if (speedBlockManager != null) speedBlockManager.save();
         if (blueMapManager != null) blueMapManager.disable();
+
+        // 嘗試清理已標記待刪除的舊版本 Jar（適用於 PlugMan 卸載重載情境）
+        for (File oldJar : pendingOldJars) {
+            try {
+                if (oldJar != null && oldJar.exists() && oldJar.delete()) {
+                    getLogger().info("已成功清理舊版本檔案: " + oldJar.getName());
+                }
+            } catch (Throwable ignored) {}
+        }
+
         getLogger().info("atrain 已停用");
+    }
+
+    private void cleanupResidualFiles() {
+        try {
+            File pluginsFolder = getDataFolder().getParentFile();
+            if (pluginsFolder != null && pluginsFolder.exists()) {
+                File[] leftovers = pluginsFolder.listFiles((dir, name) ->
+                        (name.startsWith(".atrain_") && (name.endsWith(".part") || name.endsWith(".downloading")))
+                                || (name.startsWith("atrain-") && name.endsWith(".old"))
+                                || name.endsWith(".jar.old")
+                );
+                if (leftovers != null) {
+                    for (File f : leftovers) {
+                        try {
+                            if (f.delete()) {
+                                getLogger().info("已清理暫存或過期備份檔: " + f.getName());
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void registerPendingOldJar(File jarFile) {
+        if (jarFile != null && !pendingOldJars.contains(jarFile)) {
+            pendingOldJars.add(jarFile);
+        }
     }
 
     public void reloadAll() {

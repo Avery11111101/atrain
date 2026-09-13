@@ -80,10 +80,10 @@ public class TrainCommand implements CommandExecutor, TabCompleter {
         if (args.length <= 1 || "check".equalsIgnoreCase(args[1])) {
             plugin.getUpdateService().checkUpdate(sender);
         } else if ("download".equalsIgnoreCase(args[1])) {
-            String track = args.length > 2 ? args[2] : "release";
+            String track = args.length > 2 ? args[2] : "auto";
             plugin.getUpdateService().downloadUpdate(sender, track);
         } else {
-            sender.sendMessage(TextUtil.colorize("<yellow>用法: /train update [check|download] [release|beta]"));
+            sender.sendMessage(TextUtil.colorize("<yellow>用法: /train update [check|download] [release|beta|auto]"));
         }
     }
 
