@@ -118,8 +118,21 @@ public final class AtrainPlugin extends JavaPlugin {
         pm.registerEvents(new com.avery.atrain.listener.PlayerJoinListener(this), this);
 
         if (configManager.isAutoCheckUpdate()) {
-            updateService.fetchReleasesAsync();
+            updateService.fetchReleasesAsync(false).thenAccept(catalog -> {
+                if (catalog == null) return;
+                String current = getPluginMeta().getVersion();
+                boolean hasOfficial = catalog.latestOfficial() != null && com.avery.atrain.update.UpdateService.isNewerVersion(current, catalog.latestOfficial().tagName());
+                boolean hasBeta = catalog.latestBeta() != null && com.avery.atrain.update.UpdateService.isNewerVersion(current, catalog.latestBeta().tagName());
+
+                if (hasOfficial) {
+                    getLogger().info("🌟 發現新正式穩定版: " + catalog.latestOfficial().tagName() + " (" + catalog.latestOfficial().name() + ")");
+                }
+                if (hasBeta) {
+                    getLogger().info("🧪 發現新搶先測試版: " + catalog.latestBeta().tagName() + " (" + catalog.latestBeta().name() + ")");
+                }
+            });
         }
+
 
 
         var trainCmd = new TrainCommand(this);

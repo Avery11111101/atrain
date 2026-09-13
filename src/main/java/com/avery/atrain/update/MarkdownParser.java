@@ -6,35 +6,53 @@ import java.util.List;
 public class MarkdownParser {
 
     public static List<String> parseMarkdownToMinecraft(String markdown) {
-        List<String> result = new ArrayList<>();
+        return parseMarkdownToMinecraft(markdown, 15);
+    }
+
+    public static List<String> parseMarkdownToMinecraft(String markdown, int maxLines) {
+        List<String> output = new ArrayList<>();
         if (markdown == null || markdown.isBlank()) {
-            return result;
+            return List.of("§7  (無更新說明)");
         }
 
-        String[] lines = markdown.split("\r?\n");
-        for (String line : lines) {
+        String[] rawLines = markdown.replace("\r\n", "\n").replace("\r", "\n").split("\n");
+        int count = 0;
+
+        for (String line : rawLines) {
             String trimmed = line.trim();
-            if (trimmed.isEmpty()) continue;
+            if (trimmed.isEmpty() || trimmed.startsWith("```") || trimmed.startsWith("---") || trimmed.startsWith("___")) {
+                continue;
+            }
+
+            // 過濾 HTML 標籤
+            trimmed = trimmed.replaceAll("<[^>]*>", "");
+            if (trimmed.isBlank()) continue;
+
+            // 粗體轉換 **text** -> §e§ltext§r§7
+            trimmed = trimmed.replaceAll("\\*\\*([^*]+)\\*\\*", "§e§l$1§r§7");
+            // code 轉換 `code` -> §f§ncode§r§7
+            trimmed = trimmed.replaceAll("`([^`]+)`", "§f$1§7");
 
             if (trimmed.startsWith("# ")) {
-                result.add("§b§l=== " + trimmed.substring(2) + " ===");
+                output.add("§6§l=== " + trimmed.substring(2) + " ===");
             } else if (trimmed.startsWith("## ")) {
-                result.add("§e§l[ " + trimmed.substring(3) + " ]");
+                output.add("§e§l▸ " + trimmed.substring(3));
             } else if (trimmed.startsWith("### ")) {
-                result.add("§a§l▶ " + trimmed.substring(4));
+                output.add("§b§l  • " + trimmed.substring(4));
             } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-                String content = parseInline(trimmed.substring(2));
-                result.add(" §7• §f" + content);
+                output.add("§7    • §f" + trimmed.substring(2));
             } else {
-                result.add(" §7" + parseInline(trimmed));
+                output.add("§7    " + trimmed);
+            }
+
+            count++;
+            if (count >= maxLines) {
+                output.add("§8    ... (更多詳細資訊請至 GitHub Releases 查閱)");
+                break;
             }
         }
-        return result;
-    }
 
-    private static String parseInline(String text) {
-        String boldParsed = text.replaceAll("\\*\\*(.*?)\\*\\*", "§l$1§r§f");
-        String codeParsed = boldParsed.replaceAll("`(.*?)`", "§e$1§f");
-        return codeParsed;
+        return output.isEmpty() ? List.of("§7  (無更新說明)") : output;
     }
 }
+

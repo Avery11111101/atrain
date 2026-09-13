@@ -25,12 +25,18 @@ public class PlayerJoinListener implements Listener {
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String currentVer = plugin.getPluginMeta().getVersion();
             var updateService = plugin.getUpdateService();
-            ReleaseInfo latest = updateService.getLatestRelease();
-            if (latest == null) latest = updateService.getLatestBeta();
+            updateService.fetchReleasesAsync(false).thenAccept(catalog -> {
+                if (catalog == null) return;
+                boolean hasOfficial = catalog.latestOfficial() != null && com.avery.atrain.update.UpdateService.isNewerVersion(currentVer, catalog.latestOfficial().tagName());
+                boolean hasBeta = catalog.latestBeta() != null && com.avery.atrain.update.UpdateService.isNewerVersion(currentVer, catalog.latestBeta().tagName());
 
-            if (latest != null && updateService.isNewerVersion(currentVer, latest.tagName())) {
-                TextUtil.send(player, "<gold>[atrain] ⚠️ 檢測到新版本 <yellow>" + latest.tagName() + " <gold>可供更新！輸入 <gold>/train update <gold>進行查看與下載。");
-            }
+                if (hasOfficial || hasBeta) {
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        String newVer = hasOfficial ? catalog.latestOfficial().tagName() : catalog.latestBeta().tagName();
+                        TextUtil.send(player, "<gold>[atrain] ⚠️ 檢測到新版本 <yellow>" + newVer + " <gold>可供更新！輸入 <gold>/train update <gold>進行查看與下載。");
+                    });
+                }
+            });
         }, 40L);
     }
 }
