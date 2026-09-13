@@ -379,12 +379,28 @@ public final class RailPathSampler {
     }
 
     /**
-     * 平滑列車進出站過渡曲線：
-     * 結合 15% 線性基底與 85% EaseInOut，保證離站起步與進站有平滑且具備動態可見度的初速，
-     * 避免在極小 t 時停滯成 0 導致視覺卡頓。
+     * 平滑 S 型梯形巡航過渡曲線 (Smooth S-Curve Cruise Profile)：
+     * 1. 離站起步 (前 20%): 二次平滑加速至巡航速度，結合極小線性基底避免初始停滯。
+     * 2. 中間巡航 (中段 60%): 維持高於平均速度之恆定高速巡航 (1.24x)，重現列車高速穿梭之「速度感」。
+     * 3. 靠站減速 (後 20%): 平滑平緩減速至零，精準無頓挫停靠月台金磚。
      */
     public static double smoothTransit(double t) {
         double clamped = Math.max(0.0, Math.min(1.0, t));
-        return 0.15 * clamped + 0.85 * easeInOut(clamped);
+        double a = 0.20; // 起步加速區間比例
+        double d = 0.20; // 靠站減速區間比例
+        double vc = 1.0 / (1.0 - (a + d) / 2.0); // 巡航速度係數 = 1.25
+
+        double trap;
+        if (clamped < a) {
+            trap = (vc / (2.0 * a)) * clamped * clamped;
+        } else if (clamped <= 1.0 - d) {
+            trap = (vc * a / 2.0) + vc * (clamped - a);
+        } else {
+            double u = 1.0 - clamped;
+            trap = 1.0 - (vc / (2.0 * d)) * u * u;
+        }
+
+        // 注入 5% 線性基底保證起步首 tick 即具備細微位移，95% 梯形高速巡航
+        return 0.05 * clamped + 0.95 * trap;
     }
 }

@@ -197,7 +197,11 @@ public class GuiListener implements Listener {
             }
             case 30 -> {
                 if (!plugin.getConfigManager().isCinematicTransitEnabled()) break;
-                Line line = plugin.getStopManager().resolveDisplayLine(stop);
+                String targetLineId = holder.get("display_line");
+                Line line = targetLineId != null ? plugin.getLineManager().getLine(targetLineId) : null;
+                if (line == null) {
+                    line = plugin.getStopManager().resolveDisplayLine(stop, player.getLocation());
+                }
                 if (line == null) break;
                 int cur = stop.getTravelSecondsToNext(line.getId(), plugin.getConfigManager().getDefaultSegmentSeconds());
                 stop.setTravelSecondsToNext(line.getId(), cur - 5);
@@ -206,7 +210,11 @@ public class GuiListener implements Listener {
             }
             case 32 -> {
                 if (!plugin.getConfigManager().isCinematicTransitEnabled()) break;
-                Line line = plugin.getStopManager().resolveDisplayLine(stop);
+                String targetLineId = holder.get("display_line");
+                Line line = targetLineId != null ? plugin.getLineManager().getLine(targetLineId) : null;
+                if (line == null) {
+                    line = plugin.getStopManager().resolveDisplayLine(stop, player.getLocation());
+                }
                 if (line == null) break;
                 int cur = stop.getTravelSecondsToNext(line.getId(), plugin.getConfigManager().getDefaultSegmentSeconds());
                 stop.setTravelSecondsToNext(line.getId(), cur + 5);

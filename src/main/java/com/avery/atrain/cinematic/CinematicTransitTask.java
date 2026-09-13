@@ -109,14 +109,23 @@ public final class CinematicTransitTask {
                     target.getRailLocation(direction));
         }
 
-        int seconds = currentStop.getTravelSecondsToNext(lineId,
-                plugin.getConfigManager().getDefaultSegmentSeconds());
+        int defaultSec = plugin.getConfigManager().getDefaultSegmentSeconds();
+        int seconds = currentStop.getTravelSecondsToNext(lineId, -1);
+        if (seconds <= 0 && direction == TravelDirection.REVERSE && target != null) {
+            // 回程時若當前站未設定，對稱繼承目標站點（去程起點）的行駛秒數
+            seconds = target.getTravelSecondsToNext(lineId, -1);
+        }
+        if (seconds <= 0) {
+            seconds = defaultSec;
+        }
         moveTicks = Math.max(20, seconds * 20);
         moveElapsed = 0;
         phase = Phase.MOVING;
 
         gravityWasEnabled = cart.hasGravity();
         cart.setGravity(false);
+        // 解除停靠時 maxSpeed=0 的凍結，賦予足夠的最高速度讓伺服器與客戶端正確產生 FOV 與疾馳速度感
+        cart.setMaxSpeed(Math.max(1.0, line.getMaxSpeed() * 2.5));
         lastPos = cart.getLocation();
 
         notifyPassenger("cinematic.departing", Map.of(

@@ -390,6 +390,9 @@ public class GuiManager {
         int dwellSec = stop.getDwellTimeTicks() / 20;
         var stopMgr = plugin.getStopManager();
         Line displayLine = stopMgr.resolveDisplayLine(stop, player.getLocation());
+        if (displayLine != null) {
+            holder.set("display_line", displayLine.getId());
+        }
         String prev = stopMgr.resolveDisplayPrev(stop, player.getLocation());
         String next = stopMgr.resolveDisplayNext(stop, player.getLocation());
         boolean hasPrev = stopMgr.hasDisplayPrev(stop, player.getLocation());
