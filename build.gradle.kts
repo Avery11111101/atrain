@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.avery"
-version = "2.0.0-beta.4"
+version = "2.0.0"
 
 
 java {
