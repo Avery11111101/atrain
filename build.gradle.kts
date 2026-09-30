@@ -4,12 +4,12 @@ plugins {
 }
 
 group = "com.avery"
-version = "2.0.0"
+version = "2.1.0-beta.1"
 
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -21,12 +21,12 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.+")
     compileOnly("de.bluecolored:bluemap-api:2.7.3")
     compileOnly("ac.grim.grimac:GrimAPI:1.6.0.9") // Ensure API exists
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("de.bluecolored:bluemap-api:2.7.3")
-    testImplementation("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.+")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

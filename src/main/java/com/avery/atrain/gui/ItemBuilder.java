@@ -51,10 +51,23 @@ public class ItemBuilder {
                 }
                 meta.lore(cLore);
             }
-            if (customModelData >= 0) meta.setCustomModelData(customModelData);
+            if (customModelData >= 0) {
+                try {
+                    org.bukkit.inventory.meta.components.CustomModelDataComponent component = meta.getCustomModelDataComponent();
+                    component.setFloats(List.of((float) customModelData));
+                    meta.setCustomModelDataComponent(component);
+                } catch (Throwable ignored) {
+                    setLegacyCustomModelData(meta, customModelData);
+                }
+            }
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void setLegacyCustomModelData(ItemMeta meta, int data) {
+        meta.setCustomModelData(data);
     }
 }
