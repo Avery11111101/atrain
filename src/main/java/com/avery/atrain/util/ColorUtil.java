@@ -1,7 +1,5 @@
 package com.avery.atrain.util;
 
-import de.bluecolored.bluemap.api.math.Color;
-
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -10,7 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * 顏色工具類別：支援十六進位色碼 (#RRGGBB, #RGB, &#RRGGBB, §#RRGGBB, §x§r... 等)、
- * Minecraft 傳統色碼與 BlueMap Color 轉換。
+ * Minecraft 傳統色碼與 RGBA 陣列解析。
  */
 public final class ColorUtil {
 
@@ -168,13 +166,6 @@ public final class ColorUtil {
         return new int[]{100, 255, 100, 255};
     }
 
-    /**
-     * 將顏色字串轉為 BlueMap Color 物件。
-     */
-    public static Color toBlueMapColor(String colorStr) {
-        int[] rgba = parseRgba(colorStr);
-        return new Color(rgba[0], rgba[1], rgba[2], rgba[3]);
-    }
 
     /**
      * 檢查輸入的字串是否為合法的顏色設定（Hex 或 MC 原版色碼/名稱）。

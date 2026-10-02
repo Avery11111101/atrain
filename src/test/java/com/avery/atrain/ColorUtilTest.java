@@ -28,7 +28,7 @@ public class ColorUtilTest {
         assertEquals(0xf5, rgba[2]);
         assertEquals(255, rgba[3]);
 
-        Color bmColor = ColorUtil.toBlueMapColor("#f1f5f5");
+        Color bmColor = com.avery.atrain.map.BlueMapHook.toBlueMapColor("#f1f5f5");
         assertEquals(0xf1, bmColor.getRed());
         assertEquals(0xf5, bmColor.getGreen());
         assertEquals(0xf5, bmColor.getBlue());

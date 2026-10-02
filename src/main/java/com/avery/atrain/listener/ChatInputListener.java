@@ -136,7 +136,9 @@ public class ChatInputListener implements Listener {
         String normalized = com.avery.atrain.util.ColorUtil.normalizeColor(input);
         line.setColor(normalized);
         plugin.getDataStore().save();
-        plugin.getBlueMapManager().updateMap();
+        if (plugin.getBlueMapManager() != null) {
+            plugin.getBlueMapManager().updateMap();
+        }
         plugin.getChatInputManager().clear(player);
         TextUtil.send(player, plugin.getLanguageManager().get(player, "line.color_set", Map.of("color", line.getFormattedColor() + normalized)));
         plugin.getGuiManager().openLineDetail(player, lineId, 0);
